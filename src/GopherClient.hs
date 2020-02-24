@@ -1,22 +1,12 @@
-module Main where
+module GopherClient where
 
-import Network.Simple.TCP
 import Data.Maybe
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
-import Brick
 import Debug.Trace
 import Data.List.Utils (replace)
 import Data.List.Split
-import Control.Monad
-import System.Environment
 
-import Brick
-import qualified Graphics.Vty as Vty
-
-import qualified Brick.Main as M
-import qualified Brick.Widgets.Border as B
-import qualified Brick.Widgets.Center as C
+import Network.Simple.TCP
 
 {-
 Item type characters
@@ -230,48 +220,3 @@ dummyGet host port resource =
             getAllBytes (pure $ fromJust gosh) connectionSocket
         else
             getAllBytes (pure $ B8.append wacc (fromJust gosh)) connectionSocket
-
--- The rest of this is for UI, which I should break into another module eventually
-
-data MyState = MyState
-  { msText :: String
-  } deriving (Show)
-
-data MyName = MyViewport
-    deriving (Show, Eq, Ord)
-
-type MyApp = App MyState () MyName
-
-myNameScroll :: M.ViewportScroll MyName
-myNameScroll = M.viewportScroll MyViewport
-
-drawUi :: MyState -> [Widget MyName]
-drawUi s = [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 $ ui]
-    where
-    ui = viewport MyViewport Both $ vBox [str $ msText s]
-
-handleEvent :: MyState -> BrickEvent MyName () -> EventM MyName (Next MyState)
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'q') [])) = halt s
-
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'j')  [])) = M.vScrollBy myNameScroll 1 >> M.continue s
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'k')  [])) = M.vScrollBy myNameScroll (-1) >> M.continue s
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'l') [])) = M.hScrollBy myNameScroll 1 >> M.continue s
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'h')  [])) = M.hScrollBy myNameScroll (-1) >> M.continue s
-
-handleEvent s _ = continue s
-
-myApp :: MyApp
-myApp = App
-    { appDraw = drawUi
-    , appChooseCursor = showFirstCursor
-    , appHandleEvent = handleEvent
-    , appStartEvent = pure
-    , appAttrMap = const $ attrMap Vty.defAttr []
-    }
-
-main :: IO ()
-main = do
-    (host:port:resource:[]) <- getArgs
-    o <- dummyGet host port resource
-    let presentable = clean $ show (makeGopherLines o)
-    void $ defaultMain myApp $ MyState {msText = presentable}

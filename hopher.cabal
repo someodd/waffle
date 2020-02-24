@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f45e143d4bb0652b515b95ae381eb609377c08dc37aded4b7c63f5a2b4b15ac9
+-- hash: b284e3258256037dfe12c1f116ca220b551401f69918965aca04aad8d0107868
 
 name:           hopher
 version:        0.1.0.0
@@ -16,6 +16,9 @@ library
   exposed-modules:
       Hopher
   other-modules:
+      GopherClient
+      Main
+      Ui
       Paths_hopher
   hs-source-dirs:
       src
