@@ -1,0 +1,29 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: f45e143d4bb0652b515b95ae381eb609377c08dc37aded4b7c63f5a2b4b15ac9
+
+name:           hopher
+version:        0.1.0.0
+license:        GPL-3
+license-file:   LICENSE
+build-type:     Simple
+
+library
+  exposed-modules:
+      Hopher
+  other-modules:
+      Paths_hopher
+  hs-source-dirs:
+      src
+  ghc-options: -Wall
+  build-depends:
+      MissingH
+    , base
+    , brick
+    , network-simple
+    , split
+  default-language: Haskell2010
