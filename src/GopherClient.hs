@@ -143,28 +143,27 @@ charToItemType _ = Nothing
 -- Fixme: for these three... rename to explain*ItemType?
 -- FIXME: update with the description from one of those docstrings...
 explainCanonicalType :: GopherCanonicalItemType -> String
-explainCanonicalType item = case item of
-     File -> "Item is a file. Plaintext file."
-     Directory -> "Item is a directory. Gopher submenu."
-     CsoPhoneBookServer -> "Item is a CSO phone-book server. CCSO Nameserver."
-     Error -> "Error. Error code returned by a Gopher server to indicate failure."
-     BinHexedMacintoshFile -> "Item is a BinHexed Macintosh file. BinHex-encoded file (primarily for Macintosh computers)."
-     DosBinaryArchive -> "Item is DOS binary archive of some sort. Client must read until the TCP connection closes. Beware. DOS file."
-     UnixUuencodedFile -> "Item is a UNIX uuencoded file. uuencoded file."
-     IndexSearchServer -> "Item is an Index-Search server. Gopher full-text search."
-     TextBasedTelnetSession -> "Item points to a text-based telnet session. Telnet."
-     BinaryFile -> "Item is a binary file! Client must read until the TCP connection closes. Beware. Binary file."
-     RedundantServer -> "Item is a redundant server. Mirror or alternate server (for load balancing or in case of primary server downtime)."
-     Tn3270Session -> "Item points to a text-based tn3270 session. Telnet 3270."
-     GifFile -> "Item is a GIF format graphics file. GIF file."
-     ImageFile -> "Item is some kind of image file.  Client decides how to display. Image file."
+explainCanonicalType File = "Item is a file. Plaintext file."
+explainCanonicalType Directory = "Item is a directory. Gopher submenu."
+explainCanonicalType CsoPhoneBookServer = "Item is a CSO phone-book server. CCSO Nameserver."
+explainCanonicalType Error = "Error. Error code returned by a Gopher server to indicate failure."
+explainCanonicalType BinHexedMacintoshFile = "Item is a BinHexed Macintosh file. BinHex-encoded file (primarily for Macintosh computers)."
+explainCanonicalType DosBinaryArchive = "Item is DOS binary archive of some sort. Client must read until the TCP connection closes. Beware. DOS file."
+explainCanonicalType UnixUuencodedFile = "Item is a UNIX uuencoded file. uuencoded file."
+explainCanonicalType IndexSearchServer = "Item is an Index-Search server. Gopher full-text search."
+explainCanonicalType TextBasedTelnetSession = "Item points to a text-based telnet session. Telnet."
+explainCanonicalType BinaryFile = "Item is a binary file! Client must read until the TCP connection closes. Beware. Binary file."
+explainCanonicalType RedundantServer = "Item is a redundant server. Mirror or alternate server (for load balancing or in case of primary server downtime)."
+explainCanonicalType Tn3270Session = "Item points to a text-based tn3270 session. Telnet 3270."
+explainCanonicalType GifFile = "Item is a GIF format graphics file. GIF file."
+explainCanonicalType ImageFile = "Item is some kind of image file.  Client decides how to display. Image file."
 
 explainNonCanonicalType :: GopherNonCanonicalItemType -> String
 explainNonCanonicalType item = case item of
-     Doc -> "Doc. Seen used alongside PDF's and .DOC's."
-     HtmlFile -> "HTML file."
-     InformationalMessage -> "Informational message."
-     SoundFile -> "Sound file (especially the WAV format)."
+explainNonCanonicalType Doc = "Doc. Seen used alongside PDF's and .DOC's."
+explainNonCanonicalType HtmlFile = "HTML file."
+explainNonCanonicalType InformationalMessage = "Informational message."
+explainNonCanonicalType SoundFile = "Sound file (especially the WAV format)."
 
 -- | Explain a Gopher line/menu item type, either canonical (RFC 1436) or non canonical.
 explainType :: Either GopherCanonicalItemType GopherNonCanonicalItemType -> String
