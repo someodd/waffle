@@ -120,27 +120,26 @@ This code may be either a digit or a letter of the alphabet; letters are
 case-sensitive."
 -}
 charToItemType :: Char -> Either GopherCanonicalItemType GopherNonCanonicalItemType
-charToItemType code = case code of
-    -- Left (canonical)
-    '0' -> Left File
-    '1' -> Left Directory
-    '2' -> Left CsoPhoneBookServer
-    '3' -> Left Error
-    '4' -> Left BinHexedMacintoshFile
-    '5' -> Left DosBinaryArchive
-    '6' -> Left UnixUuencodedFile
-    '7' -> Left IndexSearchServer
-    '8' -> Left TextBasedTelnetSession
-    '9' -> Left BinaryFile
-    '+' -> Left RedundantServer
-    'T' -> Left Tn3270Session
-    'g' -> Left GifFile
-    'I' -> Left ImageFile
-    -- Right (noncanonical)
-    'd' -> Right Doc
-    'h' -> Right HtmlFile
-    'i' -> Right InformationalMessage
-    's' -> Right SoundFile
+-- Left (canonical)
+charToItemType '0' = Left File
+charToItemType '1' = Left Directory
+charToItemType '2' = Left CsoPhoneBookServer
+charToItemType '3' = Left Error
+charToItemType '4' = Left BinHexedMacintoshFile
+charToItemType '5' = Left DosBinaryArchive
+charToItemType '6' = Left UnixUuencodedFile
+charToItemType '7' = Left IndexSearchServer
+charToItemType '8' = Left TextBasedTelnetSession
+charToItemType '9' = Left BinaryFile
+charToItemType '+' = Left RedundantServer
+charToItemType 'T' = Left Tn3270Session
+charToItemType 'g' = Left GifFile
+charToItemType 'I' = Left ImageFile
+-- Right (noncanonical)
+charToItemType 'd' = Right Doc
+charToItemType 'h' = Right HtmlFile
+charToItemType 'i' = Right InformationalMessage
+charToItemType 's' = Right SoundFile
 
 -- Fixme: for these three... rename to explain*ItemType?
 -- FIXME: update with the description from one of those docstrings...
