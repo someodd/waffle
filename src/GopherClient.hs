@@ -2,7 +2,6 @@ module GopherClient where
 
 import Data.Maybe
 import qualified Data.ByteString.Char8 as B8
-import Data.List.Utils (replace)
 import Data.List.Split
 
 import Network.Simple.TCP
@@ -109,7 +108,7 @@ data GopherLine = GopherLine {
 instance Show GopherLine where
     show x = (indent x) ++ (glDisplayString x)
         where
-        indent x = if (glType x) == (Right InformationalMessage) then "           " else "      "
+        indent l = if (glType l) == (Right InformationalMessage) then "           " else "      "
 
 {-|
 Take the character from a menu line delivered from a Gopher server and give
@@ -192,7 +191,6 @@ makeGopherLines rawString = GopherMenu $ map makeGopherLine numberedLines
     -- A period on a line by itself denotes the end.
     rmTerminatorPeriod l = if last l == ".\r" then init l else l
     splitFields = splitOn "\t"
-    parseLink = error "must implement" -- "link" is wrong
     makeGopherLine l = GopherLine {glType=itemType
                                   ,glLineNumber=lineNumber
                                   ,glDisplayString=fields !! 0
@@ -215,13 +213,13 @@ data GopherMenu = GopherMenu [GopherLine]
 
 -- | Easily represent a GopherMenu as a string, formatted as it might be rendered.
 instance Show GopherMenu where
-    show (GopherMenu lines) = unlines $ map show lines
+    show (GopherMenu ls) = unlines $ map show ls
 
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
 -- if you don't wish to specify.
 gopherGet :: String -> String -> String -> IO String
 gopherGet host port resource =
-    connect host port $ \(connectionSocket, remoteAddr) -> do
+    connect host port $ \(connectionSocket, _) -> do
       send connectionSocket (B8.pack $ resource ++ "\r\n")
       -- need to only fetch as many bytes as it takes to get period on a line by itself to
       -- close the connection.
@@ -233,7 +231,6 @@ gopherGet host port resource =
     getAllBytes acc connectionSocket = do
         gosh <- recv connectionSocket recvChunks
         wacc <- acc
-        pure $ fromJust gosh
         if gosh == Nothing then
             acc
         else if B8.null wacc then

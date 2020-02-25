@@ -19,6 +19,7 @@ type MyApp = App MyState () MyName
 
 -- | Replace the \t (tabs) and \r (returns) with spaces, because otherwise
 -- they'll break Brick!
+clean :: String -> String
 clean = replaceTabs . replaceReturns
     where
         replaceTabs = map (\x -> if x == '\t' then ' ' else x)
@@ -51,4 +52,5 @@ myApp = App
     , appAttrMap = const $ attrMap Vty.defAttr []
     }
 
+uiMain :: String -> IO ()
 uiMain initialState = void $ defaultMain myApp $ MyState {msText = initialState}
