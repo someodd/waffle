@@ -119,27 +119,28 @@ back the type of the item that line describes.
 This code may be either a digit or a letter of the alphabet; letters are
 case-sensitive."
 -}
-charToItemType :: Char -> Either GopherCanonicalItemType GopherNonCanonicalItemType
+charToItemType :: Char -> Maybe (Either GopherCanonicalItemType GopherNonCanonicalItemType)
 -- Left (canonical)
-charToItemType '0' = Left File
-charToItemType '1' = Left Directory
-charToItemType '2' = Left CsoPhoneBookServer
-charToItemType '3' = Left Error
-charToItemType '4' = Left BinHexedMacintoshFile
-charToItemType '5' = Left DosBinaryArchive
-charToItemType '6' = Left UnixUuencodedFile
-charToItemType '7' = Left IndexSearchServer
-charToItemType '8' = Left TextBasedTelnetSession
-charToItemType '9' = Left BinaryFile
-charToItemType '+' = Left RedundantServer
-charToItemType 'T' = Left Tn3270Session
-charToItemType 'g' = Left GifFile
-charToItemType 'I' = Left ImageFile
+charToItemType '0' = Just $ Left File
+charToItemType '1' = Just $ Left Directory
+charToItemType '2' = Just $ Left CsoPhoneBookServer
+charToItemType '3' = Just $ Left Error
+charToItemType '4' = Just $ Left BinHexedMacintoshFile
+charToItemType '5' = Just $ Left DosBinaryArchive
+charToItemType '6' = Just $ Left UnixUuencodedFile
+charToItemType '7' = Just $ Left IndexSearchServer
+charToItemType '8' = Just $ Left TextBasedTelnetSession
+charToItemType '9' = Just $ Left BinaryFile
+charToItemType '+' = Just $ Left RedundantServer
+charToItemType 'T' = Just $ Left Tn3270Session
+charToItemType 'g' = Just $ Left GifFile
+charToItemType 'I' = Just $ Left ImageFile
 -- Right (noncanonical)
-charToItemType 'd' = Right Doc
-charToItemType 'h' = Right HtmlFile
-charToItemType 'i' = Right InformationalMessage
-charToItemType 's' = Right SoundFile
+charToItemType 'd' = Just $ Right Doc
+charToItemType 'h' = Just $ Right HtmlFile
+charToItemType 'i' = Just $ Right InformationalMessage
+charToItemType 's' = Just $ Right SoundFile
+charToItemType _ = Nothing
 
 -- Fixme: for these three... rename to explain*ItemType?
 -- FIXME: update with the description from one of those docstrings...
@@ -203,7 +204,9 @@ makeGopherLines rawString = GopherMenu $ map makeGopherLine numberedLines
         where
         lineNumber = fst l
         line = snd l
-        itemType = charToItemType $ head line
+        itemType = case (charToItemType $ head line) of
+            Just x -> x
+            Nothing -> error "Unrecognized item type!"
         fields = splitFields . tail $ line
 
 -- | As you can see, a GopherMenu is simply an ordered sequence of
