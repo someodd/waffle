@@ -2,110 +2,122 @@ module GopherClient where
 
 import Data.Maybe
 import qualified Data.ByteString.Char8 as B8
-import Debug.Trace
 import Data.List.Utils (replace)
 import Data.List.Split
 
 import Network.Simple.TCP
 
-{-
-Item type characters
+{-|
+Gopher Protocol/RFC 1435 canonical item type characters.
 
-The client software decides what items are available by looking at
-the first character of each line in a directory listing.
+"The client software decides what items are available by looking at
+the first character of each line in a directory listing."
 -}
--- FIXME: these comment descriptions should just go to the explain function
+-- FIXME: these comment descriptions should aso go to the explain function...
 data GopherCanonicalItemType =
-    -- Item is a (plaintext) file. The item is a TextFile Entity. Client
+    -- | Item is a (plaintext) file. The item is a TextFile Entity. Client
     -- Should use a TextFile Transaction.
     File |
-    -- Gopher submenu. The item is a Menu Entity. Client should use a Menu
+    -- | Gopher submenu. The item is a Menu Entity. Client should use a Menu
     -- Transaction.
     Directory |
-    -- CcsoNameServer. The information applies to a CSO phone book entity.
+    -- | CcsoNameServer. The information applies to a CSO phone book entity.
     -- Clients should talk CSO protocol.
     CsoPhoneBookServer |
-    -- Signals an error condition.
+    -- | Signals an error condition.
     Error |
-    -- Item is a Macintosh file encoded in BINHEX format.
+    -- | Item is a Macintosh file encoded in BINHEX format.
     BinHexedMacintoshFile |
-    -- Item is PC-DOS binary file of some sort.  Client gets to decide.
+    -- | Item is PC-DOS binary file of some sort.  Client gets to decide.
     -- DOS binary archive of some sort. Client must read until TCP connection closes. beware
     DosBinaryArchive |
-    -- UNIX uuencoded file; item is a uuencoded file.
+    -- | UNIX uuencoded file; item is a uuencoded file.
     UnixUuencodedFile |
-    -- Gopher full-text search. The information applies to a Index Server.
+    -- | Gopher full-text search. The information applies to a Index Server.
     -- Client should use a FullText Search transaction.
     IndexSearchServer |
-    -- Text-based telnet session. The information applies to a Telnet session.
+    -- | Text-based telnet session. The information applies to a Telnet session.
     -- Connect to given host at given port. The name to login as at this host is
     -- in the selector string.
     TextBasedTelnetSession |
-    -- Client must read until tcp connection closes, beware. Item is a binary file. Client
+    -- | Client must read until tcp connection closes, beware. Item is a binary file. Client
     -- must decide what to do with it.
     BinaryFile |
-    -- The information applies to a duplicated server. The information contained within is
+    -- | The information applies to a duplicated server. The information contained within is
     -- a duplicate of the primary server. THe primary server is defined as the last DirEntity
-    -- that has a non-plus "Type" field. The client should use the transaction as defined by
-    -- the primary server Type field.
+    -- that has a non-plus "type" field. The client should use the transaction as defined by
+    -- the primary server type field.
     RedundantServer |
-    -- Item is a GIF graphic file.
+    -- | Item is a GIF graphic file.
     GifFile |
-    -- Item is some kind of image file. Client gets to decide.
+    -- | Item is some kind of image file. Client gets to decide.
     ImageFile |
-    -- Telnet 3270. The information applies to a tn3270 based telnet session.
+    -- | Telnet 3270. The information applies to a tn3270 based telnet session.
     -- Connect to given host at given port. The name to login as at this
     -- host is in the selector string.
     Tn3270Session
     deriving (Eq)
 
--- Item types improvised by Gopher client authors after RFC 1436
-data GopherNonCanonicalItemType = Doc | HtmlFile | InformationalMessage | SoundFile
+-- | Item types improvised by Gopher client authors and others after RFC 1436,
+-- see the Gopher+ specification...
+data GopherNonCanonicalItemType =
+    -- | Doc. Seen used alongside PDFs and .DOCs.
+    Doc |
+    -- | HTML file.
+    HtmlFile |
+    -- | Informational message.
+    InformationalMessage |
+    -- | Sound file (especially the WAV format).
+    SoundFile
     deriving (Eq)
 
-{-
+{-|
 A Gopher protocol item/line is defined with tab-delimitated fields. This
 abstraction makes it easier to handle said lines. The line itself will look
 something like this (where 'F' is a tab):
 
     1Display stringFselector stringFhostFportFextrastuff<CRLF>
 
-About the fields:
-    glType: The first character on each line tells you whether the line/item
-        describes a document, directory, or search device. AKA "definition."
-    glDisplayString: To be shown to the user for use in selecting this document
-        (or directory) for retrieval.
-    glSelector: A selector string that the client software mus tsend to the server
-        to retrieve the documen t(or directory listing).  The selector string
-        should mean nothing to the client software; it should never be modified by
-        the client. In practice, the selector string is often a pathname or other
-        file selector used by the server to locate the item desired. Also referred
-        to as the "magic string."
-    glHost: the domain-name of the host that has this document (or directory) and...
-    glPort: continuing from glHost, the port at which to connect.
-    glGopherPlus: Any extra fields are Gopher+ fields and not a part of the original
-        Gopher Protocol specification.
 -}
 -- FIXME: perhaps rename to DirectoryEntity?
-data GopherLine = GopherLine {glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
-                             ,glLineNumber :: Int
-                             ,glDisplayString :: String
-                             ,glSelector :: String
-                             ,glHost :: String
-                             ,glPort :: Int
-                             ,glGopherPlus :: String
-                             }
+data GopherLine = GopherLine {
+    -- | The first character on each line tells you whether the line/item
+    -- describes a document, directory, or search device. AKA "definition."
+     glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
+    -- | This is the nth line the server sent for this directory.
+    ,glLineNumber :: Int
+    -- | To be shown to the user for use in selecting this document
+    -- (or directory) for retrieval.
+    ,glDisplayString :: String
+    -- | A selector string that the client software mus tsend to the server
+    -- to retrieve the documen t(or directory listing).  The selector string
+    -- should mean nothing to the client software; it should never be modified by
+    -- the client. In practice, the selector string is often a pathname or other
+    -- file selector used by the server to locate the item desired. Also referred
+    -- to as the "magic string."
+    ,glSelector :: String
+    -- | the domain-name of the host that has this document (or directory) and...
+    ,glHost :: String
+    -- | ..continuing from glHost, the port at which to connect.
+    ,glPort :: Int
+    -- | Any extra fields are Gopher+ fields and not a part of the original
+    -- Gopher Protocol specification.
+    ,glGopherPlus :: String
+    }
+
+-- | The way a GopherLine is displayed (string) after being parsed, namely used by the UI
 instance Show GopherLine where
     show x = (indent x) ++ (glDisplayString x)
         where
         indent x = if (glType x) == (Right InformationalMessage) then "           " else "      "
 
-{-
-One-character code indicates what kind of content the client should expect.
-This code may be either a digit or a letter of the alphabet; letters are
-case-sensitive.
+{-|
+Take the character from a menu line delivered from a Gopher server and give
+back the type of the item that line describes.
 
-See: GopherLine.
+"One-character code indicates what kind of content the client should expect.
+This code may be either a digit or a letter of the alphabet; letters are
+case-sensitive."
 -}
 charToItemType :: Char -> Either GopherCanonicalItemType GopherNonCanonicalItemType
 charToItemType code = case code of
@@ -156,22 +168,23 @@ explainNonCanonicalType item = case item of
      InformationalMessage -> "Informational message."
      SoundFile -> "Sound file (especially the WAV format)."
 
+-- | Explain a Gopher line/menu item type, either canonical (RFC 1436) or non canonical.
 explainType :: Either GopherCanonicalItemType GopherNonCanonicalItemType -> String
 explainType itemType = case itemType of
     Left item -> explainCanonicalType item
     Right item -> explainNonCanonicalType item
 
+-- | Canonical item types are represented by their explaination in explainCanonicalType.
 instance Show GopherCanonicalItemType where
     show = explainCanonicalType
 
+-- | Non-canonical item types are represented by their explaination in
+-- explainNonCanonicalType.
 instance Show GopherNonCanonicalItemType where
     show = explainNonCanonicalType
 
-clean = traceShowId . replaceTabs . replaceReturns
-    where
-        replaceTabs = map (\x -> if x == '\t' then ' ' else x)
-        replaceReturns = map (\x -> if x == '\r' then ' ' else x)
-
+-- | Take a big string (series of lines) returned from a Gopher request and
+-- parse it into a Gopher menu (a series of GopherLines)!
 makeGopherLines :: String -> GopherMenu
 makeGopherLines rawString = GopherMenu $ map makeGopherLine numberedLines
     where
@@ -194,13 +207,18 @@ makeGopherLines rawString = GopherMenu $ map makeGopherLine numberedLines
         itemType = charToItemType $ head line
         fields = splitFields . tail $ line
 
+-- | As you can see, a GopherMenu is simply an ordered sequence of
+-- GopherLines.
 data GopherMenu = GopherMenu [GopherLine]
 
+-- | Easily represent a GopherMenu as a string, formatted as it might be rendered.
 instance Show GopherMenu where
     show (GopherMenu lines) = unlines $ map show lines
 
-dummyGet :: String -> String -> String -> IO String
-dummyGet host port resource =
+-- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
+-- if you don't wish to specify.
+gopherGet :: String -> String -> String -> IO String
+gopherGet host port resource =
     connect host port $ \(connectionSocket, remoteAddr) -> do
       send connectionSocket (B8.pack $ resource ++ "\r\n")
       -- need to only fetch as many bytes as it takes to get period on a line by itself to
