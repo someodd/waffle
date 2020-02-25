@@ -17,6 +17,13 @@ data MyName = MyViewport
 
 type MyApp = App MyState () MyName
 
+-- | Replace the \t (tabs) and \r (returns) with spaces, because otherwise
+-- they'll break Brick!
+clean = replaceTabs . replaceReturns
+    where
+        replaceTabs = map (\x -> if x == '\t' then ' ' else x)
+        replaceReturns = map (\x -> if x == '\r' then ' ' else x)
+
 myNameScroll :: M.ViewportScroll MyName
 myNameScroll = M.viewportScroll MyViewport
 
