@@ -1,6 +1,5 @@
 module GopherClient where
 
-import Data.Maybe
 import qualified Data.ByteString.Char8 as B8
 import Data.List.Split
 
@@ -231,9 +230,6 @@ gopherGet host port resource =
     getAllBytes acc connectionSocket = do
         gosh <- recv connectionSocket recvChunks
         wacc <- acc
-        if gosh == Nothing then
-            acc
-        else if B8.null wacc then
-            getAllBytes (pure $ fromJust gosh) connectionSocket
-        else
-            getAllBytes (pure $ B8.append wacc (fromJust gosh)) connectionSocket
+        case gosh of
+            Nothing -> acc
+            Just chnk -> getAllBytes (pure $ B8.append wacc chnk) connectionSocket
