@@ -16,8 +16,8 @@ wanted to provide fixes and improvements.
 
 ## Try it out!
 
-Compile it `stack ghc -- -threaded src/Main.hs` and then try it out
-with `./src/Main sdf.org 70 phlogs`.
+Compile it with `stack build` and then try it out with
+`stack exec hopher -- sdf.org 70 phlogs`.
 
 You can scroll like `vi` with 'h' (left), 'j' (down), 'k' (up), 'l' (right),
 and 'q' quits.
