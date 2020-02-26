@@ -21,17 +21,17 @@ type MyApp = App MyState () MyName
 -- they'll break Brick!
 clean :: String -> String
 clean = replaceTabs . replaceReturns
-    where
-        replaceTabs = map (\x -> if x == '\t' then ' ' else x)
-        replaceReturns = map (\x -> if x == '\r' then ' ' else x)
+  where
+    replaceTabs = map (\x -> if x == '\t' then ' ' else x)
+    replaceReturns = map (\x -> if x == '\r' then ' ' else x)
 
 myNameScroll :: M.ViewportScroll MyName
 myNameScroll = M.viewportScroll MyViewport
 
 drawUi :: MyState -> [Widget MyName]
 drawUi s = [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 $ ui]
-    where
-    ui = viewport MyViewport Both $ vBox [str $ msText s]
+  where
+  ui = viewport MyViewport Both $ vBox [str $ msText s]
 
 handleEvent :: MyState -> BrickEvent MyName () -> EventM MyName (Next MyState)
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'q') [])) = halt s
@@ -45,12 +45,12 @@ handleEvent s _ = continue s
 
 myApp :: MyApp
 myApp = App
-    { appDraw = drawUi
-    , appChooseCursor = showFirstCursor
-    , appHandleEvent = handleEvent
-    , appStartEvent = pure
-    , appAttrMap = const $ attrMap Vty.defAttr []
-    }
+  { appDraw = drawUi
+  , appChooseCursor = showFirstCursor
+  , appHandleEvent = handleEvent
+  , appStartEvent = pure
+  , appAttrMap = const $ attrMap Vty.defAttr []
+  }
 
 uiMain :: String -> IO ()
 uiMain initialState = void $ defaultMain myApp $ MyState {msText = initialState}
