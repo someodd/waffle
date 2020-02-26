@@ -71,34 +71,33 @@ data GopherNonCanonicalItemType =
 -- abstraction makes it easier to handle said lines. The line itself will look
 -- something like this (where 'F' is a tab):
 --
---    1Display stringFselector stringFhostFportFextrastuff<CRLF>
-data GopherLine = GopherLine {
-  -- | The first character on each line tells you whether the line/item
+--    1Display stringFselector stringFhostFportFextrastuff\CRLF
+data GopherLine = GopherLine
+  { glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
+  -- ^ The first character on each line tells you whether the line/item
   -- describes a document, directory, or search device. AKA "definition."
-   glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
-  -- | To be shown to the user for use in selecting this document
+  , glDisplayString :: String
+  -- ^ To be shown to the user for use in selecting this document
   -- (or directory) for retrieval.
-  ,glDisplayString :: String
-  -- | A selector string that the client software mus tsend to the server
+  , glSelector :: String
+  -- ^ A selector string that the client software mus tsend to the server
   -- to retrieve the documen t(or directory listing).  The selector string
   -- should mean nothing to the client software; it should never be modified by
   -- the client. In practice, the selector string is often a pathname or other
   -- file selector used by the server to locate the item desired. Also referred
   -- to as the "magic string."
-  ,glSelector :: String
-  -- | the domain-name of the host that has this document (or directory) and...
-  ,glHost :: String
-  -- | ..continuing from glHost, the port at which to connect.
-  ,glPort :: Int
-  -- | Any extra fields are Gopher+ fields and not a part of the original
+  , glHost :: String
+  -- ^ the domain-name of the host that has this document (or directory) and...
+  , glPort :: Int
+  -- ^ ..continuing from glHost, the port at which to connect.
+  , glGopherPlus :: [String]
+  -- ^ Any extra fields are Gopher+ fields and not a part of the original
   -- Gopher Protocol specification.
-  ,glGopherPlus :: [String]
   }
 
--- If the line is malformed/not all fields present/correct when tab-delimited
--- will then do makeLine as an Either statement...
-data MalformedGopherLine = MalformedGopherLine {
-  mglFields :: [String]
+-- | For Gopher lines which are not formatted correctly
+data MalformedGopherLine = MalformedGopherLine
+  { mglFields :: [String]
   }
 
 -- | The way a GopherLine is displayed (string) after being parsed, namely used by the UI
@@ -191,12 +190,6 @@ makeGopherLines rawString = GopherMenu $ map makeGopherLine rowsOfFields
   rowsOfFields = let linesWithoutTerminator = rmTerminatorPeriod . lines $ rawString
                  in map (splitOn "\t") linesWithoutTerminator
 
-  -- NOTE: if it's a valid Gopher protocol line there should be 4 fields,
-  -- whereas any more are Gopher+ fields... (I'll have to double-check
-  -- the Gopher+ rules... for now I wanna store it all in a "glGopherPlus"
-  -- field... Otherwise give back Maybe... or MalformedGopherLine? Make this EITHER?
-  -- Telling me I don't need line #?
-  --
   -- NOTE: this pattern match works well because everything after port gets lumped
   -- into a list of Gopher+ fields. Otherwise, it'll just be an empty list!
   makeGopherLine :: [String] -> Either GopherLine MalformedGopherLine
@@ -204,13 +197,13 @@ makeGopherLines rawString = GopherMenu $ map makeGopherLine rowsOfFields
     let typeChar = head $ take 1 typeCharAndDisplayString-- NOTE: Seems a hacky way to string to char...
     let displayString = drop 1 typeCharAndDisplayString
     case charToItemType typeChar of
-      Just x -> Left $ GopherLine {
-          glType=x
-         ,glDisplayString=displayString
-         ,glSelector=selector
-         ,glHost=host
-         ,glPort=read $ port--FIXME: what if this fails to int?
-         ,glGopherPlus=gopherPlus
+      Just x -> Left $ GopherLine
+         { glType=x
+         , glDisplayString=displayString
+         , glSelector=selector
+         , glHost=host
+         , glPort=read $ port--FIXME: what if this fails to int?
+         , glGopherPlus=gopherPlus
          }
       Nothing -> Right $ MalformedGopherLine { mglFields = allFields }
   makeGopherLine malformed = Right $ MalformedGopherLine { mglFields=malformed }
