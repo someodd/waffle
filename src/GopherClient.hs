@@ -82,8 +82,6 @@ data GopherLine = GopherLine {
     -- | The first character on each line tells you whether the line/item
     -- describes a document, directory, or search device. AKA "definition."
      glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
-    -- | This is the nth line the server sent for this directory.
-    ,glLineNumber :: Int
     -- | To be shown to the user for use in selecting this document
     -- (or directory) for retrieval.
     ,glDisplayString :: String
@@ -100,7 +98,13 @@ data GopherLine = GopherLine {
     ,glPort :: Int
     -- | Any extra fields are Gopher+ fields and not a part of the original
     -- Gopher Protocol specification.
-    ,glGopherPlus :: String
+    ,glGopherPlus :: [String]
+    }
+
+-- If the line is malformed/not all fields present/correct when tab-delimited
+-- will then do makeLine as an Either statement...
+data MalformedGopherLine = MalformedGopherLine {
+    mglFields :: [String]
     }
 
 -- | The way a GopherLine is displayed (string) after being parsed, namely used by the UI
@@ -108,6 +112,10 @@ instance Show GopherLine where
     show x = (indent x) ++ (glDisplayString x)
         where
         indent l = if (glType l) == (Right InformationalMessage) then "           " else "      "
+
+-- | Displaying a malformed Gopher line (string) after being parsed, namely used by the UI
+instance Show MalformedGopherLine where
+    show x = "    " ++ (show $ mglFields x)--FIXME: might this not error?
 
 {-|
 Take the character from a menu line delivered from a Gopher server and give
@@ -159,7 +167,6 @@ explainCanonicalType GifFile = "Item is a GIF format graphics file. GIF file."
 explainCanonicalType ImageFile = "Item is some kind of image file.  Client decides how to display. Image file."
 
 explainNonCanonicalType :: GopherNonCanonicalItemType -> String
-explainNonCanonicalType item = case item of
 explainNonCanonicalType Doc = "Doc. Seen used alongside PDF's and .DOC's."
 explainNonCanonicalType HtmlFile = "HTML file."
 explainNonCanonicalType InformationalMessage = "Informational message."
@@ -183,35 +190,52 @@ instance Show GopherNonCanonicalItemType where
 -- | Take a big string (series of lines) returned from a Gopher request and
 -- parse it into a Gopher menu (a series of GopherLines)!
 makeGopherLines :: String -> GopherMenu
-makeGopherLines rawString = GopherMenu $ map makeGopherLine numberedLines
+makeGopherLines rawString = GopherMenu $ map makeGopherLine rowsOfFields
     where
-    numberedLines = zip [0..] (rmTerminatorPeriod . lines $ rawString)
     -- A period on a line by itself denotes the end.
     rmTerminatorPeriod l = if last l == ".\r" then init l else l
-    splitFields = splitOn "\t"
-    makeGopherLine l = GopherLine {glType=itemType
-                                  ,glLineNumber=lineNumber
-                                  ,glDisplayString=fields !! 0
-                                  ,glSelector=fields !! 1
-                                  ,glHost=fields !! 2
-                                  ,glPort=read $ fields !! 3
-                                  ,glGopherPlus=""--fields !! 4
-                                  }
-        where
-        lineNumber = fst l
-        line = snd l
-        itemType = case (charToItemType $ head line) of
-            Just x -> x
-            Nothing -> error "Unrecognized item type!"
-        fields = splitFields . tail $ line
+    -- TODO: this could use some explaining... basically prep things for being parsed
+    -- into type...
+    rowsOfFields = let linesWithoutTerminator = rmTerminatorPeriod . lines $ rawString
+                   in map (splitOn "\t") linesWithoutTerminator
+
+    -- NOTE: if it's a valid Gopher protocol line there should be 4 fields,
+    -- whereas any more are Gopher+ fields... (I'll have to double-check
+    -- the Gopher+ rules... for now I wanna store it all in a "glGopherPlus"
+    -- field... Otherwise give back Maybe... or MalformedGopherLine? Make this EITHER?
+    -- Telling me I don't need line #?
+    --
+    -- NOTE: this pattern match works well because everything after port gets lumped
+    -- into a list of Gopher+ fields. Otherwise, it'll just be an empty list!
+    makeGopherLine :: [String] -> Either GopherLine MalformedGopherLine
+    makeGopherLine allFields@(typeCharAndDisplayString:selector:host:port:gopherPlus) = do
+        let typeChar = head $ take 1 typeCharAndDisplayString-- NOTE: Seems a hacky way to string to char...
+        let displayString = drop 1 typeCharAndDisplayString
+        case (charToItemType typeChar) of
+            Just x -> Left $ GopherLine {
+                  glType=x
+                 ,glDisplayString=displayString
+                 ,glSelector=selector
+                 ,glHost=host
+                 ,glPort=read $ port--FIXME: what if this fails to int?
+                 ,glGopherPlus=gopherPlus
+                 }
+            Nothing -> Right $ MalformedGopherLine { mglFields = allFields }
+    makeGopherLine malformed = Right $ MalformedGopherLine { mglFields=malformed }
 
 -- | As you can see, a GopherMenu is simply an ordered sequence of
 -- GopherLines.
-data GopherMenu = GopherMenu [GopherLine]
+data GopherMenu = GopherMenu [Either GopherLine MalformedGopherLine]
 
 -- | Easily represent a GopherMenu as a string, formatted as it might be rendered.
 instance Show GopherMenu where
-    show (GopherMenu ls) = unlines $ map show ls
+    show (GopherMenu ls) = unlines $ map gopherLineShow ls
+        where
+        -- Seems a little hacky
+        -- is normal line
+        gopherLineShow (Left x) = show x
+        -- is malformed line
+        gopherLineShow (Right x) = show x ++ "(MALFORMED LINE)"-- Does this have potential to break?
 
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
 -- if you don't wish to specify.
