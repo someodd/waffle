@@ -96,7 +96,7 @@ data GopherLine = GopherLine
   -- ^ Any extra fields are Gopher+ fields and not a part of the original
   -- Gopher Protocol specification.
   , glActive :: Bool
-  -- ^ Is this line actively selected?
+  -- ^ Is this line actively selected? Pretty much exclusively for the UI.
   }
 
 -- | For Gopher lines which are not formatted correctly
@@ -111,10 +111,8 @@ instance Show GopherLine where
     indent l =
       if (glType l) == (Right InformationalMessage) then
         "          "
-      else if glActive l then
-        " --> "
       else
-        "     "
+        ""
 
 -- | Displaying a malformed Gopher line (string) after being parsed, namely used by the UI
 instance Show MalformedGopherLine where

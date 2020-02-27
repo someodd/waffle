@@ -34,6 +34,19 @@ clean = replaceTabs . replaceReturns
 menuStr :: GopherMenu -> Widget n
 menuStr m = str . clean $ show m
 
+gopherLineWidget :: Either GopherLine MalformedGopherLine -> Widget n
+gopherLineWidget l = case l of
+  -- GopherLine
+  (Left gl) ->
+    if glActive gl then
+      (visible . str $ " --> ") <+> (str $ show gl)
+    else
+      str "     " <+> (str $ show gl)
+  -- MalformedLine
+  (Right ml) -> str "" <+> (str $ show ml)
+
+gopherMenuWidgets (GopherMenu m) = vBox $ map gopherLineWidget m
+
 -- I get the feeling that there's a far more efficient way to do this in brick lmao
 markFirstActive :: GopherMenu -> (GopherMenu, [Int])
 markFirstActive gopherMenu@(GopherMenu x) =
@@ -57,7 +70,6 @@ markFirstActive gopherMenu@(GopherMenu x) =
     -- .. or is it malformed?
     (Right _) -> False
 
--- should just use state!
 changeActiveLine :: GopherMenu -> Int -> Int -> GopherMenu
 changeActiveLine (GopherMenu x) n prev =
   let relevantGopherLine = x !! n
@@ -77,14 +89,11 @@ myNameScroll = M.viewportScroll MyViewport
 drawUi :: MyState -> [Widget MyName]
 drawUi s = [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 $ ui]
   where
-  ui = viewport MyViewport Both $ vBox [menuStr $ msMenu s]
+  --ui = viewport MyViewport Both $ vBox [menuStr $ msMenu s]
+  ui = viewport MyViewport Both $ gopherMenuWidgets (msMenu s)
 
--- NOTE: This is using setTop but should also use a percentage of the total height
--- to center... ctx <- getContext; h = availHeight ctx
---
--- Or it shouldn't scroll unless off of viewport
-scrollLinkPos :: MyState -> Int -> EventM MyName (Next MyState)
-scrollLinkPos s n =
+updateMenuNewLinkPos :: MyState -> Int -> (Int, Int, GopherMenu)
+updateMenuNewLinkPos s n =
   let currentIndexPos = msLinkIndexMarker s
       currentLineNumber = (msLinkIndices s) !! currentIndexPos
       potentialIndexPos = currentIndexPos + n
@@ -95,6 +104,23 @@ scrollLinkPos s n =
       newLineNumber = (msLinkIndices s) !! newIndexPos
       newMenu = changeActiveLine (msMenu s) newLineNumber currentLineNumber
       lineDifference = newLineNumber - currentLineNumber
+  in (newLineNumber, newIndexPos, newMenu)
+
+-- extremely similar to changeActiveLine
+unactive (GopherMenu x) n =
+  let relevantGopherLine = x !! n
+      relevantGopherLine' = case relevantGopherLine of
+        Left c -> c {glActive=False}
+        Right _ -> error "This should be impossible..."--FIXME crashes because malformed gets... unactivated why?!
+  in GopherMenu $ take n x ++ [Left relevantGopherLine'] ++ drop (n+1) x
+
+-- NOTE: This is using setTop but should also use a percentage of the total height
+-- to center... ctx <- getContext; h = availHeight ctx
+--
+-- Or it shouldn't scroll unless off of viewport
+scrollLinkPos :: MyState -> Int -> EventM MyName (Next MyState)
+scrollLinkPos s n =
+  let (newLineNumber, newIndexPos, newMenu) = updateMenuNewLinkPos s n
   in M.setTop myNameScroll newLineNumber >> M.continue (s {msMenu=newMenu, msLinkIndexMarker=newIndexPos})
 
 {-
@@ -111,24 +137,37 @@ scrollCenterOn toLine fromLine = do
   let h = availHeight ctx in (abs $ toLine - fromLine) + (h `div` 2)
 -}
 
+-- NOTE: when scrolling text we disable visible/active so we can actually move beyond the actively selected link
 handleEvent :: MyState -> BrickEvent MyName () -> EventM MyName (Next MyState)
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'q') [])) = halt s
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'j')  [])) = scrollLinkPos s 1
+-- ^ quit
+handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'j')  [])) =
+  let (_, newIndexPos, newMenu) = updateMenuNewLinkPos s 1
+  in M.continue $ s {msMenu=newMenu, msLinkIndexMarker=newIndexPos}-- no need for index marker anymore?
+-- ^ move link cursor down
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KDown)  [])) =
-  M.vScrollBy myNameScroll 1 >> M.continue s
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'k')  [])) = scrollLinkPos s (-1)
+  M.vScrollBy myNameScroll 1 >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
+-- ^ scroll down, disable active
+--handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'k')  [])) = updateMenuNewLinkPos s (-1)
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KUp)  [])) =
-  M.vScrollBy myNameScroll (-1) >> M.continue s
+  M.vScrollBy myNameScroll (-1) >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
+-- ^ scroll text up
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KHome)  [])) =
-  M.vScrollToBeginning myNameScroll >> M.continue s
+  M.vScrollToBeginning myNameScroll >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
+-- ^ return text home
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KEnd)  [])) =
-  M.vScrollToEnd myNameScroll >> M.continue s
+  M.vScrollToEnd myNameScroll >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
+-- ^ end of text
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KPageDown)  [])) =
-  M.vScrollPage myNameScroll Down >> M.continue s
+  M.vScrollPage myNameScroll Down >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
+-- ^ page down text
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KPageUp)  [])) =
-  M.vScrollPage myNameScroll Up >> M.continue s
+  M.vScrollPage myNameScroll Up >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
+-- ^ page up text
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'l') [])) = M.hScrollBy myNameScroll 1 >> M.continue s
+-- ^ scroll text right
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'h')  [])) = M.hScrollBy myNameScroll (-1) >> M.continue s
+-- ^ scroll text left
 handleEvent s _ = continue s
 
 myApp :: MyApp
