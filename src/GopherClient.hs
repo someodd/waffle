@@ -1,7 +1,9 @@
+-- TODO: implement metadata that is in between ========================== that. also null.host?
 module GopherClient where
 
 import qualified Data.ByteString.Char8 as B8
 import Data.List.Split
+import Debug.Trace
 
 import Network.Simple.TCP
 
@@ -93,6 +95,8 @@ data GopherLine = GopherLine
   , glGopherPlus :: [String]
   -- ^ Any extra fields are Gopher+ fields and not a part of the original
   -- Gopher Protocol specification.
+  , glActive :: Bool
+  -- ^ Is this line actively selected?
   }
 
 -- | For Gopher lines which are not formatted correctly
@@ -104,7 +108,13 @@ data MalformedGopherLine = MalformedGopherLine
 instance Show GopherLine where
   show x = (indent x) ++ (glDisplayString x)
     where
-    indent l = if (glType l) == (Right InformationalMessage) then "           " else "      "
+    indent l =
+      if (glType l) == (Right InformationalMessage) then
+        "          "
+      else if glActive l then
+        " --> "
+      else
+        "     "
 
 -- | Displaying a malformed Gopher line (string) after being parsed, namely used by the UI
 instance Show MalformedGopherLine where
@@ -180,8 +190,8 @@ instance Show GopherNonCanonicalItemType where
 
 -- | Take a big string (series of lines) returned from a Gopher request and
 -- parse it into a Gopher menu (a series of GopherLines)!
-makeGopherLines :: String -> GopherMenu
-makeGopherLines rawString = GopherMenu $ map makeGopherLine rowsOfFields
+makeGopherMenu :: String -> GopherMenu
+makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
   where
   -- A period on a line by itself denotes the end.
   rmTerminatorPeriod l = if last l == ".\r" then init l else l
@@ -204,6 +214,7 @@ makeGopherLines rawString = GopherMenu $ map makeGopherLine rowsOfFields
          , glHost=host
          , glPort=read $ port--FIXME: what if this fails to int?
          , glGopherPlus=gopherPlus
+         , glActive=False
          }
       Nothing -> Right $ MalformedGopherLine { mglFields = allFields }
   makeGopherLine malformed = Right $ MalformedGopherLine { mglFields=malformed }
@@ -224,6 +235,7 @@ instance Show GopherMenu where
 
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
 -- if you don't wish to specify.
+-- This should be named gopherMenuGet? or gopherInitiate to figure out which kinda transaction
 gopherGet :: String -> String -> String -> IO String
 gopherGet host port resource =
   connect host port $ \(connectionSocket, _) -> do
@@ -231,7 +243,7 @@ gopherGet host port resource =
     -- need to only fetch as many bytes as it takes to get period on a line by itself to
     -- close the connection.
     wow <- getAllBytes (pure B8.empty) connectionSocket
-    pure $ B8.unpack wow
+    pure $ traceShowId $ B8.unpack wow
   where
   recvChunks = 1024
   getAllBytes :: IO B8.ByteString -> Socket -> IO B8.ByteString
