@@ -19,5 +19,15 @@ wanted to provide fixes and improvements.
 Compile it with `stack build` and then try it out with
 `stack exec hopher -- sdf.org 70 phlogs`.
 
-You can scroll like `vi` with 'h' (left), 'j' (down), 'k' (up), 'l' (right),
-and 'q' quits.
+Controls:
+
+  * Next menu item is `j`
+  * Previous menu item is `k`
+  * Scroll left is the left arrow and `h`
+  * Scroll right is the right arrow and `l`
+  * Quit is `q`
+  * Page down and page up keys scrolls page up and down
+  * Arrow up scrolls up
+  * Arrow down scrolls down
+  * `home` scrolls to beginning of the page
+  * `end` scrolls to beginning of the page
