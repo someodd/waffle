@@ -5,6 +5,7 @@ import qualified Graphics.Vty as Vty
 import qualified Brick.Main as M
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
+import Graphics.Vty
 
 import Control.Monad
 import Data.List
@@ -34,16 +35,24 @@ clean = replaceTabs . replaceReturns
 menuStr :: GopherMenu -> Widget n
 menuStr m = str . clean $ show m
 
+
 gopherLineWidget :: Either GopherLine MalformedGopherLine -> Widget n
 gopherLineWidget l = case l of
   -- GopherLine
   (Left gl) ->
     if glActive gl then
-      (visible . str $ " --> ") <+> (str $ show gl)
+      withAttr (attrName "link") $ (visible . str $ " --> ") <+> (str $ show gl)
     else
       str "     " <+> (str $ show gl)
   -- MalformedLine
   (Right ml) -> str "" <+> (str $ show ml)
+
+globalDefault :: Attr
+globalDefault = white `on` black
+
+theMap :: AttrMap
+theMap = attrMap globalDefault [ (attrName "link", fg yellow) ]
+-- theMap = attrMap globalDefault [ (attrName "link", fg yellow <> underline (W.Word8 "blink")) ]
 
 gopherMenuWidgets (GopherMenu m) = vBox $ map gopherLineWidget m
 
@@ -148,7 +157,9 @@ handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'j')  [])) =
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KDown)  [])) =
   M.vScrollBy myNameScroll 1 >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
 -- ^ scroll down, disable active
---handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'k')  [])) = updateMenuNewLinkPos s (-1)
+handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'k')  [])) =
+  let (_, newIndexPos, newMenu) = updateMenuNewLinkPos s (-1)
+  in M.continue $ s {msMenu=newMenu, msLinkIndexMarker=newIndexPos}-- no need for index marker anymore?
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KUp)  [])) =
   M.vScrollBy myNameScroll (-1) >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
 -- ^ scroll text up
@@ -176,7 +187,7 @@ myApp = App
   , appChooseCursor = showFirstCursor
   , appHandleEvent = handleEvent
   , appStartEvent = pure
-  , appAttrMap = const $ attrMap Vty.defAttr []
+  , appAttrMap = const theMap
   }
 
 uiMain :: GopherMenu -> IO ()
