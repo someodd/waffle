@@ -1,3 +1,5 @@
+-- TODO: use INI theme function so people can edit INI file to set
+-- various attribute styles/colors!
 module Ui where
 
 import Brick
@@ -6,10 +8,13 @@ import qualified Brick.Main as M
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
 import Graphics.Vty
+import Graphics.Vty.Attributes
 
+import qualified Data.Text as T
 import Control.Monad
 import Data.List
 import Data.Maybe
+import Control.Monad.IO.Class
 
 import GopherClient
 
@@ -35,15 +40,24 @@ clean = replaceTabs . replaceReturns
 menuStr :: GopherMenu -> Widget n
 menuStr m = str . clean $ show m
 
-
 gopherLineWidget :: Either GopherLine MalformedGopherLine -> Widget n
 gopherLineWidget l = case l of
   -- GopherLine
+  -- FIXME: should also see if not info line by noncanon or canon and mark link
   (Left gl) ->
-    if glActive gl then
-      withAttr (attrName "link") $ (visible . str $ " --> ") <+> (str $ show gl)
-    else
-      str "     " <+> (str $ show gl)
+    case glType gl of
+      -- Canonical
+      (Left _) ->
+        if glActive gl then
+          withAttr (attrName "activeLink") $ (visible . str $ " --> ") <+> (str $ show gl)
+        else
+          withAttr (attrName "link") $ str "     " <+> (str $ show gl)
+      -- Noncanon
+      (Right t) ->
+        if t == InformationalMessage then
+          str "     " <+> (str $ show gl)
+        else
+          withAttr (attrName "link") $ str "     " <+> (str $ show gl)
   -- MalformedLine
   (Right ml) -> str "" <+> (str $ show ml)
 
@@ -51,7 +65,10 @@ globalDefault :: Attr
 globalDefault = white `on` black
 
 theMap :: AttrMap
-theMap = attrMap globalDefault [ (attrName "link", fg yellow) ]
+theMap = attrMap globalDefault
+  [ (attrName "link", fg brightBlue)
+  , (attrName "activeLink", (defAttr `withStyle` bold) `withForeColor` brightYellow)
+  ]
 -- theMap = attrMap globalDefault [ (attrName "link", fg yellow <> underline (W.Word8 "blink")) ]
 
 gopherMenuWidgets (GopherMenu m) = vBox $ map gopherLineWidget m
@@ -146,6 +163,26 @@ scrollCenterOn toLine fromLine = do
   let h = availHeight ctx in (abs $ toLine - fromLine) + (h `div` 2)
 -}
 
+-- | Follow active menu item and thus refresh the state
+requestNewState :: MyState -> IO MyState
+requestNewState s = do
+  let gopherMenuList = fromMenu $ msMenu s
+  -- NOTE: This would've worked if could applicative it..
+  --let currentItem = fmap (!!) (msMenu s) <*> (msLinkIndices s !! msLinkIndexMarker s)
+  -- Both feel hacky tho like I can't use !! hrm i don't wanna use type synonym tho
+  let currentItem = gopherMenuList !! (msLinkIndices s !! msLinkIndexMarker s)
+  case currentItem of
+    -- valid gopher line
+    (Left gl) -> do
+      let host = glHost gl
+          port = show $ glPort gl
+          selector = glSelector gl
+      o <- gopherGet host port selector
+      let (initialMenu, linkIndices) = markFirstActive (makeGopherMenu o)
+      pure $ MyState {msMenu = initialMenu, msLinkIndexMarker = 0, msLinkIndices=linkIndices}
+    -- malformed gopher line
+    (Right _) -> error "Should be impossible!"
+
 -- NOTE: when scrolling text we disable visible/active so we can actually move beyond the actively selected link
 handleEvent :: MyState -> BrickEvent MyName () -> EventM MyName (Next MyState)
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'q') [])) = halt s
@@ -179,6 +216,8 @@ handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'l') [])) = M.hScrollBy myNameScro
 -- ^ scroll text right
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'h')  [])) = M.hScrollBy myNameScroll (-1) >> M.continue s
 -- ^ scroll text left
+handleEvent s (VtyEvent (Vty.EvKey (Vty.KEnter)  [])) = liftIO (requestNewState s) >>= M.continue
+-- ^ enter/follow link
 handleEvent s _ = continue s
 
 myApp :: MyApp
