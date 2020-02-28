@@ -9,13 +9,9 @@ import qualified Brick.Main as M
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
 import Graphics.Vty
-import Graphics.Vty.Attributes
 
-import qualified Data.Text as T
 import Control.Monad
 import Data.List
-import Data.Maybe
-import Control.Monad.IO.Class
 
 import GopherClient
 
@@ -52,6 +48,7 @@ theMap = attrMap globalDefault
   ]
 -- theMap = attrMap globalDefault [ (attrName "link", fg yellow <> underline (W.Word8 "blink")) ]
 
+gopherMenuWidgets :: GopherMenu -> Int -> Widget n
 gopherMenuWidgets (GopherMenu m) activeLine = vBox $ map gopherLineWidget numberedLines
   where
   -- FIXME: should just bring back giving each line their own number
@@ -87,7 +84,7 @@ buildLinkIndices (GopherMenu ls) = findIndices isNotInfoLine ls
     -- GopherLine
     (Left gl) -> case glType gl of
       -- Canonical type
-      (Left c) -> True
+      (Left _) -> True
       -- Noncanonical type
       (Right nc) -> nc /= InformationalMessage
     -- MalformedGopherLine
@@ -133,7 +130,7 @@ requestNewState s = do
       o <- gopherGet host port selector
       let initialMenu = makeGopherMenu o
           linkIndices = buildLinkIndices initialMenu
-      pure $ MyState {msMenu = initialMenu, msLinkIndexMarker = 0, msLinkIndices=linkIndices}
+      pure $ MyState {msMenu = initialMenu, msLinkIndexMarker = 0, msLinkIndices=linkIndices, msFocused=True}
     -- malformed gopher line
     (Right _) -> error "Should be impossible!"
 
