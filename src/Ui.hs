@@ -1,5 +1,6 @@
 -- TODO: use INI theme function so people can edit INI file to set
 -- various attribute styles/colors!
+-- FIXME: the gopherplus stuff needs to be havin its tabs removed yarrr
 module Ui where
 
 import Brick
@@ -20,8 +21,9 @@ import GopherClient
 
 data MyState = MyState
   { msMenu :: GopherMenu
-  , msLinkIndexMarker :: Int
-  , msLinkIndices :: [Int]
+  , msLinkIndexMarker :: Int -- msFocusIndex?
+  , msLinkIndices :: FocusList -- msFocusList?
+  , msFocused :: Bool
   } deriving (Show)
 
 data MyName = MyViewport
@@ -40,27 +42,6 @@ clean = replaceTabs . replaceReturns
 menuStr :: GopherMenu -> Widget n
 menuStr m = str . clean $ show m
 
-gopherLineWidget :: Either GopherLine MalformedGopherLine -> Widget n
-gopherLineWidget l = case l of
-  -- GopherLine
-  -- FIXME: should also see if not info line by noncanon or canon and mark link
-  (Left gl) ->
-    case glType gl of
-      -- Canonical
-      (Left _) ->
-        if glActive gl then
-          withAttr (attrName "activeLink") $ (visible . str $ " --> ") <+> (str $ show gl)
-        else
-          withAttr (attrName "link") $ str "     " <+> (str $ show gl)
-      -- Noncanon
-      (Right t) ->
-        if t == InformationalMessage then
-          str "     " <+> (str $ show gl)
-        else
-          withAttr (attrName "link") $ str "     " <+> (str $ show gl)
-  -- MalformedLine
-  (Right ml) -> str "" <+> (str $ show ml)
-
 globalDefault :: Attr
 globalDefault = white `on` black
 
@@ -71,43 +52,46 @@ theMap = attrMap globalDefault
   ]
 -- theMap = attrMap globalDefault [ (attrName "link", fg yellow <> underline (W.Word8 "blink")) ]
 
-gopherMenuWidgets (GopherMenu m) = vBox $ map gopherLineWidget m
+gopherMenuWidgets (GopherMenu m) activeLine = vBox $ map gopherLineWidget numberedLines
+  where
+  -- FIXME: should just bring back giving each line their own number
+  numberedLines = zip [0..] m
+
+  gopherLineWidget :: (Int, Either GopherLine MalformedGopherLine) -> Widget n
+  gopherLineWidget (lineNumber, l) = case l of
+    -- GopherLine
+    -- FIXME: should also see if not info line by noncanon or canon and mark link
+    (Left gl) ->
+      case glType gl of
+        -- Canonical
+        (Left _) ->
+          if lineNumber == activeLine then
+            withAttr (attrName "activeLink") $ (visible . str $ " --> ") <+> (str $ show gl)
+          else
+            withAttr (attrName "link") $ str "     " <+> (str $ show gl)
+        -- Noncanon
+        (Right t) ->
+          if t == InformationalMessage then
+            str "     " <+> (str $ show gl)
+          else
+            withAttr (attrName "link") $ str "     " <+> (str $ show gl)
+    -- MalformedLine
+    (Right ml) -> str "" <+> (str $ show ml)
+
 
 -- I get the feeling that there's a far more efficient way to do this in brick lmao
-markFirstActive :: GopherMenu -> (GopherMenu, [Int])
-markFirstActive gopherMenu@(GopherMenu x) =
-  let relevantLineNumber = firstNonInfoLineNumber gopherMenu--FIXME: fromMaybe is bad
-      relevantGopherLine = x !! relevantLineNumber
-      relevantGopherLine' = case relevantGopherLine of
-        Left c -> c {glActive=True}
-        Right _ -> error "This should be impossible..."--FIXME
-  in (GopherMenu $ take relevantLineNumber x ++ [Left relevantGopherLine'] ++ drop (relevantLineNumber+1) x, allLinkLineNumbers gopherMenu)
+buildLinkIndices :: GopherMenu -> [Int]
+buildLinkIndices (GopherMenu ls) = findIndices isNotInfoLine ls
   where
-  -- FIXME: should me a Maybe...
-  allLinkLineNumbers (GopherMenu m) = findIndices isNotInfo m
-  firstNonInfoLineNumber (GopherMenu m) = fromJust $ findIndex isNotInfo m
-  isNotInfo r = case r of
-    -- Is it a proper Gopherline?
-    (Left l) -> case glType l of
-      -- Is a canonical gopher item type which is never info...
-      Left _ -> True
-      -- .. is a gopher noncanon type which may be info
-      Right w -> w /= InformationalMessage
-    -- .. or is it malformed?
+  isNotInfoLine l = case l of
+    -- GopherLine
+    (Left gl) -> case glType gl of
+      -- Canonical type
+      (Left c) -> True
+      -- Noncanonical type
+      (Right nc) -> nc /= InformationalMessage
+    -- MalformedGopherLine
     (Right _) -> False
-
-changeActiveLine :: GopherMenu -> Int -> Int -> GopherMenu
-changeActiveLine (GopherMenu x) n prev =
-  let relevantGopherLine = x !! n
-      relevantGopherLine' = case relevantGopherLine of
-        Left c -> c {glActive=True}
-        Right _ -> error "This should be impossible..."--FIXME
-      prevLine = x !! prev
-      prevLine' = case prevLine of
-        Left c -> c {glActive=False}
-        Right _ -> error "This should be impossible..."--FIXME
-      prevFixed = take prev x ++ [Left prevLine'] ++ drop (prev+1) x
-  in GopherMenu $ take n prevFixed ++ [Left relevantGopherLine'] ++ drop (n+1) prevFixed
 
 myNameScroll :: M.ViewportScroll MyName
 myNameScroll = M.viewportScroll MyViewport
@@ -116,52 +100,21 @@ drawUi :: MyState -> [Widget MyName]
 drawUi s = [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 $ ui]
   where
   --ui = viewport MyViewport Both $ vBox [menuStr $ msMenu s]
-  ui = viewport MyViewport Both $ gopherMenuWidgets (msMenu s)
+  ui = viewport MyViewport Both $ gopherMenuWidgets (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)
 
-updateMenuNewLinkPos :: MyState -> Int -> (Int, Int, GopherMenu)
-updateMenuNewLinkPos s n =
-  let currentIndexPos = msLinkIndexMarker s
-      currentLineNumber = (msLinkIndices s) !! currentIndexPos
-      potentialIndexPos = currentIndexPos + n
-      newIndexPos =
-        if potentialIndexPos > (length $ msLinkIndices s) - 1 then 0
-        else if potentialIndexPos < 0 then (length $ msLinkIndices s) - 1
-        else potentialIndexPos
-      newLineNumber = (msLinkIndices s) !! newIndexPos
-      newMenu = changeActiveLine (msMenu s) newLineNumber currentLineNumber
-      lineDifference = newLineNumber - currentLineNumber
-  in (newLineNumber, newIndexPos, newMenu)
+type FocusList = [Int]
+-- type FocusIndex?
 
--- extremely similar to changeActiveLine
-unactive (GopherMenu x) n =
-  let relevantGopherLine = x !! n
-      relevantGopherLine' = case relevantGopherLine of
-        Left c -> c {glActive=False}
-        Right _ -> error "This should be impossible..."--FIXME crashes because malformed gets... unactivated why?!
-  in GopherMenu $ take n x ++ [Left relevantGopherLine'] ++ drop (n+1) x
+-- | Give the new focus index after moving focus down one, wrapping
+-- to top if already at bottom.
+scrollFocusDown :: FocusList -> Int -> Int
+scrollFocusDown fl i = if i+1 > length fl - 1 then 0 else i+1
+-- i == the focusIndex
 
--- NOTE: This is using setTop but should also use a percentage of the total height
--- to center... ctx <- getContext; h = availHeight ctx
---
--- Or it shouldn't scroll unless off of viewport
-scrollLinkPos :: MyState -> Int -> EventM MyName (Next MyState)
-scrollLinkPos s n =
-  let (newLineNumber, newIndexPos, newMenu) = updateMenuNewLinkPos s n
-  in M.setTop myNameScroll newLineNumber >> M.continue (s {msMenu=newMenu, msLinkIndexMarker=newIndexPos})
-
-{-
-getViewHeight :: Int
-getViewHeight = getContext >>= \ctx -> availHeight ctx
--}
-
--- | Return what to scroll by in order to vertically center on a specific line
--- in a viewport.
-{-
-scrollCenterOn :: Int -> Int -> Int
-scrollCenterOn toLine fromLine = do
-  ctx <- getContext
-  let h = availHeight ctx in (abs $ toLine - fromLine) + (h `div` 2)
--}
+-- | Give the new focus index after moving focus up one, wrapping
+-- to bottom if already at top.
+scrollFocusUp :: FocusList -> Int -> Int
+scrollFocusUp fl i = if i-1 < 0 then length fl - 1 else i-1
 
 -- | Follow active menu item and thus refresh the state
 requestNewState :: MyState -> IO MyState
@@ -178,7 +131,8 @@ requestNewState s = do
           port = show $ glPort gl
           selector = glSelector gl
       o <- gopherGet host port selector
-      let (initialMenu, linkIndices) = markFirstActive (makeGopherMenu o)
+      let initialMenu = makeGopherMenu o
+          linkIndices = buildLinkIndices initialMenu
       pure $ MyState {msMenu = initialMenu, msLinkIndexMarker = 0, msLinkIndices=linkIndices}
     -- malformed gopher line
     (Right _) -> error "Should be impossible!"
@@ -188,9 +142,12 @@ handleEvent :: MyState -> BrickEvent MyName () -> EventM MyName (Next MyState)
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'q') [])) = halt s
 -- ^ quit
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'j')  [])) =
-  let (_, newIndexPos, newMenu) = updateMenuNewLinkPos s 1
-  in M.continue $ s {msMenu=newMenu, msLinkIndexMarker=newIndexPos}-- no need for index marker anymore?
+  let newFocusPos = scrollFocusDown (msLinkIndices s) (msLinkIndexMarker s)
+  in M.continue $ s {msLinkIndexMarker=newFocusPos}
+  --let (_, newIndexPos, newMenu) = updateMenuNewLinkPos s 1
+  --in M.continue $ s {msMenu=newMenu, msLinkIndexMarker=newIndexPos}-- no need for index marker anymore?
 -- ^ move link cursor down
+{-
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KDown)  [])) =
   M.vScrollBy myNameScroll 1 >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
 -- ^ scroll down, disable active
@@ -218,6 +175,7 @@ handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'h')  [])) = M.hScrollBy myNameScr
 -- ^ scroll text left
 handleEvent s (VtyEvent (Vty.EvKey (Vty.KEnter)  [])) = liftIO (requestNewState s) >>= M.continue
 -- ^ enter/follow link
+-}
 handleEvent s _ = continue s
 
 myApp :: MyApp
@@ -230,6 +188,6 @@ myApp = App
   }
 
 uiMain :: GopherMenu -> IO ()
-uiMain initialState =
-  let (initialMenu, linkIndices) = markFirstActive initialState
-  in void $ defaultMain myApp $ MyState {msMenu = initialMenu, msLinkIndexMarker = 0, msLinkIndices=linkIndices}
+uiMain initialMenu =
+  let linkIndices = buildLinkIndices initialMenu
+  in void $ defaultMain myApp $ MyState {msMenu = initialMenu, msLinkIndexMarker = 0, msLinkIndices=linkIndices, msFocused=True}

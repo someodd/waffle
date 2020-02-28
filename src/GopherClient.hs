@@ -1,5 +1,5 @@
 -- TODO: implement metadata that is in between ========================== that. also null.host?
--- TODO: left is preferred for errors
+-- TODO: left is preferred for errors. There is a reason for this. Read about that in LYAH
 module GopherClient where
 
 import qualified Data.ByteString.Char8 as B8
@@ -69,7 +69,7 @@ data GopherNonCanonicalItemType =
   SoundFile
   deriving (Eq)
 
--- FIXME: perhaps rename to DirectoryEntity?
+-- FIXME: bring back glNumber for line #
 -- | A Gopher protocol item/line is defined with tab-delimitated fields. This
 -- abstraction makes it easier to handle said lines. The line itself will look
 -- something like this (where 'F' is a tab):
@@ -96,10 +96,9 @@ data GopherLine = GopherLine
   , glGopherPlus :: [String]
   -- ^ Any extra fields are Gopher+ fields and not a part of the original
   -- Gopher Protocol specification.
-  , glActive :: Bool
-  -- ^ Is this line actively selected? Pretty much exclusively for the UI.
   }
 
+-- NOTE: Malformed or Unrecognized?
 -- | For Gopher lines which are not formatted correctly
 data MalformedGopherLine = MalformedGopherLine
   { mglFields :: [String]
@@ -213,7 +212,6 @@ makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
          , glHost=host
          , glPort=read $ port--FIXME: what if this fails to int?
          , glGopherPlus=gopherPlus
-         , glActive=False
          }
       Nothing -> Right $ MalformedGopherLine { mglFields = allFields }
   makeGopherLine malformed = Right $ MalformedGopherLine { mglFields=malformed }
