@@ -13,6 +13,7 @@ github: "hyperreal-gopher/hopher"
 dependencies:
   - base >= 4.7 && < 5
   - brick
+  - text
   - bytestring
   - network-simple
   - split

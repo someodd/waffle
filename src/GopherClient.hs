@@ -1,4 +1,5 @@
 -- TODO: implement metadata that is in between ========================== that. also null.host?
+-- TODO: left is preferred for errors
 module GopherClient where
 
 import qualified Data.ByteString.Char8 as B8
@@ -116,7 +117,7 @@ instance Show GopherLine where
 
 -- | Displaying a malformed Gopher line (string) after being parsed, namely used by the UI
 instance Show MalformedGopherLine where
-  show x = "    " ++ (show $ mglFields x)--FIXME: might this not error?
+  show x = "    " ++ (show $ mglFields x)--FIXME: might this not error? add "ERROR" to end?
 
 -- | Take the character from a menu line delivered from a Gopher server and give
 -- back the type of the item that line describes.
@@ -220,6 +221,9 @@ makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
 -- | As you can see, a GopherMenu is simply an ordered sequence of
 -- GopherLines.
 data GopherMenu = GopherMenu [Either GopherLine MalformedGopherLine]
+
+fromMenu :: GopherMenu -> [Either GopherLine MalformedGopherLine]
+fromMenu (GopherMenu m) = m
 
 -- | Easily represent a GopherMenu as a string, formatted as it might be rendered.
 instance Show GopherMenu where
