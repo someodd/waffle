@@ -1,190 +1,178 @@
--- TODO: use INI theme function so people can edit INI file to set
--- various attribute styles/colors!
--- FIXME: the gopherplus stuff needs to be havin its tabs removed yarrr
+-- TODO: hlint
+-- TODO: horizontal scroll for lines that need it.
+-- TODO: just disable enter/color for certain lines like information but let you select duh
+--- TODO: use INI theme function so people can edit INI file to set
+--- various attribute styles/colors!
+-- can even change borders
+-- TODO: color/invert keys in status bar
+-- TODO: some of this stuff deserves to go in gopherclient
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE CPP #-}
 module Ui where
 
-import Brick
-import qualified Graphics.Vty as Vty
+import Control.Monad (void)
+#if !(MIN_VERSION_base(4,11,0))
+import Data.Monoid
+#endif
+import qualified Graphics.Vty as V
+import Lens.Micro ((^.))
+import Control.Monad.IO.Class
+
+import qualified Brick.AttrMap as A
 import qualified Brick.Main as M
+import Brick.Types (Widget)
+import qualified Brick.Types as T
+import Brick.Util (fg, on)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
-import Graphics.Vty
-
-import Control.Monad
-import Data.List
+import Brick.Widgets.Core (hLimitPercent, str, vBox, vLimit, withAttr, (<+>))
+import qualified Brick.Widgets.List as L
+import qualified Data.Vector as Vec
 
 import GopherClient
 
-data MyState = MyState
-  { msMenu :: GopherMenu
-  , msLinkIndexMarker :: Int -- msFocusIndex?
-  , msLinkIndices :: FocusList -- msFocusList?
-  , msFocused :: Bool
-  } deriving (Show)
+drawUI :: GopherBrowserState -> [Widget ()]
+drawUI gbs = [ui]
+    where
+        l = gbsList gbs
+        label = str "Item " <+> cur <+> str " of " <+> total
+        cur = case l^.(L.listSelectedL) of
+                Nothing -> str "-"
+                Just i  -> str (show (i + 1))
+        total = str $ show $ Vec.length $ l^.(L.listElementsL)
+        box = B.borderWithLabel label $
+              hLimitPercent 100 $
+              L.renderListWithIndex (listDrawElement gbs) True l
+        ui = C.vCenter $ vBox [ box
+                              , vLimit 1 $ C.hCenter $ str "Esc to exit. Vi keys to browse. Enter to open."
+                              ]
 
-data MyName = MyViewport
-  deriving (Show, Eq, Ord)
-
-type MyApp = App MyState () MyName
-
--- | Replace the \t (tabs) and \r (returns) with spaces, because otherwise
--- they'll break Brick!
-clean :: String -> String
-clean = replaceTabs . replaceReturns
-  where
-    replaceTabs = map (\x -> if x == '\t' then ' ' else x)
-    replaceReturns = map (\x -> if x == '\r' then ' ' else x)
-
-menuStr :: GopherMenu -> Widget n
-menuStr m = str . clean $ show m
-
-globalDefault :: Attr
-globalDefault = white `on` black
-
-theMap :: AttrMap
-theMap = attrMap globalDefault
-  [ (attrName "link", fg brightBlue)
-  , (attrName "activeLink", (defAttr `withStyle` bold) `withForeColor` brightYellow)
-  ]
--- theMap = attrMap globalDefault [ (attrName "link", fg yellow <> underline (W.Word8 "blink")) ]
-
-gopherMenuWidgets :: GopherMenu -> Int -> Widget n
-gopherMenuWidgets (GopherMenu m) activeLine = vBox $ map gopherLineWidget numberedLines
-  where
-  -- FIXME: should just bring back giving each line their own number
-  numberedLines = zip [0..] m
-
-  gopherLineWidget :: (Int, Either GopherLine MalformedGopherLine) -> Widget n
-  gopherLineWidget (lineNumber, l) = case l of
+-- FIXME: should check line type... display different for selection
+-- NOTE: should parts of this go in gopherclient? also what about content negotiation?
+-- can't always give back a gophermenu! what about text pages? what about downloads?
+-- data Content = Viewable (Either GopherMenu Text) | Download?
+-- if we detect text we should instead use viewport
+-- | Make a Gopher Protocol request based on the information in state and update
+--- the state based on said request.
+requestNewState :: GopherBrowserState -> IO GopherBrowserState
+requestNewState gbs = do
+  -- should be looking at type!
+  let (host, port, resource) = decipherLine (selectedMenuLine gbs)
+  o <- gopherGet host (show port) resource
+  let newMenu = makeGopherMenu o
+  pure $ makeState newMenu
+  where 
+  decipherLine l = case l of
     -- GopherLine
-    -- FIXME: should also see if not info line by noncanon or canon and mark link
-    (Left gl) ->
-      case glType gl of
-        -- Canonical
-        (Left _) ->
-          if lineNumber == activeLine then
-            withAttr (attrName "activeLink") $ (visible . str $ " --> ") <+> (str $ show gl)
-          else
-            withAttr (attrName "link") $ str "     " <+> (str $ show gl)
-        -- Noncanon
-        (Right t) ->
-          if t == InformationalMessage then
-            str "     " <+> (str $ show gl)
-          else
-            withAttr (attrName "link") $ str "     " <+> (str $ show gl)
-    -- MalformedLine
-    (Right ml) -> str "" <+> (str $ show ml)
+    (Left gl) -> (glHost gl, glPort gl, glSelector gl)
+    -- Unrecognized line
+    (Right _) -> error "Can't do anything with unrecognized line."
 
+selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
+selectedMenuLine gbs = lineFromMenu (gbsMenu gbs)
+  where 
+  -- FIXME: use menuLine
+  lineFromMenu (GopherMenu ls) = ls !! lineNumber
+  lineNumber = case (gbsList gbs)^.(L.listSelectedL) of
+          Nothing -> error "Hit enter but nothing selected"
+          Just i  -> i
 
--- I get the feeling that there's a far more efficient way to do this in brick lmao
-buildLinkIndices :: GopherMenu -> [Int]
-buildLinkIndices (GopherMenu ls) = findIndices isNotInfoLine ls
+menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
+menuLine (GopherMenu ls) indx = ls !! indx
+
+appEvent :: GopherBrowserState -> T.BrickEvent () e -> T.EventM () (T.Next GopherBrowserState)
+appEvent gbs (T.VtyEvent e) =
+    case e of
+        V.EvKey (V.KEnter) [] -> liftIO (requestNewState gbs) >>= M.continue
+        V.EvKey V.KEsc [] -> M.halt gbs
+        ev -> M.continue =<< (\x -> gbs {gbsList=x}) <$> (L.handleListEventVi L.handleListEvent) ev (gbsList gbs)
+appEvent gbs _ = M.continue gbs
+
+-- TODO: prefix most lines with a [type descriptor] that has a color associated with it
+-- FIXME: what if not followable? disable colors...
+listDrawElement :: GopherBrowserState -> Int -> Bool -> String -> Widget ()
+listDrawElement gbs indx sel a =
+    let selStr s = if sel && isInfoMsg (selectedMenuLine gbs) then withAttr custom2Attr (str $ s)
+                   else if sel then withAttr customAttr (str $ s)
+                   else str $ s
+    in lineDescriptorWidget (menuLine (gbsMenu gbs) indx) <+> selStr a
+    where
+    lineDescriptorWidget :: Either GopherLine MalformedGopherLine -> Widget n
+    lineDescriptorWidget line = case line of
+      -- it's a gopherline
+      (Left gl) -> case glType gl of
+        -- Cannonical type
+        (Left ct) -> case ct of
+          Directory -> withAttr directoryAttr $ str "[Directory] "
+          _ -> str $ "[" ++ show ct ++ "] "
+        -- Noncannonical type
+        (Right nct) -> case nct of
+          InformationalMessage -> str ""
+          _ -> str $ "[" ++ show nct ++ "] "
+      -- it's a malformed line
+      (Right _) -> str ""
+
+-- FIXME
+-- Maybe belongs in GopherClient... show instances?
+-- maybe should produce widgets?
+lineShow :: Either GopherLine MalformedGopherLine -> String
+lineShow line = case line of
+  -- It's a GopherLine
+  (Left gl) -> case glType gl of
+    -- Canonical type
+    (Left _) -> clean $ glDisplayString gl
+    -- Noncanonical type
+    (Right nct) -> if nct == InformationalMessage then (if (clean $ glDisplayString gl) == "" then "-" else clean $ glDisplayString gl) else clean $ glDisplayString gl
+  -- It's a MalformedGopherLine
+  (Right mgl) -> clean $ show mgl
   where
-  isNotInfoLine l = case l of
-    -- GopherLine
-    (Left gl) -> case glType gl of
-      -- Canonical type
-      (Left _) -> True
-      -- Noncanonical type
-      (Right nc) -> nc /= InformationalMessage
-    -- MalformedGopherLine
-    (Right _) -> False
+  clean :: String -> String
+  clean = replaceTabs . replaceReturns
+    where
+      replaceTabs = map (\x -> if x == '\t' then ' ' else x)
+      replaceReturns = map (\x -> if x == '\r' then ' ' else x)
 
-myNameScroll :: M.ViewportScroll MyName
-myNameScroll = M.viewportScroll MyViewport
-
-drawUi :: MyState -> [Widget MyName]
-drawUi s = [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 $ ui]
+makeState :: GopherMenu -> GopherBrowserState
+makeState gm@(GopherMenu ls) = GopherBrowserState
+  { gbsList = L.list () glsVector 1
+  , gbsMenu = gm
+  }
   where
-  --ui = viewport MyViewport Both $ vBox [menuStr $ msMenu s]
-  ui = viewport MyViewport Both $ gopherMenuWidgets (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)
+  glsVector = Vec.fromList $ map lineShow ls
 
-type FocusList = [Int]
--- type FocusIndex?
+customAttr :: A.AttrName
+customAttr = L.listSelectedAttr <> "custom"
 
--- | Give the new focus index after moving focus down one, wrapping
--- to top if already at bottom.
-scrollFocusDown :: FocusList -> Int -> Int
-scrollFocusDown fl i = if i+1 > length fl - 1 then 0 else i+1
--- i == the focusIndex
+custom2Attr :: A.AttrName
+custom2Attr = "custom2"
 
--- | Give the new focus index after moving focus up one, wrapping
--- to bottom if already at top.
-scrollFocusUp :: FocusList -> Int -> Int
-scrollFocusUp fl i = if i-1 < 0 then length fl - 1 else i-1
+directoryAttr :: A.AttrName
+directoryAttr = "directoryAttr"
 
--- | Follow active menu item and thus refresh the state
-requestNewState :: MyState -> IO MyState
-requestNewState s = do
-  let gopherMenuList = fromMenu $ msMenu s
-  -- NOTE: This would've worked if could applicative it..
-  --let currentItem = fmap (!!) (msMenu s) <*> (msLinkIndices s !! msLinkIndexMarker s)
-  -- Both feel hacky tho like I can't use !! hrm i don't wanna use type synonym tho
-  let currentItem = gopherMenuList !! (msLinkIndices s !! msLinkIndexMarker s)
-  case currentItem of
-    -- valid gopher line
-    (Left gl) -> do
-      let host = glHost gl
-          port = show $ glPort gl
-          selector = glSelector gl
-      o <- gopherGet host port selector
-      let initialMenu = makeGopherMenu o
-          linkIndices = buildLinkIndices initialMenu
-      pure $ MyState {msMenu = initialMenu, msLinkIndexMarker = 0, msLinkIndices=linkIndices, msFocused=True}
-    -- malformed gopher line
-    (Right _) -> error "Should be impossible!"
+-- should implement style too
+theMap :: A.AttrMap
+theMap = A.attrMap V.defAttr
+    [ (L.listAttr,            fg V.white)
+    , (L.listSelectedAttr,    V.blue `on` V.white)
+    , (directoryAttr,         fg V.red)
+    , (customAttr,            (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.black `V.withBackColor` (V.rgbColor (201 :: Int) (255 :: Int) (229 :: Int)))
+    , (custom2Attr,           V.white `on` V.brightBlack)
+    ]
 
--- NOTE: when scrolling text we disable visible/active so we can actually move beyond the actively selected link
-handleEvent :: MyState -> BrickEvent MyName () -> EventM MyName (Next MyState)
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'q') [])) = halt s
--- ^ quit
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'j')  [])) =
-  let newFocusPos = scrollFocusDown (msLinkIndices s) (msLinkIndexMarker s)
-  in M.continue $ s {msLinkIndexMarker=newFocusPos}
-  --let (_, newIndexPos, newMenu) = updateMenuNewLinkPos s 1
-  --in M.continue $ s {msMenu=newMenu, msLinkIndexMarker=newIndexPos}-- no need for index marker anymore?
--- ^ move link cursor down
-{-
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KDown)  [])) =
-  M.vScrollBy myNameScroll 1 >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
--- ^ scroll down, disable active
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'k')  [])) =
-  let (_, newIndexPos, newMenu) = updateMenuNewLinkPos s (-1)
-  in M.continue $ s {msMenu=newMenu, msLinkIndexMarker=newIndexPos}-- no need for index marker anymore?
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KUp)  [])) =
-  M.vScrollBy myNameScroll (-1) >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
--- ^ scroll text up
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KHome)  [])) =
-  M.vScrollToBeginning myNameScroll >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
--- ^ return text home
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KEnd)  [])) =
-  M.vScrollToEnd myNameScroll >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
--- ^ end of text
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KPageDown)  [])) =
-  M.vScrollPage myNameScroll Down >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
--- ^ page down text
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KPageUp)  [])) =
-  M.vScrollPage myNameScroll Up >> M.continue (s {msMenu=unactive (msMenu s) (msLinkIndices s !! msLinkIndexMarker s)})
--- ^ page up text
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'l') [])) = M.hScrollBy myNameScroll 1 >> M.continue s
--- ^ scroll text right
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KChar 'h')  [])) = M.hScrollBy myNameScroll (-1) >> M.continue s
--- ^ scroll text left
-handleEvent s (VtyEvent (Vty.EvKey (Vty.KEnter)  [])) = liftIO (requestNewState s) >>= M.continue
--- ^ enter/follow link
--}
-handleEvent s _ = continue s
+theApp :: M.App GopherBrowserState e ()
+theApp =
+    M.App { M.appDraw = drawUI
+          , M.appChooseCursor = M.showFirstCursor
+          , M.appHandleEvent = appEvent
+          , M.appStartEvent = return
+          , M.appAttrMap = const theMap
+          }
 
-myApp :: MyApp
-myApp = App
-  { appDraw = drawUi
-  , appChooseCursor = showFirstCursor
-  , appHandleEvent = handleEvent
-  , appStartEvent = pure
-  , appAttrMap = const theMap
+-- TODO: rename to GopherBrowseState?
+data GopherBrowserState = GopherBrowserState
+  { gbsMenu :: GopherMenu
+  , gbsList :: L.List () String
   }
 
 uiMain :: GopherMenu -> IO ()
-uiMain initialMenu =
-  let linkIndices = buildLinkIndices initialMenu
-  in void $ defaultMain myApp $ MyState {msMenu = initialMenu, msLinkIndexMarker = 0, msLinkIndices=linkIndices, msFocused=True}
+uiMain gm = void $ M.defaultMain theApp (makeState gm)

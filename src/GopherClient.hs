@@ -1,10 +1,11 @@
 -- TODO: implement metadata that is in between ========================== that. also null.host?
 -- TODO: left is preferred for errors. There is a reason for this. Read about that in LYAH
+-- TODO: how do i implement history/going up directory? is it just splitting path?
+-- TODO: content detection. if not diretory then use text mode to display or another mode to download...
 module GopherClient where
 
 import qualified Data.ByteString.Char8 as B8
 import Data.List.Split
-import Debug.Trace
 
 import Network.Simple.TCP
 
@@ -54,7 +55,7 @@ data GopherCanonicalItemType =
   -- Connect to given host at given port. The name to login as at this
   -- host is in the selector string.
   Tn3270Session
-  deriving (Eq)
+  deriving (Eq, Show)
 
 -- | Item types improvised by Gopher client authors and others after RFC 1436,
 -- see the Gopher+ specification...
@@ -67,7 +68,7 @@ data GopherNonCanonicalItemType =
   InformationalMessage |
   -- | Sound file (especially the WAV format).
   SoundFile
-  deriving (Eq)
+  deriving (Eq, Show)
 
 -- FIXME: bring back glNumber for line #
 -- | A Gopher protocol item/line is defined with tab-delimitated fields. This
@@ -98,7 +99,7 @@ data GopherLine = GopherLine
   -- Gopher Protocol specification.
   }
 
--- NOTE: Malformed or Unrecognized?
+-- NOTE: for name, Malformed or Unrecognized?
 -- | For Gopher lines which are not formatted correctly
 data MalformedGopherLine = MalformedGopherLine
   { mglFields :: [String]
@@ -177,15 +178,6 @@ explainType itemType = case itemType of
   Left item -> explainCanonicalType item
   Right item -> explainNonCanonicalType item
 
--- | Canonical item types are represented by their explaination in explainCanonicalType.
-instance Show GopherCanonicalItemType where
-  show = explainCanonicalType
-
--- | Non-canonical item types are represented by their explaination in
--- explainNonCanonicalType.
-instance Show GopherNonCanonicalItemType where
-  show = explainNonCanonicalType
-
 -- | Take a big string (series of lines) returned from a Gopher request and
 -- parse it into a Gopher menu (a series of GopherLines)!
 makeGopherMenu :: String -> GopherMenu
@@ -233,6 +225,19 @@ instance Show GopherMenu where
     -- is malformed line
     gopherLineShow (Right x) = show x ++ "(MALFORMED LINE)"-- Does this have potential to break?
 
+-- Nice benefit: AFAIK info msgs are the only kind that aren't followable
+-- NOTE: should only be used in cases where there's no point in nested cases otherwise
+isInfoMsg :: Either GopherLine MalformedGopherLine -> Bool
+isInfoMsg line = case line of
+  -- It's a GopherLine
+  (Left gl) -> case glType gl of
+    -- Canonical type
+    (Left _) -> False
+    -- Noncanonical type
+    (Right nct) -> nct == InformationalMessage
+  -- It's a MalformedGopherLine
+  (Right _) -> False
+
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
 -- if you don't wish to specify.
 -- This should be named gopherMenuGet? or gopherInitiate to figure out which kinda transaction
@@ -243,7 +248,7 @@ gopherGet host port resource =
     -- need to only fetch as many bytes as it takes to get period on a line by itself to
     -- close the connection.
     wow <- getAllBytes (pure B8.empty) connectionSocket
-    pure $ traceShowId $ B8.unpack wow
+    pure $ B8.unpack wow
   where
   recvChunks = 1024
   getAllBytes :: IO B8.ByteString -> Socket -> IO B8.ByteString
