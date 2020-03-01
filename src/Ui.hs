@@ -122,7 +122,7 @@ lineShow line = case line of
     -- Canonical type
     (Left _) -> clean $ glDisplayString gl
     -- Noncanonical type
-    (Right nct) -> if nct == InformationalMessage then (if (clean $ glDisplayString gl) == "" then "-" else clean $ glDisplayString gl) else clean $ glDisplayString gl
+    (Right nct) -> if nct == InformationalMessage then (if (clean $ glDisplayString gl) == "" then " " else clean $ glDisplayString gl) else clean $ glDisplayString gl
   -- It's a MalformedGopherLine
   (Right mgl) -> clean $ show mgl
   where
