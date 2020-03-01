@@ -104,11 +104,11 @@ listDrawElement gbs indx sel a =
         -- Cannonical type
         (Left ct) -> case ct of
           Directory -> withAttr directoryAttr $ str "[Directory] "
-          _ -> str $ "[" ++ show ct ++ "] "
+          _ -> withAttr genericTypeAttr $ str $ "[" ++ show ct ++ "] "
         -- Noncannonical type
         (Right nct) -> case nct of
           InformationalMessage -> str ""
-          _ -> str $ "[" ++ show nct ++ "] "
+          _ -> withAttr genericTypeAttr $ str $ "[" ++ show nct ++ "] "
       -- it's a malformed line
       (Right _) -> str ""
 
@@ -149,12 +149,16 @@ custom2Attr = "custom2"
 directoryAttr :: A.AttrName
 directoryAttr = "directoryAttr"
 
+genericTypeAttr :: A.AttrName
+genericTypeAttr = "genericTypeAttr"
+
 -- should implement style too
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
     [ (L.listAttr,            fg V.white)
     , (L.listSelectedAttr,    V.blue `on` V.white)
     , (directoryAttr,         fg V.red)
+    , (genericTypeAttr,         fg V.blue)
     , (customAttr,            (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.black `V.withBackColor` (V.rgbColor (201 :: Int) (255 :: Int) (229 :: Int)))
     , (custom2Attr,           V.white `on` V.brightBlack)
     ]
