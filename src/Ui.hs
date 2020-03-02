@@ -37,28 +37,42 @@ import Brick.Util (fg, on)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
-import Brick.Widgets.Core (updateAttrMap, withBorderStyle, str, vBox, vLimit, withAttr, (<+>))
+import Brick.Widgets.Core (viewport, hLimitPercent, vLimitPercent, updateAttrMap, withBorderStyle, str, vBox, vLimit, withAttr, (<+>))
 import qualified Brick.Widgets.List as L
 import qualified Data.Vector as Vec
 
 import GopherClient
 
-drawUI :: GopherBrowserState -> [Widget ()]
-drawUI gbs = [ui]
-    where
-        l = gbsList gbs
-        label = str " Item " <+> cur <+> str " of " <+> total -- TODO: should be renamed
-        (host, port, resource) = gbsLocation gbs
-        title = " " ++ host ++ ":" ++ show port ++ if not $ null resource then " (" ++ resource ++ ") " else " "
-        cur = case l^.(L.listSelectedL) of
-                Nothing -> str "-"
-                Just i  -> str (show (i + 1))
-        total = str $ show $ Vec.length $ l^.(L.listElementsL)
-        box = updateAttrMap (A.applyAttrMappings borderMappings) $ withBorderStyle customBorder $ B.borderWithLabel (withAttr titleAttr $ str $ title) $
-              L.renderListWithIndex (listDrawElement gbs) True l
-        ui = C.hCenter $ C.vCenter $ vBox [ box
-                              , vLimit 1 $ str "Esc to exit. Vi keys to browse. Enter to open." <+> label
-                              ]
+data WidgetMode = FileWidget | MenuWidget--PENDING IDEA FIXME
+
+textFileModeUI :: GopherBrowserState -> [Widget MyName]
+textFileModeUI gbs =
+  let ui = viewport MyViewport T.Both $ vBox [str $ clean $ gbsText gbs]
+  in [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 $ ui]
+
+menuModeUI :: GopherBrowserState -> [Widget MyName]  -- Use WidgetMode instead?
+menuModeUI gbs = [C.hCenter $ C.vCenter $ view] --pplying viewport for first time FIXME
+  where
+    l = gbsList gbs
+    label = str " Item " <+> cur <+> str " of " <+> total -- TODO: should be renamed
+    (host, port, resource) = gbsLocation gbs
+    title = " " ++ host ++ ":" ++ show port ++ if not $ null resource then " (" ++ resource ++ ") " else " "
+    cur = case l^.(L.listSelectedL) of
+      Nothing -> str "-"
+      Just i  -> str (show (i + 1))
+    total = str $ show $ Vec.length $ l^.(L.listElementsL)
+    box = updateAttrMap (A.applyAttrMappings borderMappings) $ withBorderStyle customBorder $ B.borderWithLabel (withAttr titleAttr $ str $ title) $ L.renderListWithIndex (listDrawElement gbs) True l
+    view = vBox [ box, vLimit 1 $ str "Esc to exit. Vi keys to browse. Enter to open." <+> label]
+
+drawUI :: GopherBrowserState -> [Widget MyName]
+drawUI gbs =
+  if gbsMode gbs == MenuMode then do
+    menuModeUI gbs
+  else if gbsMode gbs == TextFileMode then do
+    -- file viewer
+    textFileModeUI gbs
+  else
+    error "Cannot draw the UI for this unknown mode."
 
 -- FIXME: should check line type... display different for selection
 -- NOTE: should parts of this go in gopherclient? also what about content negotiation?
@@ -67,19 +81,35 @@ drawUI gbs = [ui]
 -- if we detect text we should instead use viewport
 -- | Make a Gopher Protocol request based on the information in state and update
 --- the state based on said request.
+-- FIXME rename to open menu link?
 requestNewState :: GopherBrowserState -> IO GopherBrowserState
 requestNewState gbs = do
-  -- should be looking at type!
-  let location@(host, port, resource) = decipherLine (selectedMenuLine gbs)
   o <- gopherGet host (show port) resource
-  let newMenu = makeGopherMenu o
-  pure $ makeState newMenu location
-  where 
-  decipherLine l = case l of
+  let newMode = decipherMode lineType
+  if newMode == MenuMode then
+    let newMenu = makeGopherMenu o
+    in pure $ makeState newMenu location
+  else if newMode == TextFileMode then
+    pure gbs { gbsLocation = location
+             , gbsText = o
+             , gbsMode = TextFileMode
+             }
+  else
+    error "nop"
+  where
+  (host, port, resource, lineType) = case (selectedMenuLine gbs) of
     -- GopherLine
-    (Left gl) -> (glHost gl, glPort gl, glSelector gl)
+    (Left gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
     -- Unrecognized line
     (Right _) -> error "Can't do anything with unrecognized line."
+  location = (host, port, resource)
+  decipherMode someType = case someType of
+    -- canonical type
+    (Left ct) -> case ct of
+      Directory -> MenuMode
+      File -> TextFileMode
+      _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
+    (Right nct) -> error $ "Tried to open unhandled noncannonical mode: " ++ show nct
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
 selectedMenuLine gbs = lineFromMenu (gbsMenu gbs)
@@ -87,26 +117,34 @@ selectedMenuLine gbs = lineFromMenu (gbsMenu gbs)
   -- FIXME: use menuLine
   lineFromMenu (GopherMenu ls) = ls !! lineNumber
   lineNumber = case (gbsList gbs)^.(L.listSelectedL) of
-          Nothing -> error "Hit enter but nothing selected"
-          Just i  -> i
+    Nothing -> error "Hit enter but nothing selected"
+    Just i  -> i
 
 menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx
 
 -- TODO: make mode type: text or menu to switch between list and viewport?
-appEvent :: GopherBrowserState -> T.BrickEvent () e -> T.EventM () (T.Next GopherBrowserState)
+appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
+appEvent gbs (T.VtyEvent (V.EvKey V.KEsc [])) = M.halt gbs
 appEvent gbs (T.VtyEvent e) =
-    -- check gbs if the state says we're viewing a text file or if we're viewing a list
+  -- check gbs if the state says we're viewing a text file or if we're viewing a list
+  if gbsMode gbs == MenuMode then
     case e of
-        V.EvKey (V.KEnter) [] -> liftIO (requestNewState gbs) >>= M.continue
-        V.EvKey V.KEsc [] -> M.halt gbs
-        ev -> M.continue =<< (\x -> gbs {gbsList=x}) <$> (L.handleListEventVi L.handleListEvent) ev (gbsList gbs)
+      V.EvKey (V.KEnter) [] -> liftIO (requestNewState gbs) >>= M.continue
+      ev -> M.continue =<< (\x -> gbs {gbsList=x}) <$> (L.handleListEventVi L.handleListEvent) ev (gbsList gbs)
+  else if gbsMode gbs == TextFileMode then
+    -- viewport stuff here
+    case e of
+      V.EvKey (V.KChar 'j')  [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
+      _ -> error "woop"
+  else
+    error "Unrecognized mode in event."
 appEvent gbs _ = M.continue gbs
 
 -- FIXME: this is messy! unoptimized!
 -- TODO: prefix most lines with a [type descriptor] that has a color associated with it
 -- FIXME: what if not followable? disable colors...
-listDrawElement :: GopherBrowserState -> Int -> Bool -> String -> Widget ()
+listDrawElement :: GopherBrowserState -> Int -> Bool -> String -> Widget MyName
 listDrawElement gbs indx sel a =
     let selStr s = if sel && isInfoMsg (selectedMenuLine gbs) then withAttr custom2Attr (str $ s)
                    else if sel then withAttr customAttr (str $ s)
@@ -161,20 +199,24 @@ lineShow line = case line of
     (Right nct) -> if nct == InformationalMessage then (if (clean $ glDisplayString gl) == "" then " " else clean $ glDisplayString gl) else clean $ glDisplayString gl
   -- It's a MalformedGopherLine
   (Right mgl) -> clean $ show mgl
-  where
-  clean :: String -> String
-  clean = replaceTabs . replaceReturns
-    where
-      replaceTabs = map (\x -> if x == '\t' then ' ' else x)
-      replaceReturns = map (\x -> if x == '\r' then ' ' else x)
 
+clean :: String -> String
+clean = replaceTabs . replaceReturns
+  where
+    replaceTabs = map (\x -> if x == '\t' then ' ' else x)
+    replaceReturns = map (\x -> if x == '\r' then ' ' else x)
+
+-- FIXME: more like makeState from menu lol. maybe can make do for any state
+-- based on passing it the mode and other info!
 -- TODO: make mode type: text or menu to switch between list and viewport?
 makeState :: GopherMenu -> Location -> GopherBrowserState
 makeState gm@(GopherMenu ls) location = GopherBrowserState
-  { gbsList = L.list () glsVector 1
+  { gbsList = L.list MyViewport glsVector 1
   , gbsMenu = gm
   , gbsFocusLines = mkFocusLinesIndex gm
   , gbsLocation = location
+  , gbsMode = MenuMode
+  , gbsText = ""
   }
   where
   glsVector = Vec.fromList $ map lineShow ls
@@ -217,20 +259,20 @@ titleAttr = "titleAttr"
 -- should implement style too
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
-    [ (L.listAttr,            V.yellow `on` (V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int)))
-    , (L.listSelectedAttr,            (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
-    , (directoryAttr,         fg V.red)
-    , (fileAttr,         fg V.cyan)
-    , (indexSearchServerAttr,         fg V.magenta)
-    , (linkAttr,            fg (V.rgbColor (28 :: Int) (152 :: Int) (255 :: Int)))
-    , (textAttr,            fg (V.rgbColor (255 :: Int) (255 :: Int) (0 :: Int)))
-    , (genericTypeAttr,         fg V.green)
-    , (numberPrefixAttr,            fg (V.rgbColor (252 :: Int) (40 :: Int) (254 :: Int)))
-    , (customAttr,            (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
-    , (custom2Attr,           fg V.yellow)
-    , (titleAttr,           (V.defAttr `V.withStyle` V.reverseVideo) `V.withStyle` V.bold `V.withForeColor` V.white)
-    --, (asteriskAttr,           (V.defAttr `V.withStyle` V.reverseVideo))
-    ]
+  [ (L.listAttr,            V.yellow `on` (V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int)))
+  , (L.listSelectedAttr,            (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
+  , (directoryAttr,         fg V.red)
+  , (fileAttr,         fg V.cyan)
+  , (indexSearchServerAttr,         fg V.magenta)
+  , (linkAttr,            fg (V.rgbColor (28 :: Int) (152 :: Int) (255 :: Int)))
+  , (textAttr,            fg (V.rgbColor (255 :: Int) (255 :: Int) (0 :: Int)))
+  , (genericTypeAttr,         fg V.green)
+  , (numberPrefixAttr,            fg (V.rgbColor (252 :: Int) (40 :: Int) (254 :: Int)))
+  , (customAttr,            (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
+  , (custom2Attr,           fg V.yellow)
+  , (titleAttr,           (V.defAttr `V.withStyle` V.reverseVideo) `V.withStyle` V.bold `V.withForeColor` V.white)
+  --, (asteriskAttr,           (V.defAttr `V.withStyle` V.reverseVideo))
+  ]
 
 customBorder :: BS.BorderStyle
 customBorder = BS.BorderStyle
@@ -250,22 +292,35 @@ customBorder = BS.BorderStyle
 borderMappings :: [(A.AttrName, V.Attr)]
 borderMappings = [(B.borderAttr, V.cyan `on` (V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int)))]
 
-theApp :: M.App GopherBrowserState e ()
+theApp :: M.App GopherBrowserState e MyName
 theApp =
-    M.App { M.appDraw = drawUI
-          , M.appChooseCursor = M.showFirstCursor
-          , M.appHandleEvent = appEvent
-          , M.appStartEvent = return
-          , M.appAttrMap = const theMap
-          }
+  M.App { M.appDraw = drawUI
+        , M.appChooseCursor = M.showFirstCursor
+        , M.appHandleEvent = appEvent
+        , M.appStartEvent = return
+        , M.appAttrMap = const theMap
+        }
+
+data BrowserMode = MenuMode | TextFileMode
+  deriving (Show, Eq, Ord)
+
+-- this is for text mode scrolling
+data MyName = MyViewport
+  deriving (Show, Eq, Ord)
+
+-- this is for text mode scrolling
+myNameScroll :: M.ViewportScroll MyName
+myNameScroll = M.viewportScroll MyViewport
 
 -- TODO: rename to GopherBrowseState?
 data GopherBrowserState = GopherBrowserState
   { gbsMenu :: GopherMenu
-  , gbsList :: L.List () String
+  , gbsList :: L.List MyName String
   -- | The line #s which have linkable entries. Used for jumping by number and n and p hotkeys and display stuff.
   , gbsFocusLines  :: [Int]  -- NOTE: use get elemIndex to enumerate
   , gbsLocation :: Location
+  , gbsMode :: BrowserMode
+  , gbsText :: String
   }
 
 -- | Gopher location in the form of domain, port, resource/magic string.
