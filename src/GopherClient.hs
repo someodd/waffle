@@ -1,3 +1,4 @@
+-- TODO: menu and directory seem to be synonymous
 -- TODO: handle network problems
 -- TODO: implement metadata that is in between ========================== that. also null.host?
 -- TODO: left is preferred for errors. There is a reason for this. Read about that in LYAH
