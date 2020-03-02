@@ -77,24 +77,24 @@ requestNewState gbs = do
   else
     error "nop"
   where
-  (host, port, resource, lineType) = case selectedMenuLine gbs of
-    -- GopherLine
-    (Left gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
-    -- Unrecognized line
-    (Right _) -> error "Can't do anything with unrecognized line."
-  location = (host, port, resource)
-  decipherMode someType = case someType of
-    -- canonical type
-    (Left ct) -> case ct of
-      Directory -> MenuMode
-      File -> TextFileMode
-      _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
-    (Right nct) -> error $ "Tried to open unhandled noncannonical mode: " ++ show nct
+    (host, port, resource, lineType) = case selectedMenuLine gbs of
+      -- GopherLine
+      (Left gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
+      -- Unrecognized line
+      (Right _) -> error "Can't do anything with unrecognized line."
+    location = (host, port, resource)
+    decipherMode someType = case someType of
+      -- canonical type
+      (Left ct) -> case ct of
+        Directory -> MenuMode
+        File -> TextFileMode
+        _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
+      (Right nct) -> error $ "Tried to open unhandled noncannonical mode: " ++ show nct
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
-selectedMenuLine gbs = menuLine (gbsMenu gbs) lineNumber
-  where 
-  lineNumber = fromMaybe (error "Hit enter, but nothing was selected to follow! I'm not sure how that's possible!") (gbsList gbs^.L.listSelectedL)
+selectedMenuLine gbs =
+  let lineNumber = fromMaybe (error "Hit enter, but nothing was selected to follow! I'm not sure how that's possible!") (gbsList gbs^.L.listSelectedL)
+  in menuLine (gbsMenu gbs) lineNumber
 
 menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx
@@ -118,38 +118,38 @@ listDrawElement :: GopherBrowserState -> Int -> Bool -> String -> Widget MyName
 listDrawElement gbs indx sel a =
   cursorRegion <+> possibleNumber <+> withAttr lineColor (lineDescriptorWidget (menuLine (gbsMenu gbs) indx) <+> selStr a)
   where
-  selStr s
-    | sel && isInfoMsg (selectedMenuLine gbs) = withAttr custom2Attr (str s)
-    | sel = withAttr customAttr $ str s
-    | otherwise = str s
+    selStr s
+      | sel && isInfoMsg (selectedMenuLine gbs) = withAttr custom2Attr (str s)
+      | sel = withAttr customAttr $ str s
+      | otherwise = str s
 
-  cursorRegion = if sel then withAttr asteriskAttr $ str " ➤ " else str "   "
-  isLink = indx `elem` gbsFocusLines gbs
-  lineColor = if isLink then linkAttr else textAttr
-  biggestIndexDigits = length $ show (Vec.length $ gbsList gbs^.L.listElementsL)
-  curIndexDigits = length $ show $ fromJust $ indx `elemIndex` gbsFocusLines gbs
+    cursorRegion = if sel then withAttr asteriskAttr $ str " ➤ " else str "   "
+    isLink = indx `elem` gbsFocusLines gbs
+    lineColor = if isLink then linkAttr else textAttr
+    biggestIndexDigits = length $ show (Vec.length $ gbsList gbs^.L.listElementsL)
+    curIndexDigits = length $ show $ fromJust $ indx `elemIndex` gbsFocusLines gbs
 
-  possibleNumber = if isLink then withAttr numberPrefixAttr $ str $ numberPad $ show (fromJust $ indx `elemIndex` gbsFocusLines gbs) ++ ". " else str "" 
-    where
-    numberPad = (replicate (biggestIndexDigits - curIndexDigits) ' ' ++)
+    possibleNumber = if isLink then withAttr numberPrefixAttr $ str $ numberPad $ show (fromJust $ indx `elemIndex` gbsFocusLines gbs) ++ ". " else str "" 
+      where
+      numberPad = (replicate (biggestIndexDigits - curIndexDigits) ' ' ++)
 
-  lineDescriptorWidget :: Either GopherLine MalformedGopherLine -> Widget n
-  lineDescriptorWidget line = case line of
-    -- it's a gopherline
-    (Left gl) -> case glType gl of
-      -- Cannonical type
-      (Left ct) -> case ct of
-        Directory -> withAttr directoryAttr $ str "📂 [Directory] "
-        File -> withAttr fileAttr $ str "📄 [File] "
-        IndexSearchServer -> withAttr indexSearchServerAttr $ str "🔎 [IndexSearchServer] "
-        _ -> withAttr genericTypeAttr $ str $ "[" ++ show ct ++ "] "
-      -- Noncannonical type
-      (Right nct) -> case nct of
-        InformationalMessage -> str $ replicate (biggestIndexDigits+2) ' '
-        HtmlFile -> withAttr directoryAttr $ str "🌐 [HTMLFile] "
-        _ -> withAttr genericTypeAttr $ str $ "[" ++ show nct ++ "] "
-    -- it's a malformed line
-    (Right _) -> str ""
+    lineDescriptorWidget :: Either GopherLine MalformedGopherLine -> Widget n
+    lineDescriptorWidget line = case line of
+      -- it's a gopherline
+      (Left gl) -> case glType gl of
+        -- Cannonical type
+        (Left ct) -> case ct of
+          Directory -> withAttr directoryAttr $ str "📂 [Directory] "
+          File -> withAttr fileAttr $ str "📄 [File] "
+          IndexSearchServer -> withAttr indexSearchServerAttr $ str "🔎 [IndexSearchServer] "
+          _ -> withAttr genericTypeAttr $ str $ "[" ++ show ct ++ "] "
+        -- Noncannonical type
+        (Right nct) -> case nct of
+          InformationalMessage -> str $ replicate (biggestIndexDigits+2) ' '
+          HtmlFile -> withAttr directoryAttr $ str "🌐 [HTMLFile] "
+          _ -> withAttr genericTypeAttr $ str $ "[" ++ show nct ++ "] "
+      -- it's a malformed line
+      (Right _) -> str ""
 
 lineShow :: Either GopherLine MalformedGopherLine -> String
 lineShow line = case line of
@@ -180,8 +180,8 @@ makeState gm@(GopherMenu ls) location = GopherBrowserState
   , gbsText = ""
   }
   where
-  glsVector = Vec.fromList $ map lineShow ls
-  mkFocusLinesIndex (GopherMenu m) = map fst $ filter (not . isInfoMsg . snd) (zip [0..] m)
+    glsVector = Vec.fromList $ map lineShow ls
+    mkFocusLinesIndex (GopherMenu m) = map fst $ filter (not . isInfoMsg . snd) (zip [0..] m)
 
 customAttr :: A.AttrName
 customAttr = "custom"
