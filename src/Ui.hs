@@ -4,6 +4,8 @@
 --- TODO: use INI theme function so people can edit INI file to set
 -- TODO: color/invert keys in status bar
 -- TODO: some of this stuff deserves to go in gopherclient
+
+-- | This module handles the Brick UI for the Gopher client.
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE CPP #-}
 module Ui where
@@ -32,11 +34,13 @@ import qualified Data.Vector as Vec
 
 import GopherClient
 
+-- | The UI for rendering and viewing a text file.
 textFileModeUI :: GopherBrowserState -> [Widget MyName]
 textFileModeUI gbs =
   let ui = viewport MyViewport T.Both $ vBox [str $ clean $ gbsText gbs]
   in [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 ui]
 
+-- | The UI for rendering and viewing a menu.
 menuModeUI :: GopherBrowserState -> [Widget MyName]
 menuModeUI gbs = [C.hCenter $ C.vCenter view]
   where
@@ -51,6 +55,7 @@ menuModeUI gbs = [C.hCenter $ C.vCenter view]
     box = updateAttrMap (A.applyAttrMappings borderMappings) $ withBorderStyle customBorder $ B.borderWithLabel (withAttr titleAttr $ str title) $ L.renderListWithIndex (listDrawElement gbs) True l
     view = vBox [ box, vLimit 1 $ str "Esc to exit. Vi keys to browse. Enter to open." <+> label]
 
+-- | The draw handler which will choose a UI based on the browser's mode.
 drawUI :: GopherBrowserState -> [Widget MyName]
 drawUI gbs
   | gbsMode gbs == MenuMode = menuModeUI gbs
@@ -151,6 +156,7 @@ listDrawElement gbs indx sel a =
       -- it's a malformed line
       (Right _) -> str ""
 
+-- | Used for filling up a list with display strings.
 lineShow :: Either GopherLine MalformedGopherLine -> String
 lineShow line = case line of
   -- It's a GopherLine
@@ -162,6 +168,7 @@ lineShow line = case line of
   -- It's a MalformedGopherLine
   (Right mgl) -> clean $ show mgl
 
+-- | Replaces certain characters to ensure the Brick UI doesn't get "corrupted."
 clean :: String -> String
 clean = replaceTabs . replaceReturns
   where
@@ -183,6 +190,7 @@ makeState gm@(GopherMenu ls) location = GopherBrowserState
     glsVector = Vec.fromList $ map lineShow ls
     mkFocusLinesIndex (GopherMenu m) = map fst $ filter (not . isInfoMsg . snd) (zip [0..] m)
 
+-- TODO: this all feels very messy
 customAttr :: A.AttrName
 customAttr = "custom"
 
@@ -210,6 +218,7 @@ linkAttr = "linkAttr"
 textAttr :: A.AttrName
 textAttr = "textAttr"
 
+-- TODO: bad name now...
 asteriskAttr :: A.AttrName
 asteriskAttr = "asteriskAttr"
 
@@ -218,19 +227,19 @@ titleAttr = "titleAttr"
 
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
-  [ (L.listAttr,            V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
-  , (L.listSelectedAttr,            (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
-  , (directoryAttr,         fg V.red)
-  , (fileAttr,         fg V.cyan)
-  , (indexSearchServerAttr,         fg V.magenta)
-  , (linkAttr,            fg (V.rgbColor (28 :: Int) (152 :: Int) (255 :: Int)))
-  , (textAttr,            fg (V.rgbColor (255 :: Int) (255 :: Int) (0 :: Int)))
-  , (genericTypeAttr,         fg V.green)
-  , (numberPrefixAttr,            fg (V.rgbColor (252 :: Int) (40 :: Int) (254 :: Int)))
-  , (customAttr,            (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
-  , (custom2Attr,           fg V.yellow)
-  , (titleAttr,           (V.defAttr `V.withStyle` V.reverseVideo) `V.withStyle` V.bold `V.withForeColor` V.white)
-  , (asteriskAttr,           fg V.white)
+  [ (L.listAttr,                V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
+  , (L.listSelectedAttr,        (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
+  , (directoryAttr,             fg V.red)
+  , (fileAttr,                  fg V.cyan)
+  , (indexSearchServerAttr,     fg V.magenta)
+  , (linkAttr,                  fg (V.rgbColor (28 :: Int) (152 :: Int) (255 :: Int)))
+  , (textAttr,                  fg (V.rgbColor (255 :: Int) (255 :: Int) (0 :: Int)))
+  , (genericTypeAttr,           fg V.green)
+  , (numberPrefixAttr,          fg (V.rgbColor (252 :: Int) (40 :: Int) (254 :: Int)))
+  , (customAttr,                (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
+  , (custom2Attr,               fg V.yellow)
+  , (titleAttr,                 (V.defAttr `V.withStyle` V.reverseVideo) `V.withStyle` V.bold `V.withForeColor` V.white)
+  , (asteriskAttr,              fg V.white)
   ]
 
 customBorder :: BS.BorderStyle
