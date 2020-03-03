@@ -20,6 +20,7 @@ import Lens.Micro ((^.))
 import Control.Monad.IO.Class
 import Data.Maybe
 
+import Data.List.Split
 import qualified Brick.AttrMap as A
 import qualified Brick.Main as M
 import Brick.Types (Widget)
@@ -61,6 +62,26 @@ drawUI gbs
   | gbsMode gbs == MenuMode = menuModeUI gbs
   | gbsMode gbs == TextFileMode = textFileModeUI gbs
   | otherwise = error "Cannot draw the UI for this unknown mode!"
+
+-- NOTE: could even be called "parentMagicString" but whatever...
+-- | Get the parent directory if possible; the "up" command.
+parentDirectory :: String -> Maybe String
+parentDirectory magicString
+  | magicString == "/" || null magicString = Nothing
+  | otherwise = Just $ intercalate "/" (init $ wordsBy (=='/') magicString)
+
+-- | Change the state to the parent menu by network request.
+goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
+goParentDirectory gbs = do
+  let (host, port, magicString) = gbsLocation gbs
+      parentMagicString = fromMaybe ("/") (parentDirectory magicString)
+  o <- gopherGet host (show port) parentMagicString
+  let newMenu = makeGopherMenu o
+  pure $ makeState newMenu (host, port, parentMagicString)
+
+-- TODO: goBack. Need to implement a list of history.
+-- | This is different than going up a directory.
+--goBack :: GopherBrowserState -> IO GopherBrowserState
 
 -- NOTE: should parts of this go in gopherclient? the problem currently is that it
 -- returns a gopher browser state, but otherwise the dependence on gbs can be easily
@@ -106,6 +127,7 @@ menuLine (GopherMenu ls) indx = ls !! indx
 
 appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
 appEvent gbs (T.VtyEvent (V.EvKey V.KEsc [])) = M.halt gbs
+appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'u') [])) = liftIO (goParentDirectory gbs) >>= M.continue
 -- check gbs if the state says we're handling a menu (list) or a text file (viewport)
 appEvent gbs (T.VtyEvent e)
   | gbsMode gbs == MenuMode = case e of
@@ -176,7 +198,7 @@ clean = replaceTabs . replaceReturns
     replaceReturns = map (\x -> if x == '\r' then ' ' else x)
 
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
--- based on passing it the mode and other info!
+-- based on passing it the mode and other info! makeMenuState?
 makeState :: GopherMenu -> Location -> GopherBrowserState
 makeState gm@(GopherMenu ls) location = GopherBrowserState
   { gbsList = L.list MyViewport glsVector 1
