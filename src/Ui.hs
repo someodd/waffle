@@ -1,14 +1,13 @@
 -- TODO: center everything better!
 -- TODO: hlint
 -- TODO: just disable enter/color for certain lines like information but let you select duh
---- TODO: use INI theme function so people can edit INI file to set
 -- TODO: color/invert keys in status bar
 -- TODO: some of this stuff deserves to go in gopherclient
 
 -- | This module handles the Brick UI for the Gopher client.
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE CPP #-}
-module Ui where
+module Ui (uiMain) where
 
 import Control.Monad (void)
 #if !(MIN_VERSION_base(4,11,0))
@@ -20,7 +19,6 @@ import Lens.Micro ((^.))
 import Control.Monad.IO.Class
 import Data.Maybe
 
-import Data.List.Split
 import qualified Brick.AttrMap as A
 import qualified Brick.Main as M
 import Brick.Types (Widget)
@@ -63,13 +61,6 @@ drawUI gbs
   | gbsMode gbs == TextFileMode = textFileModeUI gbs
   | otherwise = error "Cannot draw the UI for this unknown mode!"
 
--- NOTE: could even be called "parentMagicString" but whatever...
--- | Get the parent directory if possible; the "up" command.
-parentDirectory :: String -> Maybe String
-parentDirectory magicString
-  | magicString == "/" || null magicString = Nothing
-  | otherwise = Just $ intercalate "/" (init $ wordsBy (=='/') magicString)
-
 -- | Change the state to the parent menu by network request.
 goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
 goParentDirectory gbs = do
@@ -82,7 +73,7 @@ goParentDirectory gbs = do
 
 type History = ([Location], Int)
 
--- TODO: goForwardHistory
+-- FIXME: can get an index error! should resolve with a dialog box.
 goHistory :: GopherBrowserState -> Int -> IO GopherBrowserState
 goHistory gbs when = do
   let (history, historyMarker) = gbsHistory gbs
@@ -93,8 +84,14 @@ goHistory gbs when = do
   let newMenu = makeGopherMenu o
   pure $ makeState newMenu (host, port, magicString) newHistory
 
-
 -- | Create a new history after visiting a new page.
+--
+-- The only way to change the list of locations in history. Everything after
+-- the current location is dropped, then the new location is appended, and
+-- the history index increased. Thus, the new location is as far "forward"
+-- as the user can now go.
+--
+-- See also: GopherBrowserState.
 newChangeHistory :: GopherBrowserState -> Location -> History
 newChangeHistory gbs newLoc =
   let (history, historyMarker) = gbsHistory gbs
@@ -327,19 +324,33 @@ data MyName = MyViewport
 myNameScroll :: M.ViewportScroll MyName
 myNameScroll = M.viewportScroll MyViewport
 
+-- | The HistoryIndex is the index in the list of locations in the history.
+-- 0 is the oldest location in history. See also: GopherBrowserState.
+type HistoryIndex = Int
+
+-- | The application state for Brick.
 data GopherBrowserState = GopherBrowserState
   { gbsMenu :: GopherMenu
+  -- ^ Simply used to store the current GopherMenu when viewing one during MenuMode.
+  -- | This is the widget which is used when rendering a GopherMenu.
   , gbsList :: L.List MyName String
   -- | The line #s which have linkable entries. Used for jumping by number and n and p hotkeys and display stuff.
   , gbsFocusLines  :: [Int]  -- NOTE: use get elemIndex to enumerate
+  -- | The current location.
   , gbsLocation :: Location
+  -- | The mode of the browser so the browser can know how to behave; are we showing
+  -- a File? Are we in a GopherMenu?
   , gbsMode :: BrowserMode
+  -- | This is for the contents of a File to be rendered when in TextFileMode.
   , gbsText :: String
-  , gbsHistory :: ([Location], Int)
+  -- The history is a list of locations, where 0th element is the oldest and new
+  -- locations are appended. See also: newChangeHistory.
+  , gbsHistory :: ([Location], HistoryIndex)
   }
 
 -- | Gopher location in the form of domain, port, resource/magic string.
 type Location = (String, Int, String)
 
+-- | This is called in order to start the UI.
 uiMain :: GopherMenu -> Location -> IO ()
 uiMain gm location = void $ M.defaultMain theApp (makeState gm location ([location], 0))

@@ -6,6 +6,7 @@
 -- TODO: content detection. if not diretory then use text mode to display or another mode to download...
 module GopherClient where
 
+import Data.List
 import qualified Data.ByteString.Char8 as B8
 import Data.List.Split
 
@@ -240,9 +241,23 @@ isInfoMsg line = case line of
   -- It's a MalformedGopherLine
   (Right _) -> False
 
+-- | Get the magic string for the parent directory/menu, if possible (may already be at root).
+--
+-- >> parentDirectory "/"
+-- Nothing
+--
+-- >> parentDirectory ""
+-- Nothing
+--
+-- >> parentDirectory "/foo/bar/hello/world"
+-- Just "foo/bar/hello"
+parentDirectory :: String -> Maybe String
+parentDirectory magicString
+  | magicString == "/" || null magicString = Nothing
+  | otherwise = Just $ intercalate "/" (init $ wordsBy (=='/') magicString)
+
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
 -- if you don't wish to specify.
--- This should be named gopherMenuGet? or gopherInitiate to figure out which kinda transaction
 gopherGet :: String -> String -> String -> IO String
 gopherGet host port resource =
   connect host port $ \(connectionSocket, _) -> do
