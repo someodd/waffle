@@ -77,11 +77,30 @@ goParentDirectory gbs = do
       parentMagicString = fromMaybe ("/") (parentDirectory magicString)
   o <- gopherGet host (show port) parentMagicString
   let newMenu = makeGopherMenu o
-  pure $ makeState newMenu (host, port, parentMagicString)
+      newLocation = (host, port, parentMagicString)
+  pure $ makeState newMenu newLocation (newChangeHistory gbs newLocation)
 
--- TODO: goBack. Need to implement a list of history.
--- | This is different than going up a directory.
---goBack :: GopherBrowserState -> IO GopherBrowserState
+type History = ([Location], Int)
+
+-- TODO: goForwardHistory
+goHistory :: GopherBrowserState -> Int -> IO GopherBrowserState
+goHistory gbs when = do
+  let (history, historyMarker) = gbsHistory gbs
+      newHistoryMarker = historyMarker + when
+      (host, port, magicString) = history !! newHistoryMarker
+      newHistory = (history, newHistoryMarker)
+  o <- gopherGet host (show port) magicString
+  let newMenu = makeGopherMenu o
+  pure $ makeState newMenu (host, port, magicString) newHistory
+
+
+-- | Create a new history after visiting a new page.
+newChangeHistory :: GopherBrowserState -> Location -> History
+newChangeHistory gbs newLoc =
+  let (history, historyMarker) = gbsHistory gbs
+      newHistory = (take (historyMarker+1) history) ++ [newLoc]
+      newHistoryMarker = historyMarker + 1
+  in (newHistory, newHistoryMarker)
 
 -- NOTE: should parts of this go in gopherclient? the problem currently is that it
 -- returns a gopher browser state, but otherwise the dependence on gbs can be easily
@@ -94,11 +113,12 @@ requestNewState gbs = do
   let newMode = decipherMode lineType
   if newMode == MenuMode then
     let newMenu = makeGopherMenu o
-    in pure $ makeState newMenu location
+    in pure $ makeState newMenu location (newChangeHistory gbs location)
   else if newMode == TextFileMode then
     pure gbs { gbsLocation = location
              , gbsText = o
              , gbsMode = TextFileMode
+             , gbsHistory = newChangeHistory gbs (host, port, resource)
              }
   else
     error "nop"
@@ -125,8 +145,12 @@ selectedMenuLine gbs =
 menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx
 
+-- TODO: implement backspace as back in history which trims it
 appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
 appEvent gbs (T.VtyEvent (V.EvKey V.KEsc [])) = M.halt gbs
+-- This should be backspace
+appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'b') [])) = liftIO (goHistory gbs (-1)) >>= M.continue
+appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'f') [])) = liftIO (goHistory gbs 1) >>= M.continue
 appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'u') [])) = liftIO (goParentDirectory gbs) >>= M.continue
 -- check gbs if the state says we're handling a menu (list) or a text file (viewport)
 appEvent gbs (T.VtyEvent e)
@@ -199,12 +223,13 @@ clean = replaceTabs . replaceReturns
 
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
 -- based on passing it the mode and other info! makeMenuState?
-makeState :: GopherMenu -> Location -> GopherBrowserState
-makeState gm@(GopherMenu ls) location = GopherBrowserState
+makeState :: GopherMenu -> Location -> History -> GopherBrowserState
+makeState gm@(GopherMenu ls) location history = GopherBrowserState
   { gbsList = L.list MyViewport glsVector 1
   , gbsMenu = gm
   , gbsFocusLines = mkFocusLinesIndex gm
   , gbsLocation = location
+  , gbsHistory = history
   , gbsMode = MenuMode
   , gbsText = ""
   }
@@ -310,10 +335,11 @@ data GopherBrowserState = GopherBrowserState
   , gbsLocation :: Location
   , gbsMode :: BrowserMode
   , gbsText :: String
+  , gbsHistory :: ([Location], Int)
   }
 
 -- | Gopher location in the form of domain, port, resource/magic string.
 type Location = (String, Int, String)
 
 uiMain :: GopherMenu -> Location -> IO ()
-uiMain gm location = void $ M.defaultMain theApp (makeState gm location)
+uiMain gm location = void $ M.defaultMain theApp (makeState gm location ([location], 0))
