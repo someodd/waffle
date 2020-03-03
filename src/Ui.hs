@@ -45,7 +45,7 @@ menuModeUI gbs = [C.hCenter $ C.vCenter view]
   where
     l = gbsList gbs
     label = str " Item " <+> cur <+> str " of " <+> total -- TODO: should be renamed
-    (host, port, resource) = gbsLocation gbs
+    (host, port, resource, _) = gbsLocation gbs
     title = " " ++ host ++ ":" ++ show port ++ if not $ null resource then " (" ++ resource ++ ") " else " "
     cur = case l^.L.listSelectedL of
       Nothing -> str "-"
@@ -64,25 +64,27 @@ drawUI gbs
 -- | Change the state to the parent menu by network request.
 goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
 goParentDirectory gbs = do
-  let (host, port, magicString) = gbsLocation gbs
+  let (host, port, magicString, browserMode) = gbsLocation gbs
       parentMagicString = fromMaybe ("/") (parentDirectory magicString)
   o <- gopherGet host (show port) parentMagicString
   let newMenu = makeGopherMenu o
-      newLocation = (host, port, parentMagicString)
+      newLocation = (host, port, parentMagicString, browserMode)
   pure $ makeState newMenu newLocation (newChangeHistory gbs newLocation)
-
-type History = ([Location], Int)
 
 -- FIXME: can get an index error! should resolve with a dialog box.
 goHistory :: GopherBrowserState -> Int -> IO GopherBrowserState
 goHistory gbs when = do
   let (history, historyMarker) = gbsHistory gbs
       newHistoryMarker = historyMarker + when
-      (host, port, magicString) = history !! newHistoryMarker
+      location@(host, port, magicString, browserMode) = history !! newHistoryMarker
       newHistory = (history, newHistoryMarker)
   o <- gopherGet host (show port) magicString
-  let newMenu = makeGopherMenu o
-  pure $ makeState newMenu (host, port, magicString) newHistory
+  -- FIXME: XXX: it's not always a menu! derp!
+  if browserMode == MenuMode then
+    let newMenu = makeGopherMenu o
+    in pure $ makeState newMenu location newHistory
+  else
+    pure $ gbs { gbsText = clean o }
 
 -- | Create a new history after visiting a new page.
 --
@@ -110,13 +112,15 @@ requestNewState gbs = do
   let newMode = decipherMode lineType
   if newMode == MenuMode then
     let newMenu = makeGopherMenu o
+        location = mkLocation MenuMode
     in pure $ makeState newMenu location (newChangeHistory gbs location)
   else if newMode == TextFileMode then
-    pure gbs { gbsLocation = location
-             , gbsText = o
-             , gbsMode = TextFileMode
-             , gbsHistory = newChangeHistory gbs (host, port, resource)
-             }
+    let location = mkLocation TextFileMode
+    in pure gbs { gbsLocation = location
+                , gbsText = o
+                , gbsMode = TextFileMode
+                , gbsHistory = newChangeHistory gbs location
+                }
   else
     error "nop"
   where
@@ -125,7 +129,7 @@ requestNewState gbs = do
       (Left gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
       -- Unrecognized line
       (Right _) -> error "Can't do anything with unrecognized line."
-    location = (host, port, resource)
+    mkLocation x = (host, port, resource, x)
     decipherMode someType = case someType of
       -- canonical type
       (Left ct) -> case ct of
@@ -221,13 +225,13 @@ clean = replaceTabs . replaceReturns
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
 -- based on passing it the mode and other info! makeMenuState?
 makeState :: GopherMenu -> Location -> History -> GopherBrowserState
-makeState gm@(GopherMenu ls) location history = GopherBrowserState
+makeState gm@(GopherMenu ls) location@(_, _, _, browserMode) history = GopherBrowserState
   { gbsList = L.list MyViewport glsVector 1
   , gbsMenu = gm
   , gbsFocusLines = mkFocusLinesIndex gm
   , gbsLocation = location
   , gbsHistory = history
-  , gbsMode = MenuMode
+  , gbsMode = browserMode
   , gbsText = ""
   }
   where
@@ -328,6 +332,10 @@ myNameScroll = M.viewportScroll MyViewport
 -- 0 is the oldest location in history. See also: GopherBrowserState.
 type HistoryIndex = Int
 
+-- The history is a list of locations, where 0th element is the oldest and new
+-- locations are appended. See also: newChangeHistory.
+type History = ([Location], HistoryIndex)
+
 -- | The application state for Brick.
 data GopherBrowserState = GopherBrowserState
   { gbsMenu :: GopherMenu
@@ -343,14 +351,18 @@ data GopherBrowserState = GopherBrowserState
   , gbsMode :: BrowserMode
   -- | This is for the contents of a File to be rendered when in TextFileMode.
   , gbsText :: String
-  -- The history is a list of locations, where 0th element is the oldest and new
-  -- locations are appended. See also: newChangeHistory.
-  , gbsHistory :: ([Location], HistoryIndex)
+  -- See: History
+  , gbsHistory :: History
   }
 
--- | Gopher location in the form of domain, port, resource/magic string.
-type Location = (String, Int, String)
+-- | Gopher location in the form of domain, port, resource/magic string,
+-- and the BrowserMode used to render it.
+type Location = (String, Int, String, BrowserMode)
 
+-- FIXME: isn't there a way to infer a location's type? Assuming first
+-- link is a menu is a horrible hack...
 -- | This is called in order to start the UI.
-uiMain :: GopherMenu -> Location -> IO ()
-uiMain gm location = void $ M.defaultMain theApp (makeState gm location ([location], 0))
+uiMain :: GopherMenu -> (String, Int, String) -> IO ()
+uiMain gm (host, port, magicString) =
+  let trueLocationType = (host, port, magicString, MenuMode)
+  in void $ M.defaultMain theApp (makeState gm trueLocationType ([trueLocationType], 0))
