@@ -69,7 +69,7 @@ goParentDirectory gbs = do
   o <- gopherGet host (show port) parentMagicString
   let newMenu = makeGopherMenu o
       newLocation = (host, port, parentMagicString, browserMode)
-  pure $ makeState newMenu newLocation (newChangeHistory gbs newLocation)
+  pure $ newStateForMenu newMenu newLocation (newChangeHistory gbs newLocation)
 
 -- FIXME: can get an index error! should resolve with a dialog box.
 goHistory :: GopherBrowserState -> Int -> IO GopherBrowserState
@@ -80,11 +80,15 @@ goHistory gbs when = do
       newHistory = (history, newHistoryMarker)
   o <- gopherGet host (show port) magicString
   -- FIXME: XXX: it's not always a menu! derp!
-  if browserMode == MenuMode then
-    let newMenu = makeGopherMenu o
-    in pure $ makeState newMenu location newHistory
-  else
-    pure $ gbs { gbsText = clean o }
+  case browserMode of
+    MenuMode ->
+      let newMenu = makeGopherMenu o
+      in pure $ newStateForMenu newMenu location newHistory
+    TextFileMode -> pure $ gbs
+      { gbsText = clean o
+      , gbsHistory = newHistory
+      , gbsMode = TextFileMode
+      }
 
 -- | Create a new history after visiting a new page.
 --
@@ -101,28 +105,24 @@ newChangeHistory gbs newLoc =
       newHistoryMarker = historyMarker + 1
   in (newHistory, newHistoryMarker)
 
--- NOTE: should parts of this go in gopherclient? the problem currently is that it
--- returns a gopher browser state, but otherwise the dependence on gbs can be easily
--- avoided.
--- | Make a Gopher Protocol request based on the information in state and update
--- the state based on said request.
-requestNewState :: GopherBrowserState -> IO GopherBrowserState
-requestNewState gbs = do
+-- | Make a request based on the currently selected Gopher menu item and change
+-- the application state (GopherBrowserState) to reflect the change.
+newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
+newStateFromSelectedMenuItem gbs = do
   o <- gopherGet host (show port) resource
   let newMode = decipherMode lineType
-  if newMode == MenuMode then
-    let newMenu = makeGopherMenu o
-        location = mkLocation MenuMode
-    in pure $ makeState newMenu location (newChangeHistory gbs location)
-  else if newMode == TextFileMode then
-    let location = mkLocation TextFileMode
-    in pure gbs { gbsLocation = location
-                , gbsText = o
-                , gbsMode = TextFileMode
-                , gbsHistory = newChangeHistory gbs location
-                }
-  else
-    error "nop"
+  case newMode of
+    MenuMode ->
+      let newMenu = makeGopherMenu o
+          location = mkLocation MenuMode
+      in pure $ newStateForMenu newMenu location (newChangeHistory gbs location)
+    TextFileMode ->
+      let location = mkLocation TextFileMode
+      in pure gbs { gbsLocation = location
+                  , gbsText = clean o
+                  , gbsMode = TextFileMode
+                  , gbsHistory = newChangeHistory gbs location
+                  }
   where
     (host, port, resource, lineType) = case selectedMenuLine gbs of
       -- GopherLine
@@ -156,7 +156,7 @@ appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'u') [])) = liftIO (goParentDirectory
 -- check gbs if the state says we're handling a menu (list) or a text file (viewport)
 appEvent gbs (T.VtyEvent e)
   | gbsMode gbs == MenuMode = case e of
-      V.EvKey V.KEnter [] -> liftIO (requestNewState gbs) >>= M.continue
+      V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
       ev -> M.continue =<< (\x -> gbs {gbsList=x}) <$> L.handleListEventVi L.handleListEvent ev (gbsList gbs)
   -- viewport stuff here
   | gbsMode gbs == TextFileMode = case e of
@@ -222,16 +222,18 @@ clean = replaceTabs . replaceReturns
     replaceTabs = map (\x -> if x == '\t' then ' ' else x)
     replaceReturns = map (\x -> if x == '\r' then ' ' else x)
 
+type TextFileContents = String
+
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
--- based on passing it the mode and other info! makeMenuState?
-makeState :: GopherMenu -> Location -> History -> GopherBrowserState
-makeState gm@(GopherMenu ls) location@(_, _, _, browserMode) history = GopherBrowserState
+-- based on passing it the mode and other info! newStateForMenu?
+newStateForMenu :: GopherMenu -> Location -> History -> GopherBrowserState
+newStateForMenu gm@(GopherMenu ls) location history = GopherBrowserState
   { gbsList = L.list MyViewport glsVector 1
   , gbsMenu = gm
   , gbsFocusLines = mkFocusLinesIndex gm
   , gbsLocation = location
   , gbsHistory = history
-  , gbsMode = browserMode
+  , gbsMode = MenuMode
   , gbsText = ""
   }
   where
@@ -350,7 +352,7 @@ data GopherBrowserState = GopherBrowserState
   -- a File? Are we in a GopherMenu?
   , gbsMode :: BrowserMode
   -- | This is for the contents of a File to be rendered when in TextFileMode.
-  , gbsText :: String
+  , gbsText :: TextFileContents
   -- See: History
   , gbsHistory :: History
   }
@@ -365,4 +367,4 @@ type Location = (String, Int, String, BrowserMode)
 uiMain :: GopherMenu -> (String, Int, String) -> IO ()
 uiMain gm (host, port, magicString) =
   let trueLocationType = (host, port, magicString, MenuMode)
-  in void $ M.defaultMain theApp (makeState gm trueLocationType ([trueLocationType], 0))
+  in void $ M.defaultMain theApp (newStateForMenu gm trueLocationType ([trueLocationType], 0))
