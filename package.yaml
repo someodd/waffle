@@ -16,6 +16,7 @@ dependencies:
   - text
   - bytestring
   - microlens
+  - open-browser
   - vector
   - network-simple
   - split
