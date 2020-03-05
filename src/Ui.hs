@@ -190,6 +190,7 @@ appEvent gbs (T.VtyEvent e)
   -- viewport stuff here
   | gbsRenderMode gbs == TextFileMode = case e of
     V.EvKey (V.KChar 'j')  [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
+    V.EvKey (V.KChar 'k')  [] -> M.vScrollBy myNameScroll (-1) >> M.continue gbs
     _ -> M.continue gbs
   | otherwise = error "Unrecognized mode in event."
   -- TODO FIXME: the MenuBuffer should be record syntax
