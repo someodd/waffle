@@ -19,6 +19,7 @@ import Lens.Micro ((^.))
 import Control.Monad.IO.Class
 import Data.Maybe
 
+import Web.Browser
 import qualified Brick.AttrMap as A
 import qualified Brick.Main as M
 import Brick.Types (Widget)
@@ -112,33 +113,30 @@ newChangeHistory gbs newLoc =
 newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
 newStateFromSelectedMenuItem gbs = do
   o <- gopherGet host (show port) resource
-  let newMode = decipherMode lineType
-  case newMode of
-    MenuMode ->
-      let newMenu = makeGopherMenu o
-          location = mkLocation MenuMode
-      in pure $ newStateForMenu newMenu location (newChangeHistory gbs location)
-    TextFileMode ->
-      let location = mkLocation TextFileMode
-      in pure gbs { gbsLocation = location
-                  , gbsBuffer = TextFileBuffer $ clean o
-                  , gbsRenderMode = TextFileMode
-                  , gbsHistory = newChangeHistory gbs location
-                  }
-  where
+  case lineType of
+    (Left ct) -> case ct of
+      Directory ->
+        let newMenu = makeGopherMenu o
+            location = mkLocation MenuMode
+        in pure $ newStateForMenu newMenu location (newChangeHistory gbs location)
+      File ->
+        let location = mkLocation TextFileMode
+        in pure gbs { gbsLocation = location
+                    , gbsBuffer = TextFileBuffer $ clean o
+                    , gbsRenderMode = TextFileMode
+                    , gbsHistory = newChangeHistory gbs location
+                    }
+      _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
+    (Right nct) ->  case nct of
+      HtmlFile -> openBrowser (drop 4 resource) >> pure gbs
+      _ -> error $ "Tried to open unhandled noncannonical mode: " ++ show nct
+   where
     (host, port, resource, lineType) = case selectedMenuLine gbs of
       -- GopherLine
       (Left gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
       -- Unrecognized line
       (Right _) -> error "Can't do anything with unrecognized line."
     mkLocation x = (host, port, resource, x)
-    decipherMode someType = case someType of
-      -- canonical type
-      (Left ct) -> case ct of
-        Directory -> MenuMode
-        File -> TextFileMode
-        _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
-      (Right nct) -> error $ "Tried to open unhandled noncannonical mode: " ++ show nct
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
 selectedMenuLine gbs =
@@ -151,12 +149,25 @@ selectedMenuLine gbs =
 menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx
 
+-- Inefficient
 jumpNextLink :: GopherBrowserState -> GopherBrowserState
 jumpNextLink gbs = updateMenuList (L.listMoveTo next l)
   where
     (MenuBuffer (_, l, focusLines)) = gbsBuffer gbs
     currentIndex = fromJust $ L.listSelected l
     next = fromMaybe (focusLines !! 0) (find (>currentIndex) focusLines)
+    -- FIXME: repeated code
+    updateMenuList ls =
+      let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
+      in gbs {gbsBuffer=MenuBuffer (gm, ls, fl)}
+
+-- Inefficient
+jumpPrevLink :: GopherBrowserState -> GopherBrowserState
+jumpPrevLink gbs = updateMenuList (L.listMoveTo next l)
+  where
+    (MenuBuffer (_, l, focusLines)) = gbsBuffer gbs
+    currentIndex = fromJust $ L.listSelected l
+    next = fromMaybe (reverse focusLines !! 0) (find (<currentIndex) $ reverse focusLines)
     -- FIXME: repeated code
     updateMenuList ls =
       let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
@@ -174,6 +185,7 @@ appEvent gbs (T.VtyEvent e)
   | gbsRenderMode gbs == MenuMode = case e of
       V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
       V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
+      V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
       ev -> M.continue =<< updateMenuList <$> L.handleListEventVi L.handleListEvent ev (getMenuList gbs)
   -- viewport stuff here
   | gbsRenderMode gbs == TextFileMode = case e of
@@ -354,6 +366,7 @@ myNameScroll = M.viewportScroll MyViewport
 -- 0 is the oldest location in history. See also: GopherBrowserState.
 type HistoryIndex = Int
 
+-- TODO: what if history also saved which line # you were on in cas eyou go back and forward
 -- The history is a list of locations, where 0th element is the oldest and new
 -- locations are appended. See also: newChangeHistory.
 type History = ([Location], HistoryIndex)
