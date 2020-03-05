@@ -66,11 +66,11 @@ drawUI gbs
 -- | Change the state to the parent menu by network request.
 goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
 goParentDirectory gbs = do
-  let (host, port, magicString, renderMode) = gbsLocation gbs
+  let (host, port, magicString, _) = gbsLocation gbs
       parentMagicString = fromMaybe ("/") (parentDirectory magicString)
   o <- gopherGet host (show port) parentMagicString
   let newMenu = makeGopherMenu o
-      newLocation = (host, port, parentMagicString, renderMode)
+      newLocation = (host, port, parentMagicString, MenuMode)
   pure $ newStateForMenu newMenu newLocation (newChangeHistory gbs newLocation)
 
 -- FIXME: can get an index error! should resolve with a dialog box.
@@ -352,6 +352,8 @@ type FocusLines = [Int]
 
 -- The types of contents for being rendered
 data Buffer =
+  -- Would it be worth doing it like this:
+  --MenuBuffer {mbGopherMenu :: GopherMenu, mbList :: L.List MyName String, mbFocusLines :: FocusLines}
   -- | Simply used to store the current GopherMenu when viewing one during MenuMode.
   -- The second element is the widget which is used when rendering a GopherMenu.
   MenuBuffer (GopherMenu, L.List MyName String, FocusLines) |
