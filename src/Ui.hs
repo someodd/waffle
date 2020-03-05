@@ -151,6 +151,17 @@ selectedMenuLine gbs =
 menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx
 
+jumpNextLink :: GopherBrowserState -> GopherBrowserState
+jumpNextLink gbs = updateMenuList (L.listMoveTo next l)
+  where
+    (MenuBuffer (_, l, focusLines)) = gbsBuffer gbs
+    currentIndex = fromJust $ L.listSelected l
+    next = fromMaybe (focusLines !! 0) (find (>currentIndex) focusLines)
+    -- FIXME: repeated code
+    updateMenuList ls =
+      let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
+      in gbs {gbsBuffer=MenuBuffer (gm, ls, fl)}
+
 -- TODO: implement backspace as back in history which trims it
 appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
 appEvent gbs (T.VtyEvent (V.EvKey V.KEsc [])) = M.halt gbs
@@ -162,6 +173,7 @@ appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'u') [])) = liftIO (goParentDirectory
 appEvent gbs (T.VtyEvent e)
   | gbsRenderMode gbs == MenuMode = case e of
       V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
+      V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
       ev -> M.continue =<< updateMenuList <$> L.handleListEventVi L.handleListEvent ev (getMenuList gbs)
   -- viewport stuff here
   | gbsRenderMode gbs == TextFileMode = case e of
@@ -230,7 +242,7 @@ lineShow line = case line of
   -- It's a MalformedGopherLine
   (Right mgl) -> clean $ show mgl
 
--- FIXME: didn't this get moved to GopherClient?
+-- FIXME: didn't this get moved to GopherClient? need to do that
 -- | Replaces certain characters to ensure the Brick UI doesn't get "corrupted."
 clean :: String -> String
 clean = replaceTabs . replaceReturns
