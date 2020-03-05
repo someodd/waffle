@@ -36,14 +36,15 @@ import GopherClient
 -- | The UI for rendering and viewing a text file.
 textFileModeUI :: GopherBrowserState -> [Widget MyName]
 textFileModeUI gbs =
-  let ui = viewport MyViewport T.Both $ vBox [str $ clean $ gbsText gbs]
+  let (TextFileBuffer tfb) = gbsBuffer gbs
+      ui = viewport MyViewport T.Both $ vBox [str $ clean tfb]
   in [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 ui]
 
 -- | The UI for rendering and viewing a menu.
 menuModeUI :: GopherBrowserState -> [Widget MyName]
 menuModeUI gbs = [C.hCenter $ C.vCenter view]
   where
-    l = gbsList gbs
+    (MenuBuffer (_, l, _)) = gbsBuffer gbs
     label = str " Item " <+> cur <+> str " of " <+> total -- TODO: should be renamed
     (host, port, resource, _) = gbsLocation gbs
     title = " " ++ host ++ ":" ++ show port ++ if not $ null resource then " (" ++ resource ++ ") " else " "
@@ -57,37 +58,38 @@ menuModeUI gbs = [C.hCenter $ C.vCenter view]
 -- | The draw handler which will choose a UI based on the browser's mode.
 drawUI :: GopherBrowserState -> [Widget MyName]
 drawUI gbs
-  | gbsMode gbs == MenuMode = menuModeUI gbs
-  | gbsMode gbs == TextFileMode = textFileModeUI gbs
+  | renderMode == MenuMode = menuModeUI gbs
+  | renderMode == TextFileMode = textFileModeUI gbs
   | otherwise = error "Cannot draw the UI for this unknown mode!"
+  where renderMode = gbsRenderMode gbs
 
 -- | Change the state to the parent menu by network request.
 goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
 goParentDirectory gbs = do
-  let (host, port, magicString, browserMode) = gbsLocation gbs
+  let (host, port, magicString, renderMode) = gbsLocation gbs
       parentMagicString = fromMaybe ("/") (parentDirectory magicString)
   o <- gopherGet host (show port) parentMagicString
   let newMenu = makeGopherMenu o
-      newLocation = (host, port, parentMagicString, browserMode)
+      newLocation = (host, port, parentMagicString, renderMode)
   pure $ newStateForMenu newMenu newLocation (newChangeHistory gbs newLocation)
 
 -- FIXME: can get an index error! should resolve with a dialog box.
+-- Shares similarities with menu item selection
 goHistory :: GopherBrowserState -> Int -> IO GopherBrowserState
 goHistory gbs when = do
   let (history, historyMarker) = gbsHistory gbs
       newHistoryMarker = historyMarker + when
-      location@(host, port, magicString, browserMode) = history !! newHistoryMarker
+      location@(host, port, magicString, renderMode) = history !! newHistoryMarker
       newHistory = (history, newHistoryMarker)
   o <- gopherGet host (show port) magicString
-  -- FIXME: XXX: it's not always a menu! derp!
-  case browserMode of
+  case renderMode of
     MenuMode ->
       let newMenu = makeGopherMenu o
       in pure $ newStateForMenu newMenu location newHistory
     TextFileMode -> pure $ gbs
-      { gbsText = clean o
+      { gbsBuffer = TextFileBuffer $ clean o
       , gbsHistory = newHistory
-      , gbsMode = TextFileMode
+      , gbsRenderMode = TextFileMode
       }
 
 -- | Create a new history after visiting a new page.
@@ -119,8 +121,8 @@ newStateFromSelectedMenuItem gbs = do
     TextFileMode ->
       let location = mkLocation TextFileMode
       in pure gbs { gbsLocation = location
-                  , gbsText = clean o
-                  , gbsMode = TextFileMode
+                  , gbsBuffer = TextFileBuffer $ clean o
+                  , gbsRenderMode = TextFileMode
                   , gbsHistory = newChangeHistory gbs location
                   }
   where
@@ -140,8 +142,11 @@ newStateFromSelectedMenuItem gbs = do
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
 selectedMenuLine gbs =
-  let lineNumber = fromMaybe (error "Hit enter, but nothing was selected to follow! I'm not sure how that's possible!") (gbsList gbs^.L.listSelectedL)
-  in menuLine (gbsMenu gbs) lineNumber
+  -- given the scope of this function, i believe this error message is not horribly accurate in all cases where it might be used
+  let lineNumber = fromMaybe (error "Hit enter, but nothing was selected to follow! I'm not sure how that's possible!") (l^.L.listSelectedL)
+  in menuLine menu lineNumber
+  where
+    (MenuBuffer (menu, l, _)) = gbsBuffer gbs
 
 menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx
@@ -155,33 +160,43 @@ appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'f') [])) = liftIO (goHistory gbs 1) 
 appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'u') [])) = liftIO (goParentDirectory gbs) >>= M.continue
 -- check gbs if the state says we're handling a menu (list) or a text file (viewport)
 appEvent gbs (T.VtyEvent e)
-  | gbsMode gbs == MenuMode = case e of
+  | gbsRenderMode gbs == MenuMode = case e of
       V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
-      ev -> M.continue =<< (\x -> gbs {gbsList=x}) <$> L.handleListEventVi L.handleListEvent ev (gbsList gbs)
+      ev -> M.continue =<< updateMenuList <$> L.handleListEventVi L.handleListEvent ev (getMenuList gbs)
   -- viewport stuff here
-  | gbsMode gbs == TextFileMode = case e of
+  | gbsRenderMode gbs == TextFileMode = case e of
     V.EvKey (V.KChar 'j')  [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
     _ -> error "woop"
   | otherwise = error "Unrecognized mode in event."
+  -- TODO FIXME: the MenuBuffer should be record syntax
+  where
+    getMenuList x =
+      let (MenuBuffer (_, gl, _)) = gbsBuffer x
+      in gl
+    updateMenuList x =
+      let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
+      in gbs {gbsBuffer=MenuBuffer (gm, x, fl)}
 appEvent gbs _ = M.continue gbs
 
 -- FIXME: this is messy! unoptimized!
 listDrawElement :: GopherBrowserState -> Int -> Bool -> String -> Widget MyName
 listDrawElement gbs indx sel a =
-  cursorRegion <+> possibleNumber <+> withAttr lineColor (lineDescriptorWidget (menuLine (gbsMenu gbs) indx) <+> selStr a)
+  cursorRegion <+> possibleNumber <+> withAttr lineColor (lineDescriptorWidget (menuLine (gmenu) indx) <+> selStr a)
   where
     selStr s
       | sel && isInfoMsg (selectedMenuLine gbs) = withAttr custom2Attr (str s)
       | sel = withAttr customAttr $ str s
       | otherwise = str s
 
-    cursorRegion = if sel then withAttr asteriskAttr $ str " ➤ " else str "   "
-    isLink = indx `elem` gbsFocusLines gbs
-    lineColor = if isLink then linkAttr else textAttr
-    biggestIndexDigits = length $ show (Vec.length $ gbsList gbs^.L.listElementsL)
-    curIndexDigits = length $ show $ fromJust $ indx `elemIndex` gbsFocusLines gbs
+    (MenuBuffer (gmenu, mlist, focusLines)) = gbsBuffer gbs
 
-    possibleNumber = if isLink then withAttr numberPrefixAttr $ str $ numberPad $ show (fromJust $ indx `elemIndex` gbsFocusLines gbs) ++ ". " else str "" 
+    cursorRegion = if sel then withAttr asteriskAttr $ str " ➤ " else str "   "
+    isLink = indx `elem` focusLines
+    lineColor = if isLink then linkAttr else textAttr
+    biggestIndexDigits = length $ show (Vec.length $ mlist^.L.listElementsL)
+    curIndexDigits = length $ show $ fromJust $ indx `elemIndex` focusLines
+
+    possibleNumber = if isLink then withAttr numberPrefixAttr $ str $ numberPad $ show (fromJust $ indx `elemIndex` focusLines) ++ ". " else str "" 
       where
       numberPad = (replicate (biggestIndexDigits - curIndexDigits) ' ' ++)
 
@@ -215,6 +230,7 @@ lineShow line = case line of
   -- It's a MalformedGopherLine
   (Right mgl) -> clean $ show mgl
 
+-- FIXME: didn't this get moved to GopherClient?
 -- | Replaces certain characters to ensure the Brick UI doesn't get "corrupted."
 clean :: String -> String
 clean = replaceTabs . replaceReturns
@@ -222,19 +238,14 @@ clean = replaceTabs . replaceReturns
     replaceTabs = map (\x -> if x == '\t' then ' ' else x)
     replaceReturns = map (\x -> if x == '\r' then ' ' else x)
 
-type TextFileContents = String
-
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
 -- based on passing it the mode and other info! newStateForMenu?
 newStateForMenu :: GopherMenu -> Location -> History -> GopherBrowserState
 newStateForMenu gm@(GopherMenu ls) location history = GopherBrowserState
-  { gbsList = L.list MyViewport glsVector 1
-  , gbsMenu = gm
-  , gbsFocusLines = mkFocusLinesIndex gm
+  { gbsBuffer = MenuBuffer (gm, L.list MyViewport glsVector 1, mkFocusLinesIndex gm)
   , gbsLocation = location
   , gbsHistory = history
-  , gbsMode = MenuMode
-  , gbsText = ""
+  , gbsRenderMode = MenuMode
   }
   where
     glsVector = Vec.fromList $ map lineShow ls
@@ -319,9 +330,6 @@ theApp =
         , M.appAttrMap = const theMap
         }
 
-data BrowserMode = MenuMode | TextFileMode
-  deriving (Show, Eq, Ord)
-
 -- this is for text mode scrolling
 data MyName = MyViewport
   deriving (Show, Eq, Ord)
@@ -338,28 +346,36 @@ type HistoryIndex = Int
 -- locations are appended. See also: newChangeHistory.
 type History = ([Location], HistoryIndex)
 
--- | The application state for Brick.
-data GopherBrowserState = GopherBrowserState
-  { gbsMenu :: GopherMenu
+-- | The line #s which have linkable entries. Used for jumping by number and n and p hotkeys and display stuff.
+-- use get elemIndex to enumerate
+type FocusLines = [Int]
+
+-- The types of contents for being rendered
+data Buffer =
+  -- | Simply used to store the current GopherMenu when viewing one during MenuMode.
+  -- The second element is the widget which is used when rendering a GopherMenu.
+  MenuBuffer (GopherMenu, L.List MyName String, FocusLines) |
   -- ^ Simply used to store the current GopherMenu when viewing one during MenuMode.
-  -- | This is the widget which is used when rendering a GopherMenu.
-  , gbsList :: L.List MyName String
-  -- | The line #s which have linkable entries. Used for jumping by number and n and p hotkeys and display stuff.
-  , gbsFocusLines  :: [Int]  -- NOTE: use get elemIndex to enumerate
-  -- | The current location.
-  , gbsLocation :: Location
-  -- | The mode of the browser so the browser can know how to behave; are we showing
-  -- a File? Are we in a GopherMenu?
-  , gbsMode :: BrowserMode
-  -- | This is for the contents of a File to be rendered when in TextFileMode.
-  , gbsText :: TextFileContents
-  -- See: History
-  , gbsHistory :: History
-  }
+  TextFileBuffer String
+  -- ^ This is for the contents of a File to be rendered when in TextFileMode.
+
+-- | Related to Buffer. Namely exists for History.
+data RenderMode = MenuMode | TextFileMode
+  deriving (Eq)
 
 -- | Gopher location in the form of domain, port, resource/magic string,
 -- and the BrowserMode used to render it.
-type Location = (String, Int, String, BrowserMode)
+type Location = (String, Int, String, RenderMode)
+
+-- | The application state for Brick.
+data GopherBrowserState = GopherBrowserState
+  { gbsBuffer :: Buffer
+  -- | The current location.
+  , gbsLocation :: Location
+  , gbsRenderMode :: RenderMode
+  -- See: History
+  , gbsHistory :: History
+  }
 
 -- FIXME: isn't there a way to infer a location's type? Assuming first
 -- link is a menu is a horrible hack...
