@@ -256,6 +256,25 @@ parentDirectory magicString
   | magicString == "/" || null magicString = Nothing
   | otherwise = Just $ intercalate "/" (init $ wordsBy (=='/') magicString)
 
+-- Lots of redundancy
+downloadGet :: String -> String -> String -> IO B8.ByteString
+downloadGet host port resource =
+  connect host port $ \(connectionSocket, _) -> do
+    send connectionSocket (B8.pack $ resource ++ "\r\n")
+    -- need to only fetch as many bytes as it takes to get period on a line by itself to
+    -- close the connection.
+    wow <- getAllBytes (pure B8.empty) connectionSocket
+    pure $ wow
+  where
+  recvChunks = 1024
+  getAllBytes :: IO B8.ByteString -> Socket -> IO B8.ByteString
+  getAllBytes acc connectionSocket = do
+    gosh <- recv connectionSocket recvChunks
+    wacc <- acc
+    case gosh of
+      Nothing -> acc
+      Just chnk -> getAllBytes (pure $ B8.append wacc chnk) connectionSocket
+
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
 -- if you don't wish to specify.
 gopherGet :: String -> String -> String -> IO String

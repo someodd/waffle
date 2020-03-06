@@ -9,15 +9,18 @@
 {-# LANGUAGE CPP #-}
 module Ui (uiMain) where
 
+import qualified Control.Exception as E
 import Control.Monad (void)
 #if !(MIN_VERSION_base(4,11,0))
 import Data.Monoid
 #endif
-import Data.List
+import Data.List as Lis
 import qualified Graphics.Vty as V
 import Lens.Micro ((^.))
 import Control.Monad.IO.Class
 import Data.Maybe
+import qualified Data.ByteString as BS
+import qualified Data.Text as Text
 
 import Web.Browser
 import qualified Brick.AttrMap as A
@@ -28,9 +31,10 @@ import Brick.Util (fg, on)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
-import Brick.Widgets.Core (viewport, hLimitPercent, vLimitPercent, updateAttrMap, withBorderStyle, str, vBox, vLimit, withAttr, (<+>))
+import Brick.Widgets.Core (withDefAttr, emptyWidget, viewport, hLimitPercent, hLimit, vLimitPercent, updateAttrMap, withBorderStyle, str, vBox, vLimit, withAttr, (<+>), (<=>), txt, padTop)
 import qualified Brick.Widgets.List as L
 import qualified Data.Vector as Vec
+import qualified Brick.Widgets.FileBrowser as FB
 
 import GopherClient
 
@@ -48,7 +52,7 @@ menuModeUI gbs = [C.hCenter $ C.vCenter view]
     (MenuBuffer (_, l, _)) = gbsBuffer gbs
     label = str " Item " <+> cur <+> str " of " <+> total -- TODO: should be renamed
     (host, port, resource, _) = gbsLocation gbs
-    title = " " ++ host ++ ":" ++ show port ++ if not $ null resource then " (" ++ resource ++ ") " else " "
+    title = " " ++ host ++ ":" ++ show port ++ if not $ Lis.null resource then " (" ++ resource ++ ") " else " "
     cur = case l^.L.listSelectedL of
       Nothing -> str "-"
       Just i  -> str (show (i + 1))
@@ -56,11 +60,34 @@ menuModeUI gbs = [C.hCenter $ C.vCenter view]
     box = updateAttrMap (A.applyAttrMappings borderMappings) $ withBorderStyle customBorder $ B.borderWithLabel (withAttr titleAttr $ str title) $ L.renderListWithIndex (listDrawElement gbs) True l
     view = vBox [ box, vLimit 1 $ str "Esc to exit. Vi keys to browse. Enter to open." <+> label]
 
+-- FIXME
+fileBrowserUi :: GopherBrowserState -> [Widget MyName]
+fileBrowserUi gbs = [C.center $ ui <=> help]
+    where
+        b = fromBuffer $ gbsBuffer gbs
+        fromBuffer x = fbFileBrowser x
+        ui = C.hCenter $
+             vLimit 15 $
+             hLimit 50 $
+             B.borderWithLabel (txt "Choose a file") $
+             FB.renderFileBrowser True b
+        help = padTop (T.Pad 1) $
+               vBox [ case FB.fileBrowserException b of
+                          Nothing -> emptyWidget
+                          Just e -> C.hCenter $ withDefAttr errorAttr $
+                                    txt $ Text.pack $ E.displayException e
+                    , C.hCenter $ txt "Up/Down: select"
+                    , C.hCenter $ txt "/: search, Ctrl-C or Esc: cancel search"
+                    , C.hCenter $ txt "Enter: change directory or select file"
+                    , C.hCenter $ txt "Esc: quit"
+                    ]
+
 -- | The draw handler which will choose a UI based on the browser's mode.
 drawUI :: GopherBrowserState -> [Widget MyName]
 drawUI gbs
   | renderMode == MenuMode = menuModeUI gbs
   | renderMode == TextFileMode = textFileModeUI gbs
+  | renderMode == FileBrowserMode = fileBrowserUi gbs
   | otherwise = error "Cannot draw the UI for this unknown mode!"
   where renderMode = gbsRenderMode gbs
 
@@ -92,6 +119,7 @@ goHistory gbs when = do
       , gbsHistory = newHistory
       , gbsRenderMode = TextFileMode
       }
+    m -> error $ "Should not be able to have a history item in the mode: " ++ show m
 
 -- | Create a new history after visiting a new page.
 --
@@ -112,20 +140,32 @@ newChangeHistory gbs newLoc =
 -- the application state (GopherBrowserState) to reflect the change.
 newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
 newStateFromSelectedMenuItem gbs = do
-  o <- gopherGet host (show port) resource
   case lineType of
     (Left ct) -> case ct of
-      Directory ->
+      Directory -> do
+        o <- gopherGet host (show port) resource
         let newMenu = makeGopherMenu o
             location = mkLocation MenuMode
-        in pure $ newStateForMenu newMenu location (newChangeHistory gbs location)
-      File ->
+        pure $ newStateForMenu newMenu location (newChangeHistory gbs location)
+      File -> do
+        o <- gopherGet host (show port) resource
         let location = mkLocation TextFileMode
-        in pure gbs { gbsLocation = location
-                    , gbsBuffer = TextFileBuffer $ clean o
-                    , gbsRenderMode = TextFileMode
-                    , gbsHistory = newChangeHistory gbs location
-                    }
+        pure gbs { gbsLocation = location
+                 , gbsBuffer = TextFileBuffer $ clean o
+                 , gbsRenderMode = TextFileMode
+                 , gbsHistory = newChangeHistory gbs location
+                 }
+      ImageFile -> do
+        o <- downloadGet host (show port) resource
+        --BS.writeFile "usefilechoserhere" o >> pure gbs-- XXX FIXME
+        x <- FB.newFileBrowser FB.selectDirectories MyViewport Nothing
+        pure $ gbs
+          { gbsRenderMode = FileBrowserMode
+          , gbsBuffer = FileBrowserBuffer { fbFileBrowser = x
+                                          , fbCallBack = (`BS.writeFile` o)
+                                          , fbFormerBufferState = gbsBuffer gbs
+                                          }
+          }
       _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
     (Right nct) ->  case nct of
       HtmlFile -> openBrowser (drop 4 resource) >> pure gbs
@@ -192,9 +232,31 @@ appEvent gbs (T.VtyEvent e)
     V.EvKey (V.KChar 'j')  [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
     V.EvKey (V.KChar 'k')  [] -> M.vScrollBy myNameScroll (-1) >> M.continue gbs
     _ -> M.continue gbs
+  | gbsRenderMode gbs == FileBrowserMode = case e of
+    -- instances of 'b' need to tap into gbsbuffer
+    V.EvKey V.KEsc [] | not (FB.fileBrowserIsSearching $ fromFileBrowserBuffer (gbsBuffer gbs)) ->
+      M.halt gbs
+    _ -> do
+      b' <- FB.handleFileBrowserEvent e (fromFileBrowserBuffer $ gbsBuffer gbs)
+      -- If the browser has a selected file after handling the
+      -- event (because the user pressed Enter), shut down.
+      case e of
+        V.EvKey V.KEnter [] ->
+          case FB.fileBrowserSelection b' of
+            [] -> M.continue $ updateFileBrowserBuffer b'
+            --_ -> M.halt $ updateFileBrowserBuffer b'
+            --_ -> M.halt $ updateFileBrowserBuffer b'
+            a:[] -> liftIO (doCallBack a) >>= M.continue
+            _ -> error "What the heck no file or something"
+        _ -> M.continue $ updateFileBrowserBuffer b'
   | otherwise = error "Unrecognized mode in event."
   -- TODO FIXME: the MenuBuffer should be record syntax
   where
+    doCallBack a = do
+      fbCallBack (gbsBuffer gbs) (FB.fileInfoFilePath a ++ "testout.out")
+      pure $ gbs {gbsBuffer = (fbFormerBufferState $ gbsBuffer gbs), gbsRenderMode = MenuMode}
+    fromFileBrowserBuffer x = fbFileBrowser x
+    updateFileBrowserBuffer bu = gbs { gbsBuffer = (gbsBuffer gbs) { fbFileBrowser = bu }  }
     getMenuList x =
       let (MenuBuffer (_, gl, _)) = gbsBuffer x
       in gl
@@ -255,7 +317,6 @@ lineShow line = case line of
   -- It's a MalformedGopherLine
   (Right mgl) -> clean $ show mgl
 
--- FIXME: didn't this get moved to GopherClient? need to do that
 -- | Replaces certain characters to ensure the Brick UI doesn't get "corrupted."
 clean :: String -> String
 clean = replaceTabs . replaceReturns
@@ -311,6 +372,9 @@ asteriskAttr = "asteriskAttr"
 titleAttr :: A.AttrName
 titleAttr = "titleAttr"
 
+errorAttr :: A.AttrName
+errorAttr = "error"
+
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
   [ (L.listAttr,                V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
@@ -326,6 +390,16 @@ theMap = A.attrMap V.defAttr
   , (custom2Attr,               fg V.yellow)
   , (titleAttr,                 (V.defAttr `V.withStyle` V.reverseVideo) `V.withStyle` V.bold `V.withForeColor` V.white)
   , (asteriskAttr,              fg V.white)
+  , (FB.fileBrowserCurrentDirectoryAttr, V.white `on` V.blue)
+  , (FB.fileBrowserSelectionInfoAttr, V.white `on` V.blue)
+  , (FB.fileBrowserDirectoryAttr, fg V.blue)
+  , (FB.fileBrowserBlockDeviceAttr, fg V.magenta)
+  , (FB.fileBrowserCharacterDeviceAttr, fg V.green)
+  , (FB.fileBrowserNamedPipeAttr, fg V.yellow)
+  , (FB.fileBrowserSymbolicLinkAttr, fg V.cyan)
+  , (FB.fileBrowserUnixSocketAttr, fg V.red)
+  , (FB.fileBrowserSelectedAttr, V.white `on` V.magenta)
+  , (errorAttr, fg V.red)
   ]
 
 customBorder :: BS.BorderStyle
@@ -384,12 +458,19 @@ data Buffer =
   -- The second element is the widget which is used when rendering a GopherMenu.
   MenuBuffer (GopherMenu, L.List MyName String, FocusLines) |
   -- ^ Simply used to store the current GopherMenu when viewing one during MenuMode.
-  TextFileBuffer String
+  TextFileBuffer String |
   -- ^ This is for the contents of a File to be rendered when in TextFileMode.
+  -- this should be a combination of things. it should have the addres of the temporary file
+  -- which should then be moved to the picked location
+  FileBrowserBuffer { fbFileBrowser :: FB.FileBrowser MyName
+                    , fbCallBack :: String -> IO ()
+                    , fbFormerBufferState :: Buffer
+                    }
+  -- FIXME: needs to be FileBrowserBuffer (FB.FIleBrowser MyName, funcToAcceptSelectedFileString, previousBufferToRestore)
 
 -- | Related to Buffer. Namely exists for History.
-data RenderMode = MenuMode | TextFileMode
-  deriving (Eq)
+data RenderMode = MenuMode | TextFileMode | FileBrowserMode
+  deriving (Eq, Show)
 
 -- | Gopher location in the form of domain, port, resource/magic string,
 -- and the BrowserMode used to render it.
