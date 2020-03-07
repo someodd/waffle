@@ -31,10 +31,11 @@ import Brick.Util (fg, on)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Center as C
-import Brick.Widgets.Core (withDefAttr, emptyWidget, viewport, hLimitPercent, hLimit, vLimitPercent, updateAttrMap, withBorderStyle, str, vBox, vLimit, withAttr, (<+>), (<=>), txt, padTop)
+import Brick.Widgets.Core (withDefAttr, emptyWidget, viewport, hLimitPercent, vLimitPercent, updateAttrMap, withBorderStyle, str, vBox, vLimit, withAttr, (<+>), (<=>), txt, padTop)
 import qualified Brick.Widgets.List as L
 import qualified Data.Vector as Vec
 import qualified Brick.Widgets.FileBrowser as FB
+import System.FilePath
 
 import GopherClient
 
@@ -62,13 +63,11 @@ menuModeUI gbs = [C.hCenter $ C.vCenter view]
 
 -- FIXME
 fileBrowserUi :: GopherBrowserState -> [Widget MyName]
-fileBrowserUi gbs = [C.center $ ui <=> help]
+fileBrowserUi gbs = [C.center $ vLimitPercent 100 $ hLimitPercent 100 $ ui <=> help]
     where
         b = fromBuffer $ gbsBuffer gbs
         fromBuffer x = fbFileBrowser x
         ui = C.hCenter $
-             vLimit 15 $
-             hLimit 50 $
              B.borderWithLabel (txt "Choose a file") $
              FB.renderFileBrowser True b
         help = padTop (T.Pad 1) $
@@ -80,6 +79,7 @@ fileBrowserUi gbs = [C.center $ ui <=> help]
                     , C.hCenter $ txt "/: search, Ctrl-C or Esc: cancel search"
                     , C.hCenter $ txt "Enter: change directory or select file"
                     , C.hCenter $ txt "Esc: quit"
+                    , C.hCenter $ str $ fbFileOutPath (gbsBuffer gbs)
                     ]
 
 -- | The draw handler which will choose a UI based on the browser's mode.
@@ -158,11 +158,14 @@ newStateFromSelectedMenuItem gbs = do
       ImageFile -> do
         o <- downloadGet host (show port) resource
         --BS.writeFile "usefilechoserhere" o >> pure gbs-- XXX FIXME
-        x <- FB.newFileBrowser FB.selectDirectories MyViewport Nothing
+        x <- FB.newFileBrowser selectNothing MyViewport Nothing
         pure $ gbs
           { gbsRenderMode = FileBrowserMode
           , gbsBuffer = FileBrowserBuffer { fbFileBrowser = x
                                           , fbCallBack = (`BS.writeFile` o)
+                                          , fbIsNamingFile = False
+                                          , fbFileOutPath = ""
+                                          , fbOriginalFileName = takeFileName resource
                                           , fbFormerBufferState = gbsBuffer gbs
                                           }
           }
@@ -177,6 +180,11 @@ newStateFromSelectedMenuItem gbs = do
       -- Unrecognized line
       (Right _) -> error "Can't do anything with unrecognized line."
     mkLocation x = (host, port, resource, x)
+
+-- | This is for FileBrowser, because we don't want to overwrite anything,
+-- we want to browse through directories and then enter in a file name.
+selectNothing :: FB.FileInfo -> Bool
+selectNothing _ = False
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
 selectedMenuLine gbs =
@@ -215,48 +223,56 @@ jumpPrevLink gbs = updateMenuList (L.listMoveTo next l)
 
 -- TODO: implement backspace as back in history which trims it
 appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
-appEvent gbs (T.VtyEvent (V.EvKey V.KEsc [])) = M.halt gbs
 -- This should be backspace
-appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'b') [])) = liftIO (goHistory gbs (-1)) >>= M.continue
-appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'f') [])) = liftIO (goHistory gbs 1) >>= M.continue
-appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'u') [])) = liftIO (goParentDirectory gbs) >>= M.continue
 -- check gbs if the state says we're handling a menu (list) or a text file (viewport)
 appEvent gbs (T.VtyEvent e)
   | gbsRenderMode gbs == MenuMode = case e of
       V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
       V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
       V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
+      V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
+      V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
+      V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
+      V.EvKey V.KEsc [] -> M.halt gbs
+-- check gbs if the state says we're handling a menu (list) or a text file (viewport)
       ev -> M.continue =<< updateMenuList <$> L.handleListEventVi L.handleListEvent ev (getMenuList gbs)
   -- viewport stuff here
   | gbsRenderMode gbs == TextFileMode = case e of
     V.EvKey (V.KChar 'j')  [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
     V.EvKey (V.KChar 'k')  [] -> M.vScrollBy myNameScroll (-1) >> M.continue gbs
+    V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
+    V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
+    V.EvKey V.KEsc [] -> M.halt gbs
+    V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
     _ -> M.continue gbs
   | gbsRenderMode gbs == FileBrowserMode = case e of
     -- instances of 'b' need to tap into gbsbuffer
     V.EvKey V.KEsc [] | not (FB.fileBrowserIsSearching $ fromFileBrowserBuffer (gbsBuffer gbs)) ->
-      M.halt gbs
+      M.continue $ returnFormerState gbs
     _ -> do
-      b' <- FB.handleFileBrowserEvent e (fromFileBrowserBuffer $ gbsBuffer gbs)
+      let (gbs', bUnOpen') = handleFileBrowserEvent' gbs e (fromFileBrowserBuffer $ gbsBuffer gbs)
+      b' <- bUnOpen'
       -- If the browser has a selected file after handling the
       -- event (because the user pressed Enter), shut down.
-      case e of
-        V.EvKey V.KEnter [] ->
-          case FB.fileBrowserSelection b' of
-            [] -> M.continue $ updateFileBrowserBuffer b'
-            --_ -> M.halt $ updateFileBrowserBuffer b'
-            --_ -> M.halt $ updateFileBrowserBuffer b'
-            a:[] -> liftIO (doCallBack a) >>= M.continue
-            _ -> error "What the heck no file or something"
-        _ -> M.continue $ updateFileBrowserBuffer b'
+      let fileOutPath = fbFileOutPath (gbsBuffer gbs')
+      if (isNamingFile gbs') then
+        M.continue (updateFileBrowserBuffer gbs' b')
+      -- this errors now
+      else if not (null $ getOutFilePath gbs') then
+        (liftIO (doCallBack fileOutPath) >>= M.continue)
+      else
+        M.continue (updateFileBrowserBuffer gbs' b')
   | otherwise = error "Unrecognized mode in event."
   -- TODO FIXME: the MenuBuffer should be record syntax
   where
+    returnFormerState g = g {gbsBuffer = (fbFormerBufferState $ gbsBuffer g), gbsRenderMode = MenuMode}
+    getOutFilePath g = fbFileOutPath (gbsBuffer g)
+    isNamingFile g = fbIsNamingFile (gbsBuffer g)
     doCallBack a = do
-      fbCallBack (gbsBuffer gbs) (FB.fileInfoFilePath a ++ "testout.out")
+      fbCallBack (gbsBuffer gbs) a
       pure $ gbs {gbsBuffer = (fbFormerBufferState $ gbsBuffer gbs), gbsRenderMode = MenuMode}
     fromFileBrowserBuffer x = fbFileBrowser x
-    updateFileBrowserBuffer bu = gbs { gbsBuffer = (gbsBuffer gbs) { fbFileBrowser = bu }  }
+    updateFileBrowserBuffer g bu = g { gbsBuffer = (gbsBuffer g) { fbFileBrowser = bu }  }
     getMenuList x =
       let (MenuBuffer (_, gl, _)) = gbsBuffer x
       in gl
@@ -264,6 +280,34 @@ appEvent gbs (T.VtyEvent e)
       let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
       in gbs {gbsBuffer=MenuBuffer (gm, x, fl)}
 appEvent gbs _ = M.continue gbs
+
+-- FIXME: only need to return GopherBrowserState actually
+-- | Overrides handling file browse revents because we have a special text entry mode!
+--- See also: handleFileBrowserEvent
+handleFileBrowserEvent' :: (Ord n) => GopherBrowserState -> V.Event -> FB.FileBrowser n -> (GopherBrowserState, T.EventM n (FB.FileBrowser n))
+handleFileBrowserEvent' gbs e b =
+    -- FIXME: okay this is very wrong/messed up. take another look at regular handleFIleBrowserEvent'
+    if not isNamingFile && e == V.EvKey (V.KChar 'n') [] then
+        (initiateNamingState, pure b)
+    else if isNamingFile then
+      case e of
+        V.EvKey V.KEnter [] -> (finalOutFilePath $ (FB.getWorkingDirectory b) ++ "/" ++ curOutFilePath, pure b)
+        V.EvKey V.KBS [] -> (updateOutFilePath $ take (length curOutFilePath - 1) curOutFilePath, pure b)
+        V.EvKey (V.KChar c) [] -> (updateOutFilePath $ curOutFilePath ++ [c], pure b)
+        _ -> (gbs, FB.handleFileBrowserEvent e b)
+    else
+      (gbs, FB.handleFileBrowserEvent e b)
+    where
+      initiateNamingState :: GopherBrowserState
+      initiateNamingState = gbs { gbsBuffer = (gbsBuffer gbs) { fbIsNamingFile = True, fbFileOutPath = (fbOriginalFileName (gbsBuffer gbs)) } }
+
+      finalOutFilePath p = gbs { gbsBuffer = (gbsBuffer gbs) { fbFileOutPath = p, fbIsNamingFile = False } }
+
+      isNamingFile = fbIsNamingFile (gbsBuffer gbs)
+
+      updateOutFilePath p = gbs { gbsBuffer = (gbsBuffer gbs) { fbFileOutPath = p } }
+
+      curOutFilePath = fbFileOutPath (gbsBuffer gbs)
 
 -- FIXME: this is messy! unoptimized!
 listDrawElement :: GopherBrowserState -> Int -> Bool -> String -> Widget MyName
@@ -464,7 +508,10 @@ data Buffer =
   -- which should then be moved to the picked location
   FileBrowserBuffer { fbFileBrowser :: FB.FileBrowser MyName
                     , fbCallBack :: String -> IO ()
+                    , fbIsNamingFile :: Bool
+                    , fbFileOutPath :: String
                     , fbFormerBufferState :: Buffer
+                    , fbOriginalFileName :: String
                     }
   -- FIXME: needs to be FileBrowserBuffer (FB.FIleBrowser MyName, funcToAcceptSelectedFileString, previousBufferToRestore)
 
