@@ -136,6 +136,22 @@ newChangeHistory gbs newLoc =
       newHistoryMarker = historyMarker + 1
   in (newHistory, newHistoryMarker)
 
+downloadState :: GopherBrowserState -> String -> Int -> String -> IO GopherBrowserState
+downloadState gbs host port resource =  do
+  o <- downloadGet host (show port) resource
+  --BS.writeFile "usefilechoserhere" o >> pure gbs-- XXX FIXME
+  x <- FB.newFileBrowser selectNothing MyViewport Nothing
+  pure $ gbs
+    { gbsRenderMode = FileBrowserMode
+    , gbsBuffer = FileBrowserBuffer { fbFileBrowser = x
+                                    , fbCallBack = (`BS.writeFile` o)
+                                    , fbIsNamingFile = False
+                                    , fbFileOutPath = ""
+                                    , fbOriginalFileName = takeFileName resource
+                                    , fbFormerBufferState = gbsBuffer gbs
+                                    }
+    }
+
 -- | Make a request based on the currently selected Gopher menu item and change
 -- the application state (GopherBrowserState) to reflect the change.
 newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
@@ -155,20 +171,7 @@ newStateFromSelectedMenuItem gbs = do
                  , gbsRenderMode = TextFileMode
                  , gbsHistory = newChangeHistory gbs location
                  }
-      ImageFile -> do
-        o <- downloadGet host (show port) resource
-        --BS.writeFile "usefilechoserhere" o >> pure gbs-- XXX FIXME
-        x <- FB.newFileBrowser selectNothing MyViewport Nothing
-        pure $ gbs
-          { gbsRenderMode = FileBrowserMode
-          , gbsBuffer = FileBrowserBuffer { fbFileBrowser = x
-                                          , fbCallBack = (`BS.writeFile` o)
-                                          , fbIsNamingFile = False
-                                          , fbFileOutPath = ""
-                                          , fbOriginalFileName = takeFileName resource
-                                          , fbFormerBufferState = gbsBuffer gbs
-                                          }
-          }
+      ImageFile -> downloadState gbs host port resource
       _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
     (Right nct) ->  case nct of
       HtmlFile -> openBrowser (drop 4 resource) >> pure gbs
