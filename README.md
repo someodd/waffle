@@ -1,8 +1,17 @@
-# Hopher: Haskell Gopher Protocol Client
+# Waffle: Haskell Gopher Protocol Client
 
-[Gopher protocol](https://en.wikipedia.org/wiki/Gopher_%28protocol%29) client
-written in Haskell, implemented according to [RFC
-1436](https://tools.ietf.org/html/rfc1436) and
+Both _gopher_ and _waffle_ in French is "gaufre:"
+
+> The origin of the word 'gopher' is uncertain; French gaufre, meaning
+> 'waffle', has been suggested, on account of the gopher tunnels resembling the
+> honeycomb-like pattern of holes in a waffle…
+
+—"Gopher," Wikipedia.
+
+Waffle is a
+[Gopher protocol](https://en.wikipedia.org/wiki/Gopher_%28protocol%29) client written
+in Haskell, implemented according to
+[RFC 1436](https://tools.ietf.org/html/rfc1436) and
 [Gopher+](https://gopher.floodgap.com/gopher/gw?a=gopher%3A%2F%2Fgopher.floodgap.com%2F0%2Fgopher%2Ftech%2Fgopherplus.txt)
 technical/protocoal specifications.
 
@@ -19,15 +28,18 @@ wanted to provide fixes and improvements.
 Compile it with `stack build` and then try it out with
 `stack exec hopher -- sdf.org 70 phlogs`.
 
-Controls:
+### Controls
 
-  * Next menu item is `j`
-  * Previous menu item is `k`
-  * Scroll left is the left arrow and `h`
-  * Scroll right is the right arrow and `l`
-  * Quit is `q`
-  * Page down and page up keys scrolls page up and down
-  * Arrow up scrolls up
-  * Arrow down scrolls down
-  * `home` scrolls to beginning of the page
-  * `end` scrolls to beginning of the page
+**Move the cursor and scroll:** `j` (down), `k` (up), `h` (left), `l` (right).
+`page down` and `page up` moves page up and page down. `g` and `home` goes to
+beginning.  `G` and `end` goes to end. 
+
+**Jump between menu links:** `p` (previous link), `n` (next link).
+
+**Quit:** `esc`.
+
+**When saving a file:** use arrow keys and enter to choose a directory, then
+`n` to start typing a file anme to save as--use the `enter` key to accept the
+filename. This will likely change.
+
+**During index search mode:** type your query then hit `enter`.
