@@ -46,6 +46,13 @@ textFileModeUI gbs =
       ui = viewport MyViewport T.Both $ vBox [str $ clean tfb]
   in [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 ui]
 
+-- | The UI for searching
+searchModeUI :: GopherBrowserState -> [Widget MyName]
+searchModeUI gbs =
+  let sb = gbsBuffer gbs
+      ui = viewport MyViewport T.Both $ vBox [str $ sbQuery sb]
+  in [C.center $ B.border $ hLimitPercent 100 $ vLimitPercent 100 ui]
+
 -- | The UI for rendering and viewing a menu.
 menuModeUI :: GopherBrowserState -> [Widget MyName]
 menuModeUI gbs = [C.hCenter $ C.vCenter view]
@@ -88,6 +95,7 @@ drawUI gbs
   | renderMode == MenuMode = menuModeUI gbs
   | renderMode == TextFileMode = textFileModeUI gbs
   | renderMode == FileBrowserMode = fileBrowserUi gbs
+  | renderMode == SearchMode = searchModeUI gbs
   | otherwise = error "Cannot draw the UI for this unknown mode!"
   where renderMode = gbsRenderMode gbs
 
@@ -152,6 +160,19 @@ downloadState gbs host port resource =  do
                                     }
     }
 
+-- XXX: how will location be done? FIXME this is broke currently...
+mkSearchResponseState :: GopherBrowserState -> IO GopherBrowserState
+mkSearchResponseState gbs = do
+  let host = (sbHost $ gbsBuffer gbs)
+      port = (sbPort $ gbsBuffer gbs)
+      resource = (sbSelector $ gbsBuffer gbs)
+      query = (sbQuery $ gbsBuffer gbs)
+  (o, selector) <- searchGet host (show port) resource query
+  let newMenu = makeGopherMenu o
+      location = (host, port, selector, MenuMode)
+  pure $ newStateForMenu newMenu location (newChangeHistory gbs location)
+  -- XXX finish
+
 -- | Make a request based on the currently selected Gopher menu item and change
 -- the application state (GopherBrowserState) to reflect the change.
 newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
@@ -171,6 +192,7 @@ newStateFromSelectedMenuItem gbs = do
                  , gbsRenderMode = TextFileMode
                  , gbsHistory = newChangeHistory gbs location
                  }
+      IndexSearchServer -> pure gbs { gbsRenderMode = SearchMode, gbsBuffer = SearchBuffer { sbQuery = "", sbFormerBufferState = gbsBuffer gbs, sbSelector = resource, sbPort = port, sbHost = host } }
       ImageFile -> downloadState gbs host port resource
       _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
     (Right nct) ->  case nct of
@@ -265,10 +287,22 @@ appEvent gbs (T.VtyEvent e)
         (liftIO (doCallBack fileOutPath) >>= M.continue)
       else
         M.continue (updateFileBrowserBuffer gbs' b')
+  -- FIXME
+  | gbsRenderMode gbs == SearchMode = case e of
+    V.EvKey V.KEsc [] -> M.continue $ returnSearchFormerState gbs
+    -- FIXME: needs to make search request
+    V.EvKey V.KEnter [] -> liftIO (mkSearchResponseState gbs) >>= M.continue
+    V.EvKey V.KBS [] -> M.continue $ updateQuery $ take (length curQuery - 1) curQuery
+    V.EvKey (V.KChar c) [] ->
+      M.continue $ gbs { gbsBuffer = (gbsBuffer gbs) { sbQuery = curQuery ++ [c] } }
+    _ -> M.continue gbs
   | otherwise = error "Unrecognized mode in event."
   -- TODO FIXME: the MenuBuffer should be record syntax
   where
+    curQuery = sbQuery $ gbsBuffer gbs
+    updateQuery s = gbs { gbsBuffer = (gbsBuffer gbs) { sbQuery = s } }
     returnFormerState g = g {gbsBuffer = (fbFormerBufferState $ gbsBuffer g), gbsRenderMode = MenuMode}
+    returnSearchFormerState g = g {gbsBuffer = (sbFormerBufferState $ gbsBuffer g), gbsRenderMode = MenuMode}
     getOutFilePath g = fbFileOutPath (gbsBuffer g)
     isNamingFile g = fbIsNamingFile (gbsBuffer g)
     doCallBack a = do
@@ -515,11 +549,17 @@ data Buffer =
                     , fbFileOutPath :: String
                     , fbFormerBufferState :: Buffer
                     , fbOriginalFileName :: String
-                    }
+                    } |
   -- FIXME: needs to be FileBrowserBuffer (FB.FIleBrowser MyName, funcToAcceptSelectedFileString, previousBufferToRestore)
+  SearchBuffer { sbQuery :: String
+               , sbFormerBufferState :: Buffer
+               , sbSelector :: String
+               , sbPort :: Int
+               , sbHost :: String
+               }
 
 -- | Related to Buffer. Namely exists for History.
-data RenderMode = MenuMode | TextFileMode | FileBrowserMode
+data RenderMode = MenuMode | TextFileMode | FileBrowserMode | SearchMode
   deriving (Eq, Show)
 
 -- | Gopher location in the form of domain, port, resource/magic string,

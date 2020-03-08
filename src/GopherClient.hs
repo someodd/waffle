@@ -1,3 +1,4 @@
+-- TODO: resource is misnamed. it's "selector string."
 -- TODO: menu and directory seem to be synonymous
 -- TODO: handle network problems
 -- TODO: implement metadata that is in between ========================== that. also null.host?
@@ -265,6 +266,28 @@ downloadGet host port resource =
     -- close the connection.
     wow <- getAllBytes (pure B8.empty) connectionSocket
     pure $ wow
+  where
+  recvChunks = 1024
+  getAllBytes :: IO B8.ByteString -> Socket -> IO B8.ByteString
+  getAllBytes acc connectionSocket = do
+    gosh <- recv connectionSocket recvChunks
+    wacc <- acc
+    case gosh of
+      Nothing -> acc
+      Just chnk -> getAllBytes (pure $ B8.append wacc chnk) connectionSocket
+
+-- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
+-- if you don't wish to specify.
+searchGet :: String -> String -> String -> String -> IO (String, String)
+searchGet host port resource query = do
+  let selector = if null resource then query else resource ++ "\t" ++ query
+  o <- connect host port $ \(connectionSocket, _) -> do
+    send connectionSocket (B8.pack $ selector ++ "\r\n")
+    -- need to only fetch as many bytes as it takes to get period on a line by itself to
+    -- close the connection.
+    wow <- getAllBytes (pure B8.empty) connectionSocket
+    pure $ B8.unpack wow
+  pure (o, selector)
   where
   recvChunks = 1024
   getAllBytes :: IO B8.ByteString -> Socket -> IO B8.ByteString
