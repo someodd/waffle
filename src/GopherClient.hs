@@ -317,3 +317,6 @@ gopherGet host port resource =
     case gosh of
       Nothing -> acc
       Just chnk -> getAllBytes (pure $ B8.append wacc chnk) connectionSocket
+
+menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
+menuLine (GopherMenu ls) indx = ls !! indx
