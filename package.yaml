@@ -1,9 +1,9 @@
-name: hopher
+name: waffle
 version: 0.1.0.0
 
 license: GPL
-description: Please see the README on GitHub at <https://github.com/hyperreal-gopher/hopher#readme>
-github: "hyperreal-gopher/hopher"
+description: Please see the README on GitHub at <https://github.com/hyperreal-gopher/waffle#readme>
+github: "hyperreal-gopher/waffle"
 
 ## These fields might be useful to fill out in the future
 # author:
@@ -28,7 +28,7 @@ library:
   source-dirs: src
 
 executables:
-  hopher:
+  waffle:
     source-dirs: app
     main: Main.hs
     ghc-options:
@@ -36,4 +36,4 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - hopher
+    - waffle
