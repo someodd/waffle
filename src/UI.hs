@@ -1,10 +1,11 @@
 -- | The main parts of the UI: event handling and the Brick app.
 -- The UI uses Brick and Vty extensively.
 
-module UI.MainUI (uiMain) where
+module UI (uiMain) where
 
 import Control.Monad.IO.Class
 import Control.Monad (void)
+import Data.Maybe
 
 import qualified Graphics.Vty as V
 import qualified Brick.Main as M
@@ -12,38 +13,34 @@ import qualified Brick.Types as T
 import qualified Brick.Widgets.FileBrowser as FB
 import qualified Brick.Widgets.List as L
 
-import UI.StyleUI
-import UI.StateUI
-import UI.DrawUI
+import UI.Util
+import UI.Menu
+import UI.History
+import UI.TextFile
+import UI.Save
+import UI.Search
+import UI.Style
 import GopherClient
 
--- FIXME: only need to return GopherBrowserState actually
--- | Overrides handling file browse revents because we have a special text entry mode!
---- See also: handleFileBrowserEvent
-handleFileBrowserEvent' :: (Ord n) => GopherBrowserState -> V.Event -> FB.FileBrowser n -> (GopherBrowserState, T.EventM n (FB.FileBrowser n))
-handleFileBrowserEvent' gbs e b =
-    -- FIXME: okay this is very wrong/messed up. take another look at regular handleFIleBrowserEvent'
-    if not isNamingFile && e == V.EvKey (V.KChar 'n') [] then
-        (initiateNamingState, pure b)
-    else if isNamingFile then
-      case e of
-        V.EvKey V.KEnter [] -> (finalOutFilePath $ (FB.getWorkingDirectory b) ++ "/" ++ curOutFilePath, pure b)
-        V.EvKey V.KBS [] -> (updateOutFilePath $ take (length curOutFilePath - 1) curOutFilePath, pure b)
-        V.EvKey (V.KChar c) [] -> (updateOutFilePath $ curOutFilePath ++ [c], pure b)
-        _ -> (gbs, FB.handleFileBrowserEvent e b)
-    else
-      (gbs, FB.handleFileBrowserEvent e b)
-    where
-      initiateNamingState :: GopherBrowserState
-      initiateNamingState = gbs { gbsBuffer = (gbsBuffer gbs) { fbIsNamingFile = True, fbFileOutPath = (fbOriginalFileName (gbsBuffer gbs)) } }
+-- | Change the state to the parent menu by network request.
+goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
+goParentDirectory gbs = do
+  let (host, port, magicString, _) = gbsLocation gbs
+      parentMagicString = fromMaybe ("/") (parentDirectory magicString)
+  o <- gopherGet host (show port) parentMagicString
+  let newMenu = makeGopherMenu o
+      newLocation = (host, port, parentMagicString, MenuMode)
+  pure $ newStateForMenu newMenu newLocation (newChangeHistory gbs newLocation)
 
-      finalOutFilePath p = gbs { gbsBuffer = (gbsBuffer gbs) { fbFileOutPath = p, fbIsNamingFile = False } }
-
-      isNamingFile = fbIsNamingFile (gbsBuffer gbs)
-
-      updateOutFilePath p = gbs { gbsBuffer = (gbsBuffer gbs) { fbFileOutPath = p } }
-
-      curOutFilePath = fbFileOutPath (gbsBuffer gbs)
+-- | The draw handler which will choose a UI based on the browser's mode.
+drawUI :: GopherBrowserState -> [T.Widget MyName]
+drawUI gbs
+  | renderMode == MenuMode = menuModeUI gbs
+  | renderMode == TextFileMode = textFileModeUI gbs
+  | renderMode == FileBrowserMode = fileBrowserUi gbs
+  | renderMode == SearchMode = searchModeUI gbs
+  | otherwise = error "Cannot draw the UI for this unknown mode!"
+  where renderMode = gbsRenderMode gbs
 
 -- TODO: implement backspace as back in history which trims it
 appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
@@ -125,7 +122,6 @@ theApp =
         , M.appStartEvent = return
         , M.appAttrMap = const theMap
         }
-
 
 -- FIXME: isn't there a way to infer a location's type? Assuming first
 -- link is a menu is a horrible hack...

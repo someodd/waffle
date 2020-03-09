@@ -2,7 +2,7 @@ module Main where
 
 import System.Environment
 
-import UI.MainUI
+import UI
 import GopherClient
 
 main :: IO ()

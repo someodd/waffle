@@ -23,6 +23,8 @@ intend to make this a really good Gopher client. I got the idea to make a
 Gopher client because the default `gopher` client in Ubuntu was lacking and I
 wanted to provide fixes and improvements.
 
+Special thanks to @Garmelon for mentoring me through all of this.
+
 ## Try it out!
 
 Compile it with `stack build` and then try it out with
