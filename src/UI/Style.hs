@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module UI.StyleUI where
+module UI.Style where
 
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty as V
