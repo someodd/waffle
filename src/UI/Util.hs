@@ -106,5 +106,3 @@ data GopherBrowserState = GopherBrowserState
   -- See: History
   , gbsHistory :: History
   }
-
-

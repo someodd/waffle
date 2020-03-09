@@ -47,6 +47,9 @@ titleAttr = "titleAttr"
 errorAttr :: A.AttrName
 errorAttr = "error"
 
+inputFieldAttr :: A.AttrName
+inputFieldAttr = "inputField"
+
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
   [ (L.listAttr,                V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
@@ -62,6 +65,7 @@ theMap = A.attrMap V.defAttr
   , (custom2Attr,               fg V.yellow)
   , (titleAttr,                 (V.defAttr `V.withStyle` V.reverseVideo) `V.withStyle` V.bold `V.withForeColor` V.white)
   , (asteriskAttr,              fg V.white)
+  , (inputFieldAttr,            V.white `on` V.brightBlack)
   , (FB.fileBrowserCurrentDirectoryAttr, V.white `on` V.blue)
   , (FB.fileBrowserSelectionInfoAttr, V.white `on` V.blue)
   , (FB.fileBrowserDirectoryAttr, fg V.blue)
