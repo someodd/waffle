@@ -4,6 +4,7 @@ module UI.Style where
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty as V
 import qualified Brick.Widgets.FileBrowser as FB
+import qualified Brick.Widgets.Edit as E
 import qualified Brick.AttrMap as A
 import qualified Brick.Widgets.Border.Style as BS
 import qualified Brick.Widgets.Border as B
@@ -65,7 +66,8 @@ theMap = A.attrMap V.defAttr
   , (custom2Attr,               fg V.yellow)
   , (titleAttr,                 (V.defAttr `V.withStyle` V.reverseVideo) `V.withStyle` V.bold `V.withForeColor` V.white)
   , (asteriskAttr,              fg V.white)
-  , (inputFieldAttr,            V.white `on` V.brightBlack)
+  , (E.editAttr,                V.white `on` V.brightBlack)
+  , (E.editFocusedAttr,         V.white `on` V.brightBlack)
   , (FB.fileBrowserCurrentDirectoryAttr, V.white `on` V.blue)
   , (FB.fileBrowserSelectionInfoAttr, V.white `on` V.blue)
   , (FB.fileBrowserDirectoryAttr, fg V.blue)

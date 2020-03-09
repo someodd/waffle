@@ -1,3 +1,4 @@
+-- TODO: have event handlers broken into the appropriate module
 -- | The main parts of the UI: event handling and the Brick app.
 -- The UI uses Brick and Vty extensively.
 
@@ -86,10 +87,11 @@ appEvent gbs (T.VtyEvent e)
     V.EvKey V.KEsc [] -> M.continue $ returnSearchFormerState gbs
     -- FIXME: needs to make search request
     V.EvKey V.KEnter [] -> liftIO (mkSearchResponseState gbs) >>= M.continue
-    V.EvKey V.KBS [] -> M.continue $ updateQuery $ take (length curQuery - 1) curQuery
-    V.EvKey (V.KChar c) [] ->
-      M.continue $ gbs { gbsBuffer = (gbsBuffer gbs) { sbQuery = curQuery ++ [c] } }
-    _ -> M.continue gbs
+    e -> M.continue =<< editorEventHandler gbs e
+    --V.EvKey V.KBS [] -> M.continue $ updateQuery $ take (length curQuery - 1) curQuery
+    --V.EvKey (V.KChar c) [] ->
+    --  M.continue $ gbs { gbsBuffer = (gbsBuffer gbs) { sbQuery = curQuery ++ [c] } }
+    --_ -> M.continue gbs
   | otherwise = error "Unrecognized mode in event."
   -- TODO FIXME: the MenuBuffer should be record syntax
   where
