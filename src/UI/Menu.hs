@@ -10,6 +10,7 @@ import Brick.AttrMap (applyAttrMappings)
 import qualified Brick.Widgets.List as BrickList
 import qualified Brick.Types as T
 import Brick.Widgets.Center (vCenter, hCenter)
+import Brick.Widgets.Edit as E
 import Brick.Widgets.Core (str, withAttr, withBorderStyle, vBox, vLimit)
 import Web.Browser
 import Brick.Widgets.Core ((<+>), updateAttrMap)
@@ -71,7 +72,7 @@ newStateFromSelectedMenuItem gbs = do
                  , gbsRenderMode = TextFileMode
                  , gbsHistory = newChangeHistory gbs location
                  }
-      IndexSearchServer -> pure gbs { gbsRenderMode = SearchMode, gbsBuffer = SearchBuffer { sbQuery = "", sbFormerBufferState = gbsBuffer gbs, sbSelector = resource, sbPort = port, sbHost = host } }
+      IndexSearchServer -> pure gbs { gbsRenderMode = SearchMode, gbsBuffer = SearchBuffer { sbQuery = "", sbFormerBufferState = gbsBuffer gbs, sbSelector = resource, sbPort = port, sbHost = host, sbEditorState = E.editor MyViewport Nothing "" } }
       ImageFile -> downloadState gbs host port resource
       _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
     (Right nct) ->  case nct of

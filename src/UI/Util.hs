@@ -5,6 +5,7 @@ import qualified Data.Vector as Vector
 import Brick.Main (ViewportScroll, viewportScroll)
 import qualified Brick.Widgets.List as BrickList -- (List)? FIXME
 import Brick.Widgets.FileBrowser (FileBrowser)
+import Brick.Widgets.Edit as E
 
 import GopherClient
 
@@ -91,7 +92,11 @@ data Buffer =
                , sbSelector :: String
                , sbPort :: Int
                , sbHost :: String
+               , sbEditorState :: EditorState
                }
+
+data EditName = Edit1 deriving (Ord, Show, Eq)
+type EditorState = E.Editor String MyName
 
 -- | Related to Buffer. Namely exists for History.
 data RenderMode = MenuMode | TextFileMode | FileBrowserMode | SearchMode
