@@ -34,13 +34,11 @@ goParentDirectory gbs = do
 
 -- | The draw handler which will choose a UI based on the browser's mode.
 drawUI :: GopherBrowserState -> [T.Widget MyName]
-drawUI gbs
-  | renderMode == MenuMode = menuModeUI gbs
-  | renderMode == TextFileMode = textFileModeUI gbs
-  | renderMode == FileBrowserMode = fileBrowserUi gbs
-  | renderMode == SearchMode = searchModeUI gbs
-  | otherwise = error "Cannot draw the UI for this unknown mode!"
-  where renderMode = gbsRenderMode gbs
+drawUI gbs = case gbsRenderMode gbs of
+  MenuMode -> menuModeUI gbs
+  TextFileMode -> textFileModeUI gbs
+  FileBrowserMode -> fileBrowserUi gbs
+  SearchMode -> searchInputUI gbs
 
 -- TODO: implement backspace as back in history which trims it
 appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
