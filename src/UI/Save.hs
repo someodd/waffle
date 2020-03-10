@@ -2,10 +2,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Save where
 
+import Control.Monad.IO.Class
 import qualified Data.ByteString as ByteString
 import qualified Data.Text as Text
 import Control.Exception (displayException)
 
+import qualified Brick.Main as M
 import qualified Brick.Widgets.FileBrowser as FB
 import qualified Graphics.Vty as V
 import qualified Brick.Types as T
@@ -97,3 +99,32 @@ fileBrowserUi gbs = [center $ vLimitPercent 100 $ hLimitPercent 100 $ ui <=> hel
                     , hCenter $ txt "Esc: quit"
                     , hCenter $ str $ fbFileOutPath (gbsBuffer gbs)
                     ]
+
+saveEventHandler :: GopherBrowserState -> V.Event -> T.EventM MyName (T.Next GopherBrowserState)
+saveEventHandler gbs e =
+  case e of
+    -- instances of 'b' need to tap into gbsbuffer
+    V.EvKey V.KEsc [] | not (FB.fileBrowserIsSearching $ fromFileBrowserBuffer (gbsBuffer gbs)) ->
+      M.continue $ returnFormerState gbs
+    _ -> do
+      let (gbs', bUnOpen') = handleFileBrowserEvent' gbs e (fromFileBrowserBuffer $ gbsBuffer gbs)
+      b' <- bUnOpen'
+      -- If the browser has a selected file after handling the
+      -- event (because the user pressed Enter), shut down.
+      let fileOutPath = fbFileOutPath (gbsBuffer gbs')
+      if (isNamingFile gbs') then
+        M.continue (updateFileBrowserBuffer gbs' b')
+      -- this errors now
+      else if not (null $ getOutFilePath gbs') then
+        (liftIO (doCallBack fileOutPath) >>= M.continue)
+      else
+        M.continue (updateFileBrowserBuffer gbs' b')
+  where
+    fromFileBrowserBuffer x = fbFileBrowser x
+    returnFormerState g = g {gbsBuffer = (fbFormerBufferState $ gbsBuffer g), gbsRenderMode = MenuMode}
+    isNamingFile g = fbIsNamingFile (gbsBuffer g)
+    updateFileBrowserBuffer g bu = g { gbsBuffer = (gbsBuffer g) { fbFileBrowser = bu }  }
+    getOutFilePath g = fbFileOutPath (gbsBuffer g)
+    doCallBack a = do
+      fbCallBack (gbsBuffer gbs) a
+      pure $ gbs {gbsBuffer = (fbFormerBufferState $ gbsBuffer gbs), gbsRenderMode = MenuMode}
