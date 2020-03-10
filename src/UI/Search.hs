@@ -53,6 +53,6 @@ searchEventHandler gbs e =
     -- | A modification of the default Brick.Widgets.Edit event handler; changed to
     -- return a GopherBrowserState instead of just an editor state.
     editorEventHandler :: GopherBrowserState -> Event -> T.EventM MyName GopherBrowserState
-    editorEventHandler gbs e =
-      let updateEditorInBuffer x = gbs { gbsBuffer = (gbsBuffer gbs) { sbEditorState = x } }
-      in updateEditorInBuffer <$> E.handleEditorEvent e (sbEditorState $ gbsBuffer gbs)
+    editorEventHandler gbs' e' =
+      let updateEditorInBuffer x = gbs' { gbsBuffer = (gbsBuffer gbs') { sbEditorState = x } }
+      in updateEditorInBuffer <$> E.handleEditorEvent e' (sbEditorState $ gbsBuffer gbs)
