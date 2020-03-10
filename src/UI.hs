@@ -87,7 +87,7 @@ appEvent gbs (T.VtyEvent e)
     V.EvKey V.KEsc [] -> M.continue $ returnSearchFormerState gbs
     -- FIXME: needs to make search request
     V.EvKey V.KEnter [] -> liftIO (mkSearchResponseState gbs) >>= M.continue
-    e -> M.continue =<< editorEventHandler gbs e
+    _ -> M.continue =<< editorEventHandler gbs e
     --V.EvKey V.KBS [] -> M.continue $ updateQuery $ take (length curQuery - 1) curQuery
     --V.EvKey (V.KChar c) [] ->
     --  M.continue $ gbs { gbsBuffer = (gbsBuffer gbs) { sbQuery = curQuery ++ [c] } }
@@ -95,8 +95,6 @@ appEvent gbs (T.VtyEvent e)
   | otherwise = error "Unrecognized mode in event."
   -- TODO FIXME: the MenuBuffer should be record syntax
   where
-    curQuery = sbQuery $ gbsBuffer gbs
-    updateQuery s = gbs { gbsBuffer = (gbsBuffer gbs) { sbQuery = s } }
     returnFormerState g = g {gbsBuffer = (fbFormerBufferState $ gbsBuffer g), gbsRenderMode = MenuMode}
     returnSearchFormerState g = g {gbsBuffer = (sbFormerBufferState $ gbsBuffer g), gbsRenderMode = MenuMode}
     getOutFilePath g = fbFileOutPath (gbsBuffer g)
