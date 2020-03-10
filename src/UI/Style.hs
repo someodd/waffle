@@ -51,10 +51,17 @@ errorAttr = "error"
 inputFieldAttr :: A.AttrName
 inputFieldAttr = "inputField"
 
+inputDialogLabelAttr :: A.AttrName
+inputDialogLabelAttr = "inputDialogLabelAttr"
+
+inputDialogAttr :: A.AttrName
+inputDialogAttr = "inputDialogAttr"
+
 theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
   [ (L.listAttr,                V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
   , (L.listSelectedAttr,        (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
+  , (inputDialogAttr,           V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
   , (directoryAttr,             fg V.red)
   , (fileAttr,                  fg V.cyan)
   , (indexSearchServerAttr,     fg V.magenta)
@@ -65,6 +72,7 @@ theMap = A.attrMap V.defAttr
   , (customAttr,                (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
   , (custom2Attr,               fg V.yellow)
   , (titleAttr,                 (V.defAttr `V.withStyle` V.reverseVideo) `V.withStyle` V.bold `V.withForeColor` V.white)
+  , (inputDialogLabelAttr,      (V.defAttr `V.withStyle` V.reverseVideo) `V.withStyle` V.bold `V.withForeColor` V.yellow)
   , (asteriskAttr,              fg V.white)
   , (E.editAttr,                V.white `on` V.brightBlack)
   , (E.editFocusedAttr,         V.white `on` V.brightBlack)
@@ -95,5 +103,46 @@ customBorder = BS.BorderStyle
   , BS.bsVertical = ' '
   }
 
+-- Round oval
+inputDialogBorder :: BS.BorderStyle
+inputDialogBorder = BS.BorderStyle
+  { BS.bsCornerTL = '░'
+  , BS.bsCornerTR = '░'
+  , BS.bsCornerBR = '░'
+  , BS.bsCornerBL = '░'
+  , BS.bsIntersectFull = ' '
+  , BS.bsIntersectL = ' '
+  , BS.bsIntersectR = ' '
+  , BS.bsIntersectT = ' '
+  , BS.bsIntersectB = ' '
+  , BS.bsHorizontal = '▓'
+  , BS.bsVertical = '▒'
+  }
+
+-- emoji test
+emojiBorder :: BS.BorderStyle
+emojiBorder = BS.BorderStyle
+  { BS.bsCornerTL = '╋'
+  , BS.bsCornerTR = '╋'
+  , BS.bsCornerBR = '╋'
+  , BS.bsCornerBL = '╋'
+  , BS.bsIntersectFull = ' '
+  , BS.bsIntersectL = ' '
+  , BS.bsIntersectR = ' '
+  , BS.bsIntersectT = ' '
+  , BS.bsIntersectB = ' '
+  , BS.bsHorizontal = '┅'
+  , BS.bsVertical = '┇'
+  }
+
+inputDialogBorderAttr :: A.AttrName
+inputDialogBorderAttr = "inputDialogBorderAttr"
+
+borderMappingsInputDialog :: [(A.AttrName, V.Attr)]
+borderMappingsInputDialog =
+--  [ (inputDialogBorderAttr, V.red `on` V.rgbColor (55 :: Int) (175 :: Int) (200 :: Int)) ]
+    [ (B.borderAttr, V.yellow `on` V.rgbColor (55 :: Int) (175 :: Int) (200 :: Int)) ]
+
 borderMappings :: [(A.AttrName, V.Attr)]
-borderMappings = [(B.borderAttr, V.cyan `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))]
+borderMappings = 
+  [ (B.borderAttr,          V.cyan `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int)) ]
