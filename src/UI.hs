@@ -1,7 +1,11 @@
--- TODO: have event handlers broken into the appropriate module
--- | The main parts of the UI: event handling and the Brick app.
--- The UI uses Brick and Vty extensively.
-
+-- | Stitch together the Brick app from the disparate parts of the UI.
+--
+-- Build initiate the Brick.Main.App. All UI modules/modes, such as UI.Save and
+-- UI.Menu, converge here, into drawUI (for the Brick app's Brick.Main.appDraw)
+-- which picks which module/mode's drawing function to use and likewise into appEvent
+-- (for the Brick app's Brick.Main.appHandleEvent) which picks which module/mode's event
+-- handler to use, both are picked based on the current gbsRenderMode set in the Brick
+-- application state (GopherBrowserState).
 module UI (uiMain) where
 
 import Control.Monad (void)
@@ -18,6 +22,9 @@ import UI.Style
 import GopherClient
 
 -- | The draw handler which will choose a UI based on the browser's mode.
+-- | Picks a UI/draw function based on the current gbsRenderMode.
+--
+-- Used as Brick.Main.appDraw when constructing the Brick app.
 drawUI :: GopherBrowserState -> [T.Widget MyName]
 drawUI gbs = case gbsRenderMode gbs of
   MenuMode -> menuModeUI gbs
@@ -26,20 +33,19 @@ drawUI gbs = case gbsRenderMode gbs of
   SearchMode -> searchInputUI gbs
 
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
--- some cases where we don't want history available?
--- TODO: implement backspace as back in history which trims it
+-- some cases where we don't want history available
+--
+-- | The Brick application event handler which chooses which event handler to use based
+-- on the current gbsRenderMode.
+--
+-- Used for Brick.Main.appHandleEvent.
 appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
--- This should be backspace
--- check gbs if the state says we're handling a menu (list) or a text file (viewport)
 appEvent gbs (T.VtyEvent e)
   | gbsRenderMode gbs == MenuMode = menuEventHandler gbs e
-  -- viewport stuff here
   | gbsRenderMode gbs == TextFileMode = textFileEventHandler gbs e
   | gbsRenderMode gbs == FileBrowserMode = saveEventHandler gbs e
-  -- FIXME
   | gbsRenderMode gbs == SearchMode = searchEventHandler gbs e
   | otherwise = error "Unrecognized mode in event."
-  -- TODO FIXME: the MenuBuffer should be record syntax
 appEvent gbs _ = M.continue gbs
 
 theApp :: M.App GopherBrowserState e MyName
@@ -53,7 +59,8 @@ theApp =
 
 -- FIXME: isn't there a way to infer a location's type? Assuming first
 -- link is a menu is a horrible hack...
--- | This is called in order to start the UI.
+--
+-- | Start the Brick app at a specific Gopher menu in Gopherspace.
 uiMain :: GopherMenu -> (String, Int, String) -> IO ()
 uiMain gm (host, port, magicString) =
   let trueLocationType = (host, port, magicString, MenuMode)
