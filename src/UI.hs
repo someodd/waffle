@@ -6,13 +6,11 @@ module UI (uiMain) where
 
 import Control.Monad.IO.Class
 import Control.Monad (void)
-import Data.Maybe
 
 import qualified Graphics.Vty as V
 import qualified Brick.Main as M
 import qualified Brick.Types as T
 import qualified Brick.Widgets.FileBrowser as FB
-import qualified Brick.Widgets.List as L
 
 import UI.Util
 import UI.Menu
@@ -22,16 +20,6 @@ import UI.Save
 import UI.Search
 import UI.Style
 import GopherClient
-
--- | Change the state to the parent menu by network request.
-goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
-goParentDirectory gbs = do
-  let (host, port, magicString, _) = gbsLocation gbs
-      parentMagicString = fromMaybe ("/") (parentDirectory magicString)
-  o <- gopherGet host (show port) parentMagicString
-  let newMenu = makeGopherMenu o
-      newLocation = (host, port, parentMagicString, MenuMode)
-  pure $ newStateForMenu newMenu newLocation (newChangeHistory gbs newLocation)
 
 -- | The draw handler which will choose a UI based on the browser's mode.
 drawUI :: GopherBrowserState -> [T.Widget MyName]
@@ -46,16 +34,7 @@ appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Ne
 -- This should be backspace
 -- check gbs if the state says we're handling a menu (list) or a text file (viewport)
 appEvent gbs (T.VtyEvent e)
-  | gbsRenderMode gbs == MenuMode = case e of
-      V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
-      V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
-      V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
-      V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
-      V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
-      V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
-      V.EvKey V.KEsc [] -> M.halt gbs
--- check gbs if the state says we're handling a menu (list) or a text file (viewport)
-      ev -> M.continue =<< updateMenuList <$> L.handleListEventVi L.handleListEvent ev (getMenuList gbs)
+  | gbsRenderMode gbs == MenuMode = menuEventHandler gbs e
   -- viewport stuff here
   | gbsRenderMode gbs == TextFileMode = case e of
     V.EvKey (V.KChar 'j')  [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
@@ -104,12 +83,6 @@ appEvent gbs (T.VtyEvent e)
       pure $ gbs {gbsBuffer = (fbFormerBufferState $ gbsBuffer gbs), gbsRenderMode = MenuMode}
     fromFileBrowserBuffer x = fbFileBrowser x
     updateFileBrowserBuffer g bu = g { gbsBuffer = (gbsBuffer g) { fbFileBrowser = bu }  }
-    getMenuList x =
-      let (MenuBuffer (_, gl, _)) = gbsBuffer x
-      in gl
-    updateMenuList x =
-      let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
-      in gbs {gbsBuffer=MenuBuffer (gm, x, fl)}
 appEvent gbs _ = M.continue gbs
 
 theApp :: M.App GopherBrowserState e MyName

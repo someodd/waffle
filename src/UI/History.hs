@@ -1,4 +1,7 @@
+-- | History and general navigation.
 module UI.History where
+
+import Data.Maybe
 
 import UI.Util
 import GopherClient
@@ -37,3 +40,13 @@ newChangeHistory gbs newLoc =
       newHistory = (take (historyMarker+1) history) ++ [newLoc]
       newHistoryMarker = historyMarker + 1
   in (newHistory, newHistoryMarker)
+
+-- | Change the state to the parent menu by network request.
+goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
+goParentDirectory gbs = do
+  let (host, port, magicString, _) = gbsLocation gbs
+      parentMagicString = fromMaybe ("/") (parentDirectory magicString)
+  o <- gopherGet host (show port) parentMagicString
+  let newMenu = makeGopherMenu o
+      newLocation = (host, port, parentMagicString, MenuMode)
+  pure $ newStateForMenu newMenu newLocation (newChangeHistory gbs newLocation)
