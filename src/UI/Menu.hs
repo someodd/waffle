@@ -2,8 +2,12 @@ module UI.Menu where
 
 import Data.List as List
 import qualified Data.Vector as Vector
+import Control.Monad.IO.Class
 import Data.Maybe
 
+import qualified Graphics.Vty as V
+import qualified Brick.Main as M
+import qualified Brick.Widgets.List as L
 import Lens.Micro ((^.))
 import Brick.Widgets.Border (borderWithLabel)
 import Brick.AttrMap (applyAttrMappings)
@@ -141,4 +145,22 @@ listDrawElement gbs indx sel a =
       -- it's a malformed line
       (Right _) -> str ""
 
-
+menuEventHandler :: GopherBrowserState -> V.Event -> T.EventM MyName (T.Next GopherBrowserState)
+menuEventHandler gbs e =
+  case e of
+        V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
+        V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
+        V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
+        V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
+        V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
+        V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
+        V.EvKey V.KEsc [] -> M.halt gbs
+  -- check gbs if the state says we're handling a menu (list) or a text file (viewport)
+        ev -> M.continue =<< updateMenuList <$> L.handleListEventVi L.handleListEvent ev (getMenuList gbs)
+  where
+    getMenuList x =
+      let (MenuBuffer (_, gl, _)) = gbsBuffer x
+      in gl
+    updateMenuList x =
+      let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
+      in gbs {gbsBuffer=MenuBuffer (gm, x, fl)}
