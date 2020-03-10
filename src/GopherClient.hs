@@ -3,7 +3,6 @@
 -- TODO: handle network problems
 -- TODO: implement metadata that is in between ========================== that. also null.host?
 -- TODO: left is preferred for errors. There is a reason for this. Read about that in LYAH
--- TODO: how do i implement history/going up directory? is it just splitting path?
 -- TODO: content detection. if not diretory then use text mode to display or another mode to download...
 module GopherClient where
 
@@ -111,17 +110,17 @@ data MalformedGopherLine = MalformedGopherLine
 
 -- | The way a GopherLine is displayed (string) after being parsed, namely used by the UI
 instance Show GopherLine where
-  show x = (indent x) ++ (glDisplayString x)
+  show x = indent x ++ glDisplayString x
     where
     indent l =
-      if (glType l) == (Right InformationalMessage) then
+      if glType l == Right InformationalMessage then
         "          "
       else
         ""
 
 -- | Displaying a malformed Gopher line (string) after being parsed, namely used by the UI
 instance Show MalformedGopherLine where
-  show x = "    " ++ (show $ mglFields x)--FIXME: might this not error? add "ERROR" to end?
+  show x = "    " ++ show (mglFields x)--FIXME: might this not error? add "ERROR" to end?
 
 -- | Take the character from a menu line delivered from a Gopher server and give
 -- back the type of the item that line describes.
