@@ -61,7 +61,7 @@ theMap :: A.AttrMap
 theMap = A.attrMap V.defAttr
   [ (L.listAttr,                V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
   , (L.listSelectedAttr,        (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white)
-  , (inputDialogAttr,           V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
+  , (inputDialogAttr,           V.rgbColor (255 :: Int) (255 :: Int) (0 :: Int) `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
   , (directoryAttr,             fg V.red)
   , (fileAttr,                  fg V.cyan)
   , (indexSearchServerAttr,     fg V.magenta)
