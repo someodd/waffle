@@ -12,6 +12,7 @@ import Control.Monad (void)
 
 import qualified Brick.Main as M
 import qualified Brick.Types as T
+import qualified Graphics.Vty as V
 
 import UI.Util
 import UI.Menu
@@ -40,6 +41,7 @@ drawUI gbs = case gbsRenderMode gbs of
 --
 -- Used for Brick.Main.appHandleEvent.
 appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
+appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = M.halt gbs
 appEvent gbs (T.VtyEvent e)
   | gbsRenderMode gbs == MenuMode = menuEventHandler gbs e
   | gbsRenderMode gbs == TextFileMode = textFileEventHandler gbs e

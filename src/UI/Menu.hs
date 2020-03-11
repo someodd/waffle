@@ -159,7 +159,6 @@ menuEventHandler gbs e =
         V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
         V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
         V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
-        V.EvKey V.KEsc [] -> M.halt gbs
   -- check gbs if the state says we're handling a menu (list) or a text file (viewport)
         ev -> M.continue =<< updateMenuList <$> L.handleListEventVi L.handleListEvent ev (getMenuList gbs)
   where
