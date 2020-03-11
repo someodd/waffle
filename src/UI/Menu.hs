@@ -15,7 +15,7 @@ import qualified Brick.Widgets.List as BrickList
 import qualified Brick.Types as T
 import Brick.Widgets.Center (vCenter, hCenter)
 import Brick.Widgets.Edit as E
-import Brick.Widgets.Core (str, withAttr, withBorderStyle, vBox, vLimit)
+import Brick.Widgets.Core (viewport, str, withAttr, withBorderStyle, vBox, vLimit, hLimitPercent)
 import Web.Browser
 import Brick.Widgets.Core ((<+>), updateAttrMap)
 
@@ -102,7 +102,7 @@ menuModeUI gbs = [hCenter $ vCenter view]
       Nothing -> str "-"
       Just i  -> str (show (i + 1))
     total = str $ show $ Vector.length $ l^.BrickList.listElementsL
-    box = updateAttrMap (applyAttrMappings borderMappings) $ withBorderStyle customBorder $ borderWithLabel (withAttr titleAttr $ str title) $ BrickList.renderListWithIndex (listDrawElement gbs) True l
+    box = updateAttrMap (applyAttrMappings borderMappings) $ withBorderStyle customBorder $ borderWithLabel (withAttr titleAttr $ str title) $ viewport MyWidget T.Horizontal $ hLimitPercent 100 $ BrickList.renderListWithIndex (listDrawElement gbs) True l
     view = vBox [ box, vLimit 1 $ str "Esc to exit. Vi keys to browse. Enter to open." <+> label]
 
 -- FIXME: this is messy! unoptimized!
@@ -145,10 +145,15 @@ listDrawElement gbs indx sel a =
       -- it's a malformed line
       (Right _) -> str ""
 
+myWidgetScroll :: M.ViewportScroll MyName
+myWidgetScroll = M.viewportScroll MyWidget
+
 menuEventHandler :: GopherBrowserState -> V.Event -> T.EventM MyName (T.Next GopherBrowserState)
 menuEventHandler gbs e =
   case e of
         V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
+        V.EvKey (V.KChar 'l')  [] -> M.hScrollBy myWidgetScroll 1 >> M.continue gbs
+        V.EvKey (V.KChar 'h')  [] -> M.hScrollBy myWidgetScroll (-1) >> M.continue gbs
         V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
         V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
         V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
