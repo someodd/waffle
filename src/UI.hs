@@ -8,11 +8,14 @@
 -- application state (GopherBrowserState).
 module UI (uiMain) where
 
+
 import Control.Monad (void)
 
 import qualified Brick.Main as M
 import qualified Brick.Types as T
 import qualified Graphics.Vty as V
+import qualified Brick.BChan
+import qualified Graphics.Vty
 
 import UI.Util
 import UI.Menu
@@ -20,6 +23,7 @@ import UI.TextFile
 import UI.Save
 import UI.Search
 import UI.Style
+import UI.Progress
 import GopherClient
 
 -- | The draw handler which will choose a UI based on the browser's mode.
@@ -32,6 +36,7 @@ drawUI gbs = case gbsRenderMode gbs of
   TextFileMode -> textFileModeUI gbs
   FileBrowserMode -> fileBrowserUi gbs
   SearchMode -> searchInputUI gbs
+  ProgressMode -> drawProgressUI gbs
 
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
 -- some cases where we don't want history available
@@ -40,17 +45,23 @@ drawUI gbs = case gbsRenderMode gbs of
 -- on the current gbsRenderMode.
 --
 -- Used for Brick.Main.appHandleEvent.
-appEvent :: GopherBrowserState -> T.BrickEvent MyName e -> T.EventM MyName (T.Next GopherBrowserState)
+appEvent :: GopherBrowserState -> T.BrickEvent MyName CustomEvent -> T.EventM MyName (T.Next GopherBrowserState)
 appEvent gbs (T.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = M.halt gbs
+-- What about above FIXME... event types should be deicphered by event handler?
 appEvent gbs (T.VtyEvent e)
   | gbsRenderMode gbs == MenuMode = menuEventHandler gbs e
   | gbsRenderMode gbs == TextFileMode = textFileEventHandler gbs e
   | gbsRenderMode gbs == FileBrowserMode = saveEventHandler gbs e
   | gbsRenderMode gbs == SearchMode = searchEventHandler gbs e
+  -- FIXME: two separate ones because of the way we pass events and pattern match
+  -- | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs e
   | otherwise = error "Unrecognized mode in event."
-appEvent gbs _ = M.continue gbs
+-- Seems hacky FIXME (for customevent)
+appEvent gbs e
+  | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs e
+  | otherwise = M.continue gbs
 
-theApp :: M.App GopherBrowserState e MyName
+theApp :: M.App GopherBrowserState CustomEvent MyName
 theApp =
   M.App { M.appDraw = drawUI
         , M.appChooseCursor = M.showFirstCursor
@@ -64,6 +75,10 @@ theApp =
 --
 -- | Start the Brick app at a specific Gopher menu in Gopherspace.
 uiMain :: GopherMenu -> (String, Int, String) -> IO ()
-uiMain gm (host, port, magicString) =
+uiMain gm (host, port, magicString) = do
+  eventChan <- Brick.BChan.newBChan 10
+  let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
+  initialVty <- buildVty
   let trueLocationType = (host, port, magicString, MenuMode)
-  in void $ M.defaultMain theApp (newStateForMenu gm trueLocationType ([trueLocationType], 0))
+      initialState = (newStateForMenu eventChan gm trueLocationType ([trueLocationType], 0))
+  void $ M.customMain initialVty buildVty (Just eventChan) theApp initialState

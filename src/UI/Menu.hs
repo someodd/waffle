@@ -1,3 +1,4 @@
+-- FIXME: optimizations! cleanup!
 module UI.Menu where
 
 import Data.List as List
@@ -15,15 +16,14 @@ import qualified Brick.Widgets.List as BrickList
 import qualified Brick.Types as T
 import Brick.Widgets.Center (vCenter, hCenter)
 import Brick.Widgets.Edit as E
-import Brick.Widgets.Core (viewport, str, withAttr, withBorderStyle, vBox, vLimit, hLimitPercent)
+import Brick.Widgets.Core (viewport, str, withAttr, withBorderStyle, vBox, vLimit, hLimitPercent, (<+>), updateAttrMap)
 import Web.Browser
-import Brick.Widgets.Core ((<+>), updateAttrMap)
 
 import UI.Util
 import UI.Style
 import UI.History
 import GopherClient
-import UI.Save
+import UI.Progress
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
 selectedMenuLine gbs =
@@ -63,32 +63,23 @@ newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
 newStateFromSelectedMenuItem gbs = do
   case lineType of
     (Left ct) -> case ct of
-      Directory -> do
-        o <- gopherGet host (show port) resource
-        let newMenu = makeGopherMenu o
-            location = mkLocation MenuMode
-        pure $ newStateForMenu newMenu location (newChangeHistory gbs location)
-      File -> do
-        o <- gopherGet host (show port) resource
-        let location = mkLocation TextFileMode
-        pure gbs { gbsLocation = location
-                 , gbsBuffer = TextFileBuffer $ clean o
-                 , gbsRenderMode = TextFileMode
-                 , gbsHistory = newChangeHistory gbs location
-                 }
+      Directory -> initProgressMode gbs (host, port, resource, MenuMode)
+      File -> initProgressMode gbs (host, port, resource, TextFileMode)
       IndexSearchServer -> pure gbs { gbsRenderMode = SearchMode, gbsBuffer = SearchBuffer { sbQuery = "", sbFormerBufferState = gbsBuffer gbs, sbSelector = resource, sbPort = port, sbHost = host, sbEditorState = E.editor MyViewport Nothing "" } }
-      ImageFile -> downloadState gbs host port resource
-      _ -> error $ "Tried to open unhandled cannonical mode: " ++ show ct
+      ImageFile -> initProgressMode gbs (host, port, resource, FileBrowserMode)
+      -- FIXME: it's possible this could be an incorrect exception if everything isn't covered, like telnet
+      -- so I need to implement those modes above and then of course this can be the catchall...
+      _ -> initProgressMode gbs (host, port, resource, FileBrowserMode)
     (Right nct) ->  case nct of
       HtmlFile -> openBrowser (drop 4 resource) >> pure gbs
-      _ -> error $ "Tried to open unhandled noncannonical mode: " ++ show nct
+      -- FIXME: same as previous comment...
+      _ -> initProgressMode gbs (host, port, resource, FileBrowserMode)
    where
     (host, port, resource, lineType) = case selectedMenuLine gbs of
       -- GopherLine
       (Left gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
       -- Unrecognized line
       (Right _) -> error "Can't do anything with unrecognized line."
-    mkLocation x = (host, port, resource, x)
 
 -- | The UI for rendering and viewing a menu.
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]

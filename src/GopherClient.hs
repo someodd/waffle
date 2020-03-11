@@ -1,3 +1,4 @@
+-- TODO: more stuff from UI needs to go in here for clearer separation?
 -- TODO: resource is misnamed. it's "selector string."
 -- TODO: menu and directory seem to be synonymous
 -- TODO: handle network problems
@@ -256,6 +257,8 @@ parentDirectory magicString
   | magicString == "/" || null magicString = Nothing
   | otherwise = Just $ intercalate "/" (init $ wordsBy (=='/') magicString)
 
+-- TODO: delete after implementing caching because it won't be used anymore due
+-- to UI.Progress!
 -- Lots of redundancy
 downloadGet :: String -> String -> String -> IO B8.ByteString
 downloadGet host port resource =
@@ -275,6 +278,7 @@ downloadGet host port resource =
       Nothing -> acc
       Just chnk -> getAllBytes (pure $ B8.append wacc chnk) connectionSocket
 
+-- TODO/FIXME: implement progressmode! it'd be almost exactly like menu
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
 -- if you don't wish to specify.
 searchGet :: String -> String -> String -> String -> IO (String, String)
@@ -297,6 +301,8 @@ searchGet host port resource query = do
       Nothing -> acc
       Just chnk -> getAllBytes (pure $ B8.append wacc chnk) connectionSocket
 
+-- TODO: delete after implementing caching because it won't be used anymore due
+-- to UI.Progress!
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
 -- if you don't wish to specify.
 gopherGet :: String -> String -> String -> IO String
