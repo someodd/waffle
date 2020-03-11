@@ -42,8 +42,9 @@ clean = replaceTabs . replaceReturns
     replaceTabs = map (\x -> if x == '\t' then ' ' else x)
     replaceReturns = map (\x -> if x == '\r' then ' ' else x)
 
+-- FIXME
 -- this is for text mode scrolling
-data MyName = MyViewport
+data MyName = MyViewport | MyWidget
   deriving (Show, Eq, Ord)
 
 -- this is for text mode scrolling
