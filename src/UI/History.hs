@@ -18,7 +18,7 @@ goHistory gbs when = do
   case renderMode of
     MenuMode ->
       let newMenu = makeGopherMenu o
-      in pure $ newStateForMenu newMenu location newHistory
+      in pure $ newStateForMenu (gbsChan gbs) newMenu location newHistory
     TextFileMode -> pure $ gbs
       { gbsBuffer = TextFileBuffer $ clean o
       , gbsHistory = newHistory
@@ -49,4 +49,4 @@ goParentDirectory gbs = do
   o <- gopherGet host (show port) parentMagicString
   let newMenu = makeGopherMenu o
       newLocation = (host, port, parentMagicString, MenuMode)
-  pure $ newStateForMenu newMenu newLocation (newChangeHistory gbs newLocation)
+  pure $ newStateForMenu (gbsChan gbs) newMenu newLocation (newChangeHistory gbs newLocation)

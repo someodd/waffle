@@ -17,7 +17,9 @@ dependencies:
   - bytestring
   - microlens
   - open-browser
+  - directory
   - filepath
+  - temporary
   - containers
   - vector
   - network-simple

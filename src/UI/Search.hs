@@ -36,7 +36,7 @@ mkSearchResponseState gbs = do
   (o, selector) <- searchGet host (show port) resource query
   let newMenu = makeGopherMenu o
       location = (host, port, selector, MenuMode)
-  pure $ newStateForMenu newMenu location (newChangeHistory gbs location)
+  pure $ newStateForMenu (gbsChan gbs) newMenu location (newChangeHistory gbs location)
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.

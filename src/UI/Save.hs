@@ -38,6 +38,7 @@ downloadState gbs host port resource =  do
   pure $ gbs
     { gbsRenderMode = FileBrowserMode
     , gbsBuffer = FileBrowserBuffer { fbFileBrowser = x
+                                    -- should be move FIXME
                                     , fbCallBack = (`ByteString.writeFile` o)
                                     , fbIsNamingFile = False
                                     , fbFileOutPath = ""

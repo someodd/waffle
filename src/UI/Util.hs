@@ -1,5 +1,12 @@
 module UI.Util where
 
+import qualified Data.ByteString.Char8 as B8
+import qualified Graphics.Vty as V
+
+import qualified Brick.Types as T
+import Brick.Widgets.Core (viewport, str, withAttr, withBorderStyle, vBox, vLimit, hLimitPercent)
+
+import qualified Brick.BChan
 import qualified Data.Vector as Vector
 
 import Brick.Main (ViewportScroll, viewportScroll)
@@ -11,12 +18,15 @@ import GopherClient
 
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
 -- based on passing it the mode and other info! newStateForMenu?
-newStateForMenu :: GopherMenu -> Location -> History -> GopherBrowserState
-newStateForMenu gm@(GopherMenu ls) location history = GopherBrowserState
+--
+-- probs needs to be IO
+newStateForMenu :: Brick.BChan.BChan CustomEvent -> GopherMenu -> Location -> History -> GopherBrowserState
+newStateForMenu chan gm@(GopherMenu ls) location history = GopherBrowserState
   { gbsBuffer = MenuBuffer (gm, BrickList.list MyViewport glsVector 1, mkFocusLinesIndex gm)
   , gbsLocation = location
   , gbsHistory = history
   , gbsRenderMode = MenuMode
+  , gbsChan = chan
   }
   where
     glsVector = Vector.fromList $ map lineShow ls
@@ -94,13 +104,21 @@ data Buffer =
                , sbPort :: Int
                , sbHost :: String
                , sbEditorState :: EditorState
-               }
+               } |
+  -- This is used to indicate how many bytes have been downloaded
+  -- of a menu or a save a text flie etc, anything!
+  -- FIXME: not db* but pb*
+  ProgressBuffer { pbBytesDownloaded :: Int
+                 , pbMessage :: String -- BETTER NAME NEEDED
+                 , pbInitGbs :: GopherBrowserState
+                 }
 
 data EditName = Edit1 deriving (Ord, Show, Eq)
 type EditorState = E.Editor String MyName
 
+-- TODO: maybe rename filebrowsermode to SaveMode or SaveFileMode
 -- | Related to Buffer. Namely exists for History.
-data RenderMode = MenuMode | TextFileMode | FileBrowserMode | SearchMode
+data RenderMode = MenuMode | TextFileMode | FileBrowserMode | SearchMode | ProgressMode
   deriving (Eq, Show)
 
 -- | The application state for Brick.
@@ -111,4 +129,26 @@ data GopherBrowserState = GopherBrowserState
   , gbsRenderMode :: RenderMode
   -- See: History
   , gbsHistory :: History
+  , gbsChan :: Brick.BChan.BChan CustomEvent
   }
+
+-- Draw counter!
+{-
+drawCounter :: GopherBrowserState -> [T.Widget MyName]
+drawCounter gbs = [a]
+  where
+    a = str $ "Downloaded bytes: " ++ counterBytes
+    counterBytes = show $ getInt $ gbsBuffer gbs
+    getInt (DownloadBuffer n) = n
+-}
+
+-- | Carries through the entire state I guess!
+-- think of this right now as a progress event
+data CustomEvent = NewStateEvent GopherBrowserState
+
+-- TODO: put this in the progress downloader
+--counterThread :: Brick.BChan.BChan CounterEvent -> IO ()
+{-
+counterThread gbs chan = do
+  Brick.BChan.writeBChan chan $ Counter
+-}
