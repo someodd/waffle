@@ -22,6 +22,7 @@ import qualified Brick.BChan
 import qualified Data.ByteString.Char8 as B8
 import qualified Brick.Types as T
 import System.IO.Temp (emptySystemTempFile)
+import qualified Data.ByteString.UTF8 as U8
 
 import UI.Util
 import UI.History--TODO: make this in top level not just UI? or it's all app state so idk
@@ -60,14 +61,14 @@ progressDownloadMemoryString initialProgGbs location@(host, port, resource, mode
     send connectionSocket (B8.pack $ resource ++ "\r\n")
     Brick.BChan.writeBChan chan (NewStateEvent initialProgGbs)
     o <- getAllBytes (pure $ Just $ GetAllBytesCallback (getAllBytesCallback, initialProgGbs)) 1024 (pure B8.empty) connectionSocket
-    let textFile = clean (B8.unpack o)
+    let textFile = clean (U8.toString o)
         finalState = case mode of
                        TextFileMode -> initialProgGbs { gbsLocation = location
                                                       , gbsBuffer = TextFileBuffer $ textFile
                                                       , gbsRenderMode = TextFileMode
                                                       , gbsHistory = newChangeHistory initialProgGbs location
                                                       }
-                       MenuMode -> newStateForMenu chan (makeGopherMenu $ B8.unpack o) location (newChangeHistory initialProgGbs location)
+                       MenuMode -> newStateForMenu chan (makeGopherMenu $ U8.toString o) location (newChangeHistory initialProgGbs location)
                        m -> error $ "Cannot download as a string into memory for: " ++ show m
     -- The final progress event, which changes the state to the render mode specified;
     -- utilizing the string downloaded into memory.
