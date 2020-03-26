@@ -1,11 +1,5 @@
 module UI.Util where
 
-import qualified Data.ByteString.Char8 as B8
-import qualified Graphics.Vty as V
-
-import qualified Brick.Types as T
-import Brick.Widgets.Core (viewport, str, withAttr, withBorderStyle, vBox, vLimit, hLimitPercent)
-
 import qualified Brick.BChan
 import qualified Data.Vector as Vector
 

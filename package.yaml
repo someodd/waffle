@@ -17,6 +17,7 @@ dependencies:
   - bytestring
   - microlens
   - open-browser
+  - utf8-string
   - directory
   - filepath
   - temporary

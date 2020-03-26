@@ -80,5 +80,5 @@ uiMain gm (host, port, magicString) = do
   let buildVty = Graphics.Vty.mkVty Graphics.Vty.defaultConfig
   initialVty <- buildVty
   let trueLocationType = (host, port, magicString, MenuMode)
-      initialState = (newStateForMenu eventChan gm trueLocationType ([trueLocationType], 0))
+      initialState = newStateForMenu eventChan gm trueLocationType ([trueLocationType], 0)
   void $ M.customMain initialVty buildVty (Just eventChan) theApp initialState

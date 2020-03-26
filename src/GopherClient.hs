@@ -206,7 +206,7 @@ makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
          , glDisplayString=displayString
          , glSelector=selector
          , glHost=host
-         , glPort=read $ port--FIXME: what if this fails to int?
+         , glPort=read port--FIXME: what if this fails to int?
          , glGopherPlus=gopherPlus
          }
       Nothing -> Right $ MalformedGopherLine { mglFields = allFields }
@@ -266,17 +266,25 @@ downloadGet host port resource =
     send connectionSocket (B8.pack $ resource ++ "\r\n")
     -- need to only fetch as many bytes as it takes to get period on a line by itself to
     -- close the connection.
-    wow <- getAllBytes (pure B8.empty) connectionSocket
-    pure $ wow
-  where
-  recvChunks = 1024
-  getAllBytes :: IO B8.ByteString -> Socket -> IO B8.ByteString
-  getAllBytes acc connectionSocket = do
-    gosh <- recv connectionSocket recvChunks
-    wacc <- acc
-    case gosh of
-      Nothing -> acc
-      Just chnk -> getAllBytes (pure $ B8.append wacc chnk) connectionSocket
+    getAllBytes (pure Nothing) 1024 (pure B8.empty) connectionSocket
+
+data GetAllBytesCallback st = GetAllBytesCallback (st -> B8.ByteString -> IO st, st)
+
+-- TODO: What about modifying this with a callback for progress...
+getAllBytes :: IO (Maybe (GetAllBytesCallback a)) -> Int -> IO B8.ByteString -> Socket -> IO B8.ByteString
+getAllBytes callback recvChunks acc connectionSocket = do
+  gosh <- recv connectionSocket recvChunks
+  wacc <- acc
+  case gosh of
+    Nothing -> acc
+    Just chnk -> do
+      cb <- callback
+      let newCallbackArg = case cb of
+                     Just (GetAllBytesCallback (callback', gbs)) -> do
+                       newGbs <- callback' gbs chnk
+                       pure $ Just $ GetAllBytesCallback (callback', newGbs)
+                     Nothing -> pure Nothing
+      getAllBytes newCallbackArg recvChunks (pure $ B8.append wacc chnk) connectionSocket
 
 -- TODO/FIXME: implement progressmode! it'd be almost exactly like menu
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
@@ -288,18 +296,9 @@ searchGet host port resource query = do
     send connectionSocket (B8.pack $ selector ++ "\r\n")
     -- need to only fetch as many bytes as it takes to get period on a line by itself to
     -- close the connection.
-    wow <- getAllBytes (pure B8.empty) connectionSocket
+    wow <- getAllBytes (pure Nothing) 1024 (pure B8.empty) connectionSocket
     pure $ B8.unpack wow
   pure (o, selector)
-  where
-  recvChunks = 1024
-  getAllBytes :: IO B8.ByteString -> Socket -> IO B8.ByteString
-  getAllBytes acc connectionSocket = do
-    gosh <- recv connectionSocket recvChunks
-    wacc <- acc
-    case gosh of
-      Nothing -> acc
-      Just chnk -> getAllBytes (pure $ B8.append wacc chnk) connectionSocket
 
 -- TODO: delete after implementing caching because it won't be used anymore due
 -- to UI.Progress!
@@ -311,17 +310,8 @@ gopherGet host port resource =
     send connectionSocket (B8.pack $ resource ++ "\r\n")
     -- need to only fetch as many bytes as it takes to get period on a line by itself to
     -- close the connection.
-    wow <- getAllBytes (pure B8.empty) connectionSocket
+    wow <- getAllBytes (pure Nothing) 1024 (pure B8.empty) connectionSocket
     pure $ B8.unpack wow
-  where
-  recvChunks = 1024
-  getAllBytes :: IO B8.ByteString -> Socket -> IO B8.ByteString
-  getAllBytes acc connectionSocket = do
-    gosh <- recv connectionSocket recvChunks
-    wacc <- acc
-    case gosh of
-      Nothing -> acc
-      Just chnk -> getAllBytes (pure $ B8.append wacc chnk) connectionSocket
 
 menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx

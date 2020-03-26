@@ -39,7 +39,7 @@ jumpNextLink gbs = updateMenuList (BrickList.listMoveTo next l)
   where
     (MenuBuffer (_, l, focusLines)) = gbsBuffer gbs
     currentIndex = fromJust $ BrickList.listSelected l
-    next = fromMaybe (focusLines !! 0) (find (>currentIndex) focusLines)
+    next = fromMaybe (head focusLines) (find (>currentIndex) focusLines)
     -- FIXME: repeated code
     updateMenuList ls =
       let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
@@ -60,7 +60,7 @@ jumpPrevLink gbs = updateMenuList (BrickList.listMoveTo next l)
 -- | Make a request based on the currently selected Gopher menu item and change
 -- the application state (GopherBrowserState) to reflect the change.
 newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
-newStateFromSelectedMenuItem gbs = do
+newStateFromSelectedMenuItem gbs =
   case lineType of
     (Left ct) -> case ct of
       Directory -> initProgressMode gbs (host, port, resource, MenuMode)

@@ -28,7 +28,7 @@ inputDialogUI editorState label helpString =
          $ padLeftRight 4
          $ hLimit 100
          $ vLimit 3
-         $ vBox [withAttr inputFieldAttr $ editorField, padTop (T.Pad 1) $ str helpString]
-  in [center $ ui]
+         $ vBox [withAttr inputFieldAttr editorField, padTop (T.Pad 1) $ str helpString]
+  in [center ui]
   where
-    editorField = (E.renderEditor (str . unlines)) True editorState
+    editorField = E.renderEditor (str . unlines) True editorState
