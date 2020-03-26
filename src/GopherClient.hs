@@ -9,6 +9,8 @@ module GopherClient where
 
 import Data.List
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.UTF8 as U8
 import Data.List.Split
 
 import Network.Simple.TCP
@@ -260,18 +262,18 @@ parentDirectory magicString
 -- TODO: delete after implementing caching because it won't be used anymore due
 -- to UI.Progress!
 -- Lots of redundancy
-downloadGet :: String -> String -> String -> IO B8.ByteString
+downloadGet :: String -> String -> String -> IO BS.ByteString
 downloadGet host port resource =
   connect host port $ \(connectionSocket, _) -> do
     send connectionSocket (B8.pack $ resource ++ "\r\n")
     -- need to only fetch as many bytes as it takes to get period on a line by itself to
     -- close the connection.
-    getAllBytes (pure Nothing) 1024 (pure B8.empty) connectionSocket
+    getAllBytes (pure Nothing) 1024 (pure BS.empty) connectionSocket
 
-data GetAllBytesCallback st = GetAllBytesCallback (st -> B8.ByteString -> IO st, st)
+data GetAllBytesCallback st = GetAllBytesCallback (st -> BS.ByteString -> IO st, st)
 
 -- TODO: What about modifying this with a callback for progress...
-getAllBytes :: IO (Maybe (GetAllBytesCallback a)) -> Int -> IO B8.ByteString -> Socket -> IO B8.ByteString
+getAllBytes :: IO (Maybe (GetAllBytesCallback a)) -> Int -> IO BS.ByteString -> Socket -> IO BS.ByteString
 getAllBytes callback recvChunks acc connectionSocket = do
   gosh <- recv connectionSocket recvChunks
   wacc <- acc
@@ -284,7 +286,7 @@ getAllBytes callback recvChunks acc connectionSocket = do
                        newGbs <- callback' gbs chnk
                        pure $ Just $ GetAllBytesCallback (callback', newGbs)
                      Nothing -> pure Nothing
-      getAllBytes newCallbackArg recvChunks (pure $ B8.append wacc chnk) connectionSocket
+      getAllBytes newCallbackArg recvChunks (pure $ BS.append wacc chnk) connectionSocket
 
 -- TODO/FIXME: implement progressmode! it'd be almost exactly like menu
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
@@ -293,11 +295,11 @@ searchGet :: String -> String -> String -> String -> IO (String, String)
 searchGet host port resource query = do
   let selector = if null resource then query else resource ++ "\t" ++ query
   o <- connect host port $ \(connectionSocket, _) -> do
-    send connectionSocket (B8.pack $ selector ++ "\r\n")
+    send connectionSocket (U8.fromString $ selector ++ "\r\n")
     -- need to only fetch as many bytes as it takes to get period on a line by itself to
     -- close the connection.
-    wow <- getAllBytes (pure Nothing) 1024 (pure B8.empty) connectionSocket
-    pure $ B8.unpack wow
+    wow <- getAllBytes (pure Nothing) 1024 (pure BS.empty) connectionSocket
+    pure $ B8.unpack wow--FIXME: u8.toString
   pure (o, selector)
 
 -- TODO: delete after implementing caching because it won't be used anymore due
@@ -310,8 +312,8 @@ gopherGet host port resource =
     send connectionSocket (B8.pack $ resource ++ "\r\n")
     -- need to only fetch as many bytes as it takes to get period on a line by itself to
     -- close the connection.
-    wow <- getAllBytes (pure Nothing) 1024 (pure B8.empty) connectionSocket
-    pure $ B8.unpack wow
+    wow <- getAllBytes (pure Nothing) 1024 (pure BS.empty) connectionSocket
+    pure $ U8.toString wow
 
 menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx
