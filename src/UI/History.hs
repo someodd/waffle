@@ -37,7 +37,7 @@ goHistory gbs when = do
 newChangeHistory :: GopherBrowserState -> Location -> History
 newChangeHistory gbs newLoc =
   let (history, historyMarker) = gbsHistory gbs
-      newHistory = (take (historyMarker+1) history) ++ [newLoc]
+      newHistory = take (historyMarker+1) history ++ [newLoc]
       newHistoryMarker = historyMarker + 1
   in (newHistory, newHistoryMarker)
 
@@ -45,7 +45,7 @@ newChangeHistory gbs newLoc =
 goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
 goParentDirectory gbs = do
   let (host, port, magicString, _) = gbsLocation gbs
-      parentMagicString = fromMaybe ("/") (parentDirectory magicString)
+      parentMagicString = fromMaybe "/" (parentDirectory magicString)
   o <- gopherGet host (show port) parentMagicString
   let newMenu = makeGopherMenu o
       newLocation = (host, port, parentMagicString, MenuMode)

@@ -59,7 +59,7 @@ progressDownloadMemoryString initialProgGbs location@(host, port, resource, mode
     let chan = gbsChan initialProgGbs
     send connectionSocket (B8.pack $ resource ++ "\r\n")
     Brick.BChan.writeBChan chan (NewStateEvent initialProgGbs)
-    o <- getAllBytes initialProgGbs (pure B8.empty) connectionSocket
+    o <- getAllBytes (pure $ Just $ GetAllBytesCallback (getAllBytesCallback, initialProgGbs)) 1024 (pure B8.empty) connectionSocket
     let textFile = clean (B8.unpack o)
         finalState = case mode of
                        TextFileMode -> initialProgGbs { gbsLocation = location
@@ -74,19 +74,12 @@ progressDownloadMemoryString initialProgGbs location@(host, port, resource, mode
     Brick.BChan.writeBChan chan (NewStateEvent finalState)
     pure ()
   where
-    recvChunks = 1024
-
-    -- FIXME: totally unreadable
-    getAllBytes :: GopherBrowserState -> IO B8.ByteString -> Socket -> IO B8.ByteString
-    getAllBytes gbs' acc connectionSocket = do
-      gosh <- recv connectionSocket recvChunks
-      wacc <- acc
-      case gosh of
-        Nothing -> acc
-        Just chnk -> do
-          let newGbs = addProgBytes gbs' (B8.length chnk)
-          Brick.BChan.writeBChan (gbsChan gbs') (NewStateEvent newGbs)
-          getAllBytes newGbs (pure $ B8.append wacc chnk) connectionSocket
+    -- FIXME: this doesn't use chan!
+    getAllBytesCallback :: GopherBrowserState -> B8.ByteString -> IO GopherBrowserState
+    getAllBytesCallback gbs' chnk = do
+      let newGbs = addProgBytes gbs' (B8.length chnk)
+      Brick.BChan.writeBChan (gbsChan gbs') (NewStateEvent newGbs)
+      pure newGbs
 
 -- TODO: make a version of this for huge text files, or even huge menus!
 -- | Emits events of a new application state (GBS). Starts by only
@@ -127,6 +120,7 @@ progressDownloadBytes gbs (host, port, resource, _) =
     Brick.BChan.writeBChan chan (NewStateEvent finalState)
     pure ()
   where
+    -- FIXME: could make gopherclient thing
     recvChunks = 1024
     writeAllBytes :: GopherBrowserState -> Socket -> String -> IO ()
     writeAllBytes gbs' connectionSocket tempFilePath = do
