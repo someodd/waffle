@@ -9,22 +9,22 @@
 module UI (uiMain) where
 
 
-import Control.Monad (void)
+import           Control.Monad (void)
 
-import qualified Brick.Main as M
-import qualified Brick.Types as T
-import qualified Graphics.Vty as V
 import qualified Brick.BChan
+import qualified Brick.Main    as M
+import qualified Brick.Types   as T
+import qualified Graphics.Vty  as V
 import qualified Graphics.Vty
 
-import UI.Util
-import UI.Menu
-import UI.TextFile
-import UI.Save
-import UI.Search
-import UI.Style
-import UI.Progress
-import GopherClient
+import           GopherClient
+import           UI.Menu
+import           UI.Progress
+import           UI.Save
+import           UI.Search
+import           UI.Style
+import           UI.TextFile
+import           UI.Util
 
 -- | The draw handler which will choose a UI based on the browser's mode.
 -- | Picks a UI/draw function based on the current gbsRenderMode.
@@ -32,11 +32,11 @@ import GopherClient
 -- Used as Brick.Main.appDraw when constructing the Brick app.
 drawUI :: GopherBrowserState -> [T.Widget MyName]
 drawUI gbs = case gbsRenderMode gbs of
-  MenuMode -> menuModeUI gbs
-  TextFileMode -> textFileModeUI gbs
+  MenuMode        -> menuModeUI gbs
+  TextFileMode    -> textFileModeUI gbs
   FileBrowserMode -> fileBrowserUi gbs
-  SearchMode -> searchInputUI gbs
-  ProgressMode -> drawProgressUI gbs
+  SearchMode      -> searchInputUI gbs
+  ProgressMode    -> drawProgressUI gbs
 
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
 -- some cases where we don't want history available
