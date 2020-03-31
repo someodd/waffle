@@ -20,60 +20,60 @@ import Network.Simple.TCP
 -- "The client software decides what items are available by looking at
 -- the first character of each line in a directory listing."
 data GopherCanonicalItemType =
-  -- | Item is a (plaintext) file. The item is a TextFile Entity. Client
-  -- Should use a TextFile Transaction.
   File |
-  -- | Gopher submenu. The item is a Menu Entity. Client should use a Menu
-  -- Transaction.
+  -- ^ Item is a (plaintext) file. The item is a TextFile Entity. Client
+  -- Should use a TextFile Transaction.
   Directory |
-  -- | CcsoNameServer. The information applies to a CSO phone book entity.
-  -- Clients should talk CSO protocol.
+  -- ^ Gopher submenu. The item is a Menu Entity. Client should use a Menu
+  -- Transaction.
   CsoPhoneBookServer |
-  -- | Signals an error condition.
+  -- ^ CcsoNameServer. The information applies to a CSO phone book entity.
+  -- Clients should talk CSO protocol.
   Error |
-  -- | Item is a Macintosh file encoded in BINHEX format.
+  -- ^ Signals an error condition.
   BinHexedMacintoshFile |
-  -- | Item is PC-DOS binary file of some sort.  Client gets to decide.
-  -- DOS binary archive of some sort. Client must read until TCP connection closes. beware
+  -- ^ Item is a Macintosh file encoded in BINHEX format.
   DosBinaryArchive |
-  -- | UNIX uuencoded file; item is a uuencoded file.
+  -- ^ Item is PC-DOS binary file of some sort.  Client gets to decide.
+  -- DOS binary archive of some sort. Client must read until TCP connection closes. beware
   UnixUuencodedFile |
-  -- | Gopher full-text search. The information applies to a Index Server.
-  -- Client should use a FullText Search transaction.
+  -- ^ UNIX uuencoded file; item is a uuencoded file.
   IndexSearchServer |
-  -- | Text-based telnet session. The information applies to a Telnet session.
+  -- ^ Gopher full-text search. The information applies to a Index Server.
+  -- Client should use a FullText Search transaction.
+  TextBasedTelnetSession |
+  -- ^ Text-based telnet session. The information applies to a Telnet session.
   -- Connect to given host at given port. The name to login as at this host is
   -- in the selector string.
-  TextBasedTelnetSession |
-  -- | Client must read until tcp connection closes, beware. Item is a binary file. Client
-  -- must decide what to do with it.
   BinaryFile |
-  -- | The information applies to a duplicated server. The information contained within is
+  -- ^ Client must read until tcp connection closes, beware. Item is a binary file. Client
+  -- must decide what to do with it.
+  RedundantServer |
+  -- ^ The information applies to a duplicated server. The information contained within is
   -- a duplicate of the primary server. THe primary server is defined as the last DirEntity
   -- that has a non-plus "type" field. The client should use the transaction as defined by
   -- the primary server type field.
-  RedundantServer |
-  -- | Item is a GIF graphic file.
   GifFile |
-  -- | Item is some kind of image file. Client gets to decide.
+  -- ^ Item is a GIF graphic file.
   ImageFile |
-  -- | Telnet 3270. The information applies to a tn3270 based telnet session.
+  -- ^ Item is some kind of image file. Client gets to decide.
+  Tn3270Session
+  -- ^ Telnet 3270. The information applies to a tn3270 based telnet session.
   -- Connect to given host at given port. The name to login as at this
   -- host is in the selector string.
-  Tn3270Session
   deriving (Eq, Show)
 
 -- | Item types improvised by Gopher client authors and others after RFC 1436,
 -- see the Gopher+ specification...
 data GopherNonCanonicalItemType =
-  -- | Doc. Seen used alongside PDFs and .DOCs.
   Doc |
-  -- | HTML file.
+  -- ^ Doc. Seen used alongside PDFs and .DOCs.
   HtmlFile |
-  -- | Informational message.
+  -- ^ HTML file.
   InformationalMessage |
-  -- | Sound file (especially the WAV format).
+  -- ^ Informational message.
   SoundFile
+  -- ^ Sound file (especially the WAV format).
   deriving (Eq, Show)
 
 -- FIXME: bring back glNumber for line #
