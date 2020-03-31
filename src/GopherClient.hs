@@ -237,8 +237,8 @@ fromMenu (GopherMenu m) = m
 instance Show GopherMenu where
   show (GopherMenu ls) = unlines $ map gopherLineShow ls
    where
-  -- Seems a little hacky
-  -- is normal line
+    -- Seems a little hacky
+    -- is normal line
     gopherLineShow (Left  x) = show x
     -- is malformed line
     gopherLineShow (Right x) = show x ++ "(MALFORMED LINE)"-- Does this have potential to break?

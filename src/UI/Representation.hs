@@ -2,11 +2,11 @@
 module UI.Representation where
 
 import qualified Brick.BChan
-import qualified Brick.Widgets.List as BrickList -- (List)? FIXME
-import Brick.Widgets.FileBrowser (FileBrowser)
-import Brick.Widgets.Edit as E
+import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
+import           Brick.Widgets.FileBrowser      ( FileBrowser )
+import           Brick.Widgets.Edit            as E
 
-import GopherClient
+import           GopherClient
 
 -- This is used to indicate how many bytes have been downloaded
 -- of a menu or a save a text flie etc, anything!
@@ -53,38 +53,28 @@ data Buffer
 
 updateFileBrowserBuffer gbs f =
   let (FileBrowserBuffer sb) = gbsBuffer gbs
-  in gbs { gbsBuffer = FileBrowserBuffer (f sb) }
+  in  gbs { gbsBuffer = FileBrowserBuffer (f sb) }
 
-getMenu gbs =
-  let (MenuBuffer m) = gbsBuffer gbs
-  in m
+getMenu gbs = let (MenuBuffer m) = gbsBuffer gbs in m
 
-getProgress gbs =
-  let (ProgressBuffer p) = gbsBuffer gbs
-  in p
+getProgress gbs = let (ProgressBuffer p) = gbsBuffer gbs in p
 
 updateProgressBuffer gbs f =
   let (ProgressBuffer p) = gbsBuffer gbs
-  in gbs { gbsBuffer = ProgressBuffer (f p) }
+  in  gbs { gbsBuffer = ProgressBuffer (f p) }
 
 -- | Get the SaveBrowser from Buffer
-getSaveBrowser gbs =
-  let (FileBrowserBuffer sb) = gbsBuffer gbs
-  in sb
+getSaveBrowser gbs = let (FileBrowserBuffer sb) = gbsBuffer gbs in sb
 
 -- | Get the TextFile from Buffer.
-getTextFile gbs =
-  let (TextFileBuffer tf) = gbsBuffer gbs
-  in tf
+getTextFile gbs = let (TextFileBuffer tf) = gbsBuffer gbs in tf
 
-getSearch gbs =
-  let (SearchBuffer s) = gbsBuffer gbs
-  in s
+getSearch gbs = let (SearchBuffer s) = gbsBuffer gbs in s
 
 -- FIXME: could update to use getSaveBrowser
 updateSearchBuffer gbs f =
   let (SearchBuffer sb) = gbsBuffer gbs
-  in gbs { gbsBuffer = SearchBuffer (f sb) }
+  in  gbs { gbsBuffer = SearchBuffer (f sb) }
 
 -- OLD STUFF NOT USED... DELETE FIXME
 menuFromBuffer :: Buffer -> Menu
