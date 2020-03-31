@@ -4,6 +4,7 @@ module UI.History where
 import Data.Maybe
 
 import UI.Util
+import UI.Representation
 import GopherClient
 
 -- FIXME: can get an index error! should resolve with a dialog box.
@@ -20,7 +21,7 @@ goHistory gbs when = do
       let newMenu = makeGopherMenu o
       in pure $ newStateForMenu (gbsChan gbs) newMenu location newHistory
     TextFileMode -> pure $ gbs
-      { gbsBuffer = TextFileBuffer $ clean o
+      { gbsBuffer = TextFileBuffer $ TextFile $ clean o
       , gbsHistory = newHistory
       , gbsRenderMode = TextFileMode
       }

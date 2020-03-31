@@ -29,6 +29,7 @@ import Brick.Widgets.Core
 import UI.Util
 import GopherClient (downloadGet)
 import UI.Style
+import UI.Representation
 
 downloadState :: GopherBrowserState -> String -> Int -> String -> IO GopherBrowserState
 downloadState gbs host port resource =  do
@@ -37,14 +38,14 @@ downloadState gbs host port resource =  do
   x <- FB.newFileBrowser selectNothing MyViewport Nothing
   pure $ gbs
     { gbsRenderMode = FileBrowserMode
-    , gbsBuffer = FileBrowserBuffer { fbFileBrowser = x
-                                    -- should be move FIXME
-                                    , fbCallBack = (`ByteString.writeFile` o)
-                                    , fbIsNamingFile = False
-                                    , fbFileOutPath = ""
-                                    , fbOriginalFileName = takeFileName resource
-                                    , fbFormerBufferState = gbsBuffer gbs
-                                    }
+    , gbsBuffer = FileBrowserBuffer $ SaveBrowser { fbFileBrowser = x
+                                                  -- should be move FIXME
+                                                  , fbCallBack = (`ByteString.writeFile` o)
+                                                  , fbIsNamingFile = False
+                                                  , fbFileOutPath = ""
+                                                  , fbOriginalFileName = takeFileName resource
+                                                  , fbFormerBufferState = gbsBuffer gbs
+                                                  }
     }
   where
     -- | This is for FileBrowser, because we don't want to overwrite anything,
@@ -70,21 +71,31 @@ handleFileBrowserEvent' gbs e b =
       (gbs, FB.handleFileBrowserEvent e b)
     where
       initiateNamingState :: GopherBrowserState
-      initiateNamingState = gbs { gbsBuffer = (gbsBuffer gbs) { fbIsNamingFile = True, fbFileOutPath = (fbOriginalFileName (gbsBuffer gbs)) } }
+      initiateNamingState =
+        let cb = \x -> x { fbIsNamingFile = True, fbFileOutPath = (fbOriginalFileName (getSaveBrowser gbs)) }
+        in updateFileBrowserBuffer gbs cb
 
-      finalOutFilePath p = gbs { gbsBuffer = (gbsBuffer gbs) { fbFileOutPath = p, fbIsNamingFile = False } }
+      finalOutFilePath :: String -> GopherBrowserState
+      finalOutFilePath p =
+        let cb = \x -> x { fbFileOutPath = p, fbIsNamingFile = False }
+        in updateFileBrowserBuffer gbs cb
 
-      isNamingFile = fbIsNamingFile (gbsBuffer gbs)
+      isNamingFile :: Bool
+      isNamingFile = fbIsNamingFile (getSaveBrowser gbs)
 
-      updateOutFilePath p = gbs { gbsBuffer = (gbsBuffer gbs) { fbFileOutPath = p } }
+      updateOutFilePath :: String -> GopherBrowserState
+      updateOutFilePath p =
+        let cb = \x -> x { fbFileOutPath = p }
+        in updateFileBrowserBuffer gbs cb
 
-      curOutFilePath = fbFileOutPath (gbsBuffer gbs)
+      curOutFilePath :: String
+      curOutFilePath = fbFileOutPath (getSaveBrowser gbs)
 
 -- FIXME
 fileBrowserUi :: GopherBrowserState -> [T.Widget MyName]
 fileBrowserUi gbs = [center $ vLimitPercent 100 $ hLimitPercent 100 $ ui <=> help]
     where
-        b = fromBuffer $ gbsBuffer gbs
+        b = fromBuffer $ getSaveBrowser gbs
         fromBuffer x = fbFileBrowser x
         ui = hCenter $
              borderWithLabel (txt "Choose a file") $
@@ -98,34 +109,39 @@ fileBrowserUi gbs = [center $ vLimitPercent 100 $ hLimitPercent 100 $ ui <=> hel
                     , hCenter $ txt "/: search, Ctrl-C or Esc: cancel search"
                     , hCenter $ txt "Enter: change directory or select file"
                     , hCenter $ txt "Esc: quit"
-                    , hCenter $ str $ fbFileOutPath (gbsBuffer gbs)
+                    , hCenter $ str $ fbFileOutPath (getSaveBrowser gbs)
                     ]
 
 saveEventHandler :: GopherBrowserState -> V.Event -> T.EventM MyName (T.Next GopherBrowserState)
 saveEventHandler gbs e =
   case e of
     -- instances of 'b' need to tap into gbsbuffer
-    V.EvKey V.KEsc [] | not (FB.fileBrowserIsSearching $ fromFileBrowserBuffer (gbsBuffer gbs)) ->
+    V.EvKey V.KEsc [] | not (FB.fileBrowserIsSearching $ fromFileBrowserBuffer (getSaveBrowser gbs)) ->
       M.continue $ returnFormerState gbs
     _ -> do
-      let (gbs', bUnOpen') = handleFileBrowserEvent' gbs e (fromFileBrowserBuffer $ gbsBuffer gbs)
+      let (gbs', bUnOpen') = handleFileBrowserEvent' gbs e (fromFileBrowserBuffer $ getSaveBrowser gbs)
       b' <- bUnOpen'
       -- If the browser has a selected file after handling the
       -- event (because the user pressed Enter), shut down.
-      let fileOutPath = fbFileOutPath (gbsBuffer gbs')
+      let fileOutPath = fbFileOutPath (getSaveBrowser gbs')
       if (isNamingFile gbs') then
-        M.continue (updateFileBrowserBuffer gbs' b')
+        M.continue (upFileBrowserBuffer gbs' b')
       -- this errors now
       else if not (null $ getOutFilePath gbs') then
         (liftIO (doCallBack fileOutPath) >>= M.continue)
       else
-        M.continue (updateFileBrowserBuffer gbs' b')
+        M.continue (upFileBrowserBuffer gbs' b')
   where
     fromFileBrowserBuffer x = fbFileBrowser x
-    returnFormerState g = g {gbsBuffer = (fbFormerBufferState $ gbsBuffer g), gbsRenderMode = MenuMode}
-    isNamingFile g = fbIsNamingFile (gbsBuffer g)
-    updateFileBrowserBuffer g bu = g { gbsBuffer = (gbsBuffer g) { fbFileBrowser = bu }  }
-    getOutFilePath g = fbFileOutPath (gbsBuffer g)
+    returnFormerState g = g {gbsBuffer = (fbFormerBufferState $ getSaveBrowser g), gbsRenderMode = MenuMode}
+    isNamingFile g = fbIsNamingFile (getSaveBrowser g)
+
+    -- FIXME: redundant?
+    upFileBrowserBuffer g bu =
+      let cb = \x -> x { fbFileBrowser = bu }
+      in updateFileBrowserBuffer g cb
+
+    getOutFilePath g = fbFileOutPath (getSaveBrowser g)
     doCallBack a = do
-      fbCallBack (gbsBuffer gbs) a
-      pure $ gbs {gbsBuffer = (fbFormerBufferState $ gbsBuffer gbs), gbsRenderMode = MenuMode}
+      fbCallBack (getSaveBrowser gbs) a
+      pure $ gbs {gbsBuffer = (fbFormerBufferState $ getSaveBrowser gbs), gbsRenderMode = MenuMode}

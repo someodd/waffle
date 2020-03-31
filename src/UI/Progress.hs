@@ -26,6 +26,7 @@ import qualified Data.ByteString.UTF8 as U8
 
 import UI.Util
 import UI.History--TODO: make this in top level not just UI? or it's all app state so idk
+import UI.Representation
 import GopherClient
 
 selectNothing :: FB.FileInfo -> Bool
@@ -39,7 +40,7 @@ initProgressMode gbs location@(_, _, _, mode) =
                                 FileBrowserMode -> (progressDownloadBytes, "binary file")
                                 m -> error $ "Unspported mode requested for progress mode: " ++ show m
       initialProgGbs = gbs { gbsRenderMode = ProgressMode
-                           , gbsBuffer = ProgressBuffer
+                           , gbsBuffer = ProgressBuffer $ Progress
                                { pbBytesDownloaded = 0
                                , pbInitGbs = gbs
                                , pbMessage = "Downloading a " ++ message
@@ -48,7 +49,9 @@ initProgressMode gbs location@(_, _, _, mode) =
   in forkIO (downloader initialProgGbs location) >> pure initialProgGbs
 
 addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
-addProgBytes gbs' nbytes = gbs' { gbsBuffer = (gbsBuffer gbs') { pbBytesDownloaded = pbBytesDownloaded (gbsBuffer gbs') + nbytes } }
+addProgBytes gbs' nbytes =
+  let cb = \x -> x { pbBytesDownloaded = pbBytesDownloaded (getProgress gbs') + nbytes }
+  in updateProgressBuffer gbs' cb
 
 -- TODO: maybe make updating history optional? for reload. could be argument
 -- | Download something from a GopherHole to a string in memory, while sending progress
@@ -64,7 +67,7 @@ progressDownloadMemoryString initialProgGbs location@(host, port, resource, mode
     let textFile = clean (U8.toString o)
         finalState = case mode of
                        TextFileMode -> initialProgGbs { gbsLocation = location
-                                                      , gbsBuffer = TextFileBuffer $ textFile
+                                                      , gbsBuffer = TextFileBuffer $ TextFile $ textFile
                                                       , gbsRenderMode = TextFileMode
                                                       , gbsHistory = newChangeHistory initialProgGbs location
                                                       }
@@ -93,7 +96,7 @@ progressDownloadBytes :: GopherBrowserState -> Location -> IO ()
 progressDownloadBytes gbs (host, port, resource, _) =
   connect host (show port) $ \(connectionSocket, _) -> do
     let chan = gbsChan gbs
-        formerBufferState = gbsBuffer $ pbInitGbs (gbsBuffer gbs) -- FIXME: not needed
+        formerBufferState = gbsBuffer $ pbInitGbs (getProgress gbs) -- FIXME: not needed
     send connectionSocket (B8.pack $ resource ++ "\r\n")
     -- FIXME: what if this is left over from last time?
     tempFilePath <- emptySystemTempFile "waffle.download.tmp"
@@ -109,14 +112,14 @@ progressDownloadBytes gbs (host, port, resource, _) =
     -- THE FINAL EVENT...
     x <- FB.newFileBrowser selectNothing MyViewport Nothing
     let finalState = gbs { gbsRenderMode = FileBrowserMode
-                         , gbsBuffer = FileBrowserBuffer { fbFileBrowser = x -- FIXME
-                                                         -- FIXME: move temp to specified location
-                                                         , fbCallBack = (tempFilePath `renameFile`)
-                                                         , fbIsNamingFile = False
-                                                         , fbFileOutPath = ""
-                                                         , fbOriginalFileName = takeFileName resource
-                                                         , fbFormerBufferState = formerBufferState
-                                                         }
+                         , gbsBuffer = FileBrowserBuffer $ SaveBrowser { fbFileBrowser = x -- FIXME
+                                                                       -- FIXME: move temp to specified location
+                                                                       , fbCallBack = (tempFilePath `renameFile`)
+                                                                       , fbIsNamingFile = False
+                                                                       , fbFileOutPath = ""
+                                                                       , fbOriginalFileName = takeFileName resource
+                                                                       , fbFormerBufferState = formerBufferState
+                                                                       }
                          }
     Brick.BChan.writeBChan chan (NewStateEvent finalState)
     pure ()
@@ -138,7 +141,7 @@ drawProgressUI :: GopherBrowserState -> [T.Widget MyName]
 drawProgressUI gbs = [a]
   where
     -- FIXME: "downloaded" isn't necessarily correct. You can request more bytes than is left...
-    a = str $ "Downloaded bytes: " ++ show (pbBytesDownloaded (gbsBuffer gbs))
+    a = str $ "Downloaded bytes: " ++ show (pbBytesDownloaded (getProgress gbs))
 
 -- TODO: handleProgressEvents
 progressEventHandler :: GopherBrowserState -> T.BrickEvent MyName CustomEvent -> T.EventM MyName (T.Next GopherBrowserState)
