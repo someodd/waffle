@@ -15,24 +15,25 @@ import           GopherClient              (makeGopherMenu, searchGet)
 import           UI.History
 import           UI.InputDialog
 import           UI.Util
+import           UI.Representation
 
 -- | Draw the search prompt. Used by UI.drawUI if the gbsRenderMode
 -- is SearchMode.
 searchInputUI :: GopherBrowserState -> [T.Widget MyName]
 searchInputUI gbs = inputDialogUI editorBuffer labelText helpText
   where
-    searchBuffer = gbsBuffer gbs
-    editorBuffer = sbEditorState (gbsBuffer gbs)
+    searchBuffer = getSearch gbs
+    editorBuffer = sbEditorState (getSearch gbs)
     labelText = "Search: " ++ sbHost searchBuffer
     helpText = "Press ENTER to search"
 
 -- | Form a new application state based on a Gopher search request.
 mkSearchResponseState :: GopherBrowserState -> IO GopherBrowserState
 mkSearchResponseState gbs = do
-  let host = sbHost $ gbsBuffer gbs
-      port = sbPort $ gbsBuffer gbs
-      resource = sbSelector $ gbsBuffer gbs
-      query = unlines (E.getEditContents $ sbEditorState $ gbsBuffer gbs)
+  let host = sbHost $ getSearch gbs
+      port = sbPort $ getSearch gbs
+      resource = sbSelector $ getSearch gbs
+      query = unlines (E.getEditContents $ sbEditorState $ getSearch gbs)
   (o, selector) <- searchGet host (show port) resource query
   let newMenu = makeGopherMenu o
       location = (host, port, selector, MenuMode)
@@ -48,11 +49,11 @@ searchEventHandler gbs e =
     V.EvKey V.KEnter [] -> liftIO (mkSearchResponseState gbs) >>= M.continue
     _                   -> M.continue =<< editorEventHandler gbs e
   where
-    returnSearchFormerState g = g {gbsBuffer = sbFormerBufferState $ gbsBuffer g, gbsRenderMode = MenuMode}
+    returnSearchFormerState g = g {gbsBuffer = sbFormerBufferState $ getSearch g, gbsRenderMode = MenuMode}
 
     -- | A modification of the default Brick.Widgets.Edit event handler; changed to
     -- return a GopherBrowserState instead of just an editor state.
     editorEventHandler :: GopherBrowserState -> Event -> T.EventM MyName GopherBrowserState
     editorEventHandler gbs' e' =
-      let updateEditorInBuffer x = gbs' { gbsBuffer = (gbsBuffer gbs') { sbEditorState = x } }
-      in updateEditorInBuffer <$> E.handleEditorEvent e' (sbEditorState $ gbsBuffer gbs)
+      let updateEditorInBuffer x = updateSearchBuffer gbs' (\s -> s { sbEditorState = x })
+      in updateEditorInBuffer <$> E.handleEditorEvent e' (sbEditorState $ getSearch gbs)

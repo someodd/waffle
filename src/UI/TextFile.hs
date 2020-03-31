@@ -12,12 +12,13 @@ import qualified Brick.Main as M
 
 import UI.Util
 import UI.History
+import UI.Representation
 
 -- | The UI for rendering and viewing a text file.
 textFileModeUI :: GopherBrowserState -> [T.Widget MyName]
 textFileModeUI gbs =
-  let (TextFileBuffer tfb) = gbsBuffer gbs
-      ui = viewport MyViewport T.Both $ vBox [str $ clean tfb]
+  let (TextFile textFileContents) = getTextFile gbs
+      ui = viewport MyViewport T.Both $ vBox [str $ clean textFileContents]
   in [center $ border $ hLimitPercent 100 $ vLimitPercent 100 ui]
 
 textFileEventHandler :: GopherBrowserState -> V.Event -> T.EventM MyName (T.Next GopherBrowserState)

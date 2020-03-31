@@ -10,6 +10,7 @@ import Brick.Widgets.Core (vBox, str, hLimit, vLimit, withBorderStyle, padLeftRi
 
 import UI.Util
 import UI.Style
+import UI.Representation
 
 -- updateAttrMap (applyAttrMappings borderMappings) $ withBorderStyle inputDialogBorderAttr $ borderWithLabel (withAttr inputDialogLabelAttr $ str title)
 

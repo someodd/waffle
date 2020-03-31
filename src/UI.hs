@@ -24,6 +24,7 @@ import           UI.Search
 import           UI.Style
 import           UI.TextFile
 import           UI.Util
+import           UI.Representation
 
 -- | The draw handler which will choose a UI based on the browser's mode.
 -- | Picks a UI/draw function based on the current gbsRenderMode.

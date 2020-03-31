@@ -24,6 +24,7 @@ import UI.Style
 import UI.History
 import GopherClient
 import UI.Progress
+import UI.Representation
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
 selectedMenuLine gbs =
@@ -31,31 +32,31 @@ selectedMenuLine gbs =
   let lineNumber = fromMaybe (error "Hit enter, but nothing was selected to follow! I'm not sure how that's possible!") (l^.BrickList.listSelectedL)
   in menuLine menu lineNumber
   where
-    (MenuBuffer (menu, l, _)) = gbsBuffer gbs
+    (Menu (menu, l, _)) = getMenu gbs
 
 -- Inefficient
 jumpNextLink :: GopherBrowserState -> GopherBrowserState
 jumpNextLink gbs = updateMenuList (BrickList.listMoveTo next l)
   where
-    (MenuBuffer (_, l, focusLines)) = gbsBuffer gbs
+    (Menu (_, l, focusLines)) = getMenu gbs
     currentIndex = fromJust $ BrickList.listSelected l
     next = fromMaybe (head focusLines) (find (>currentIndex) focusLines)
     -- FIXME: repeated code
     updateMenuList ls =
-      let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
-      in gbs {gbsBuffer=MenuBuffer (gm, ls, fl)}
+      let (Menu (gm, _, fl)) = getMenu gbs
+      in gbs {gbsBuffer=MenuBuffer $ Menu (gm, ls, fl)}
 
 -- Inefficient
 jumpPrevLink :: GopherBrowserState -> GopherBrowserState
 jumpPrevLink gbs = updateMenuList (BrickList.listMoveTo next l)
   where
-    (MenuBuffer (_, l, focusLines)) = gbsBuffer gbs
+    (Menu (_, l, focusLines)) = getMenu gbs
     currentIndex = fromJust $ BrickList.listSelected l
     next = fromMaybe (reverse focusLines !! 0) (find (<currentIndex) $ reverse focusLines)
     -- FIXME: repeated code
     updateMenuList ls =
-      let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
-      in gbs {gbsBuffer=MenuBuffer (gm, ls, fl)}
+      let (Menu (gm, _, fl)) = getMenu gbs
+      in gbs {gbsBuffer=MenuBuffer $ Menu (gm, ls, fl)}
 
 -- | Make a request based on the currently selected Gopher menu item and change
 -- the application state (GopherBrowserState) to reflect the change.
@@ -65,7 +66,7 @@ newStateFromSelectedMenuItem gbs =
     (Left ct) -> case ct of
       Directory -> initProgressMode gbs (host, port, resource, MenuMode)
       File -> initProgressMode gbs (host, port, resource, TextFileMode)
-      IndexSearchServer -> pure gbs { gbsRenderMode = SearchMode, gbsBuffer = SearchBuffer { sbQuery = "", sbFormerBufferState = gbsBuffer gbs, sbSelector = resource, sbPort = port, sbHost = host, sbEditorState = E.editor MyViewport Nothing "" } }
+      IndexSearchServer -> pure gbs { gbsRenderMode = SearchMode, gbsBuffer = SearchBuffer $ Search { sbQuery = "", sbFormerBufferState = gbsBuffer gbs, sbSelector = resource, sbPort = port, sbHost = host, sbEditorState = E.editor MyViewport Nothing "" } }
       ImageFile -> initProgressMode gbs (host, port, resource, FileBrowserMode)
       -- FIXME: it's possible this could be an incorrect exception if everything isn't covered, like telnet
       -- so I need to implement those modes above and then of course this can be the catchall...
@@ -85,7 +86,7 @@ newStateFromSelectedMenuItem gbs =
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
 menuModeUI gbs = [hCenter $ vCenter view]
   where
-    (MenuBuffer (_, l, _)) = gbsBuffer gbs
+    (Menu (_, l, _)) = getMenu gbs
     label = str " Item " <+> cur <+> str " of " <+> total -- TODO: should be renamed
     (host, port, resource, _) = gbsLocation gbs
     title = " " ++ host ++ ":" ++ show port ++ if not $ List.null resource then " (" ++ resource ++ ") " else " "
@@ -106,7 +107,7 @@ listDrawElement gbs indx sel a =
       | sel = withAttr customAttr $ str s
       | otherwise = str s
 
-    (MenuBuffer (gmenu, mlist, focusLines)) = gbsBuffer gbs
+    (Menu (gmenu, mlist, focusLines)) = getMenu gbs
 
     cursorRegion = if sel then withAttr asteriskAttr $ str " ➤ " else str "   "
     isLink = indx `elem` focusLines
@@ -154,8 +155,8 @@ menuEventHandler gbs e =
         ev -> M.continue =<< updateMenuList <$> L.handleListEventVi L.handleListEvent ev (getMenuList gbs)
   where
     getMenuList x =
-      let (MenuBuffer (_, gl, _)) = gbsBuffer x
+      let (Menu (_, gl, _)) = getMenu x
       in gl
     updateMenuList x =
-      let (MenuBuffer (gm, _, fl)) = gbsBuffer gbs
-      in gbs {gbsBuffer=MenuBuffer (gm, x, fl)}
+      let (Menu (gm, _, fl)) = getMenu gbs
+      in gbs {gbsBuffer=MenuBuffer $ Menu (gm, x, fl)}
