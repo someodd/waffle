@@ -66,33 +66,31 @@ handleFileBrowserEvent'
   -> FB.FileBrowser n
   -> (GopherBrowserState, T.EventM n (FB.FileBrowser n))
 handleFileBrowserEvent' gbs e b
+  |
     -- FIXME: okay this is very wrong/messed up. take another look at regular handleFIleBrowserEvent'
-  | not isNamingFile && e == V.EvKey (V.KChar 'n') [] =
-    (initiateNamingState, pure b)
-  | isNamingFile =
-    case e of
-      V.EvKey V.KEnter [] ->
-        ( finalOutFilePath
-          $  FB.getWorkingDirectory b
-          ++ "/"
-          ++ curOutFilePath
-        , pure b
-        )
-      V.EvKey V.KBS [] ->
-        ( updateOutFilePath $ take (length curOutFilePath - 1) curOutFilePath
-        , pure b
-        )
-      V.EvKey (V.KChar c) [] ->
-        (updateOutFilePath $ curOutFilePath ++ [c], pure b)
-      _ -> (gbs, FB.handleFileBrowserEvent e b)
-  | otherwise = (gbs, FB.handleFileBrowserEvent e b)
+    not isNamingFile && e == V.EvKey (V.KChar 'n') []
+  = (initiateNamingState, pure b)
+  | isNamingFile
+  = case e of
+    V.EvKey V.KEnter [] ->
+      ( finalOutFilePath $ FB.getWorkingDirectory b ++ "/" ++ curOutFilePath
+      , pure b
+      )
+    V.EvKey V.KBS [] ->
+      ( updateOutFilePath $ take (length curOutFilePath - 1) curOutFilePath
+      , pure b
+      )
+    V.EvKey (V.KChar c) [] ->
+      (updateOutFilePath $ curOutFilePath ++ [c], pure b)
+    _ -> (gbs, FB.handleFileBrowserEvent e b)
+  | otherwise
+  = (gbs, FB.handleFileBrowserEvent e b)
  where
   initiateNamingState :: GopherBrowserState
   initiateNamingState =
-    let cb x = x
-          { fbIsNamingFile = True
-          , fbFileOutPath  = fbOriginalFileName (getSaveBrowser gbs)
-          }
+    let cb x = x { fbIsNamingFile = True
+                 , fbFileOutPath  = fbOriginalFileName (getSaveBrowser gbs)
+                 }
     in  updateFileBrowserBuffer gbs cb
 
   finalOutFilePath :: String -> GopherBrowserState
@@ -159,10 +157,9 @@ saveEventHandler gbs e = case e of
         else M.continue (upFileBrowserBuffer gbs' b')
  where
   fromFileBrowserBuffer = fbFileBrowser
-  returnFormerState g = g
-    { gbsBuffer     = fbFormerBufferState $ getSaveBrowser g
-    , gbsRenderMode = MenuMode
-    }
+  returnFormerState g = g { gbsBuffer = fbFormerBufferState $ getSaveBrowser g
+                          , gbsRenderMode = MenuMode
+                          }
   isNamingFile g = fbIsNamingFile (getSaveBrowser g)
 
   -- FIXME: redundant?
