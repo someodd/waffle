@@ -65,39 +65,39 @@ handleFileBrowserEvent'
   -> V.Event
   -> FB.FileBrowser n
   -> (GopherBrowserState, T.EventM n (FB.FileBrowser n))
-handleFileBrowserEvent' gbs e b =
+handleFileBrowserEvent' gbs e b
     -- FIXME: okay this is very wrong/messed up. take another look at regular handleFIleBrowserEvent'
-  if not isNamingFile && e == V.EvKey (V.KChar 'n') []
-    then (initiateNamingState, pure b)
-    else if isNamingFile
-      then case e of
-        V.EvKey V.KEnter [] ->
-          ( finalOutFilePath
-            $  (FB.getWorkingDirectory b)
-            ++ "/"
-            ++ curOutFilePath
-          , pure b
-          )
-        V.EvKey V.KBS [] ->
-          ( updateOutFilePath $ take (length curOutFilePath - 1) curOutFilePath
-          , pure b
-          )
-        V.EvKey (V.KChar c) [] ->
-          (updateOutFilePath $ curOutFilePath ++ [c], pure b)
-        _ -> (gbs, FB.handleFileBrowserEvent e b)
-      else (gbs, FB.handleFileBrowserEvent e b)
+  | not isNamingFile && e == V.EvKey (V.KChar 'n') [] =
+    (initiateNamingState, pure b)
+  | isNamingFile =
+    case e of
+      V.EvKey V.KEnter [] ->
+        ( finalOutFilePath
+          $  FB.getWorkingDirectory b
+          ++ "/"
+          ++ curOutFilePath
+        , pure b
+        )
+      V.EvKey V.KBS [] ->
+        ( updateOutFilePath $ take (length curOutFilePath - 1) curOutFilePath
+        , pure b
+        )
+      V.EvKey (V.KChar c) [] ->
+        (updateOutFilePath $ curOutFilePath ++ [c], pure b)
+      _ -> (gbs, FB.handleFileBrowserEvent e b)
+  | otherwise = (gbs, FB.handleFileBrowserEvent e b)
  where
   initiateNamingState :: GopherBrowserState
   initiateNamingState =
-    let cb = \x -> x
+    let cb x = x
           { fbIsNamingFile = True
-          , fbFileOutPath  = (fbOriginalFileName (getSaveBrowser gbs))
+          , fbFileOutPath  = fbOriginalFileName (getSaveBrowser gbs)
           }
     in  updateFileBrowserBuffer gbs cb
 
   finalOutFilePath :: String -> GopherBrowserState
   finalOutFilePath p =
-    let cb = \x -> x { fbFileOutPath = p, fbIsNamingFile = False }
+    let cb x = x { fbFileOutPath = p, fbIsNamingFile = False }
     in  updateFileBrowserBuffer gbs cb
 
   isNamingFile :: Bool
@@ -105,7 +105,7 @@ handleFileBrowserEvent' gbs e b =
 
   updateOutFilePath :: String -> GopherBrowserState
   updateOutFilePath p =
-    let cb = \x -> x { fbFileOutPath = p } in updateFileBrowserBuffer gbs cb
+    let cb x = x { fbFileOutPath = p } in updateFileBrowserBuffer gbs cb
 
   curOutFilePath :: String
   curOutFilePath = fbFileOutPath (getSaveBrowser gbs)
@@ -116,7 +116,7 @@ fileBrowserUi gbs =
   [center $ vLimitPercent 100 $ hLimitPercent 100 $ ui <=> help]
  where
   b = fromBuffer $ getSaveBrowser gbs
-  fromBuffer x = fbFileBrowser x
+  fromBuffer = fbFileBrowser
   ui = hCenter $ borderWithLabel (txt "Choose a file") $ FB.renderFileBrowser
     True
     b
@@ -151,27 +151,27 @@ saveEventHandler gbs e = case e of
     -- If the browser has a selected file after handling the
     -- event (because the user pressed Enter), shut down.
     let fileOutPath = fbFileOutPath (getSaveBrowser gbs')
-    if (isNamingFile gbs')
+    if isNamingFile gbs'
       then M.continue (upFileBrowserBuffer gbs' b')
     -- this errors now
       else if not (null $ getOutFilePath gbs')
-        then (liftIO (doCallBack fileOutPath) >>= M.continue)
+        then liftIO (doCallBack fileOutPath) >>= M.continue
         else M.continue (upFileBrowserBuffer gbs' b')
  where
-  fromFileBrowserBuffer x = fbFileBrowser x
+  fromFileBrowserBuffer = fbFileBrowser
   returnFormerState g = g
-    { gbsBuffer     = (fbFormerBufferState $ getSaveBrowser g)
+    { gbsBuffer     = fbFormerBufferState $ getSaveBrowser g
     , gbsRenderMode = MenuMode
     }
   isNamingFile g = fbIsNamingFile (getSaveBrowser g)
 
   -- FIXME: redundant?
   upFileBrowserBuffer g bu =
-    let cb = \x -> x { fbFileBrowser = bu } in updateFileBrowserBuffer g cb
+    let cb x = x { fbFileBrowser = bu } in updateFileBrowserBuffer g cb
 
   getOutFilePath g = fbFileOutPath (getSaveBrowser g)
   doCallBack a = do
     fbCallBack (getSaveBrowser gbs) a
-    pure $ gbs { gbsBuffer     = (fbFormerBufferState $ getSaveBrowser gbs)
+    pure $ gbs { gbsBuffer     = fbFormerBufferState $ getSaveBrowser gbs
                , gbsRenderMode = MenuMode
                }
