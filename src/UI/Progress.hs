@@ -53,10 +53,9 @@ initProgressMode gbs location@(_, _, _, mode) =
 
 addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
 addProgBytes gbs' nbytes =
-  let cb =
-          \x -> x
-            { pbBytesDownloaded = pbBytesDownloaded (getProgress gbs') + nbytes
-            }
+  let cb x = x
+        { pbBytesDownloaded = pbBytesDownloaded (getProgress gbs') + nbytes
+        }
   in  updateProgressBuffer gbs' cb
 
 -- TODO: maybe make updating history optional? for reload. could be argument
@@ -79,7 +78,7 @@ progressDownloadMemoryString initialProgGbs location@(host, port, resource, mode
       finalState = case mode of
         TextFileMode -> initialProgGbs
           { gbsLocation   = location
-          , gbsBuffer     = TextFileBuffer $ TextFile $ textFile
+          , gbsBuffer     = TextFileBuffer $ TextFile textFile
           , gbsRenderMode = TextFileMode
           , gbsHistory    = newChangeHistory initialProgGbs location
           }
