@@ -35,13 +35,13 @@ data Search = Search { sbQuery :: String
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
 -- The second element is the widget which is used when rendering a GopherMenu.
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
-data Menu = Menu (GopherMenu, BrickList.List MyName String, FocusLines)
+newtype Menu = Menu (GopherMenu, BrickList.List MyName String, FocusLines)
 
 -- FIXME: why not just type?
 -- | This is for the contents of a File to be rendered when in TextFileMode.
 -- this should be a combination of things. it should have the addres of the temporary file
 -- which should then be moved to the picked location
-data TextFile = TextFile String
+newtype TextFile = TextFile String
 
 -- | The data from which a UI is rendered.
 data Buffer
@@ -111,7 +111,7 @@ type Location = (String, Int, String, RenderMode)
 
 -- | Carries through the entire state I guess!
 -- think of this right now as a progress event
-data CustomEvent = NewStateEvent GopherBrowserState
+newtype CustomEvent = NewStateEvent GopherBrowserState
 
 -- | The application state for Brick.
 data GopherBrowserState = GopherBrowserState
