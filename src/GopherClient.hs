@@ -107,7 +107,7 @@ data GopherLine = GopherLine
 
 -- NOTE: for name, Malformed or Unrecognized?
 -- | For Gopher lines which are not formatted correctly
-data MalformedGopherLine = MalformedGopherLine
+newtype MalformedGopherLine = MalformedGopherLine
   { mglFields :: [String]
   }
 
@@ -228,7 +228,7 @@ makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
 
 -- | As you can see, a GopherMenu is simply an ordered sequence of
 -- GopherLines.
-data GopherMenu = GopherMenu [Either GopherLine MalformedGopherLine]
+newtype GopherMenu = GopherMenu [Either GopherLine MalformedGopherLine]
 
 fromMenu :: GopherMenu -> [Either GopherLine MalformedGopherLine]
 fromMenu (GopherMenu m) = m
@@ -282,7 +282,7 @@ downloadGet host port resource = connect host port $ \(connectionSocket, _) ->
     -- close the connection.
     getAllBytes (pure Nothing) 1024 (pure BS.empty) connectionSocket
 
-data GetAllBytesCallback st = GetAllBytesCallback (st -> BS.ByteString -> IO st, st)
+newtype GetAllBytesCallback st = GetAllBytesCallback (st -> BS.ByteString -> IO st, st)
 
 -- TODO: What about modifying this with a callback for progress...
 getAllBytes
