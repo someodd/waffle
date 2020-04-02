@@ -1,5 +1,9 @@
+-- FIXME TODO: rename to DialogPopup?
 -- | A single-line input dialog box.
-module UI.InputDialog where
+module UI.Popup
+  ( popup
+  , inputPopupUI
+  ) where
 
 import qualified Brick.Widgets.Edit            as E
 import qualified Brick.Types                   as T
@@ -26,10 +30,9 @@ import           UI.Representation
 
 -- updateAttrMap (applyAttrMappings borderMappings) $ withBorderStyle inputDialogBorderAttr $ borderWithLabel (withAttr inputDialogLabelAttr $ str title)
 
--- FIXME: implement editor from Brick?
--- https://hackage.haskell.org/package/brick-0.52/docs/Brick-Widgets-Edit.html#v:editorText
-inputDialogUI :: E.Editor String MyName -> String -> String -> [T.Widget MyName]
-inputDialogUI editorState label helpString =
+-- TODO: document
+popup :: String -> T.Widget MyName -> String -> [T.Widget MyName]
+popup label mainWidget helpString =
   let
     ui =
       vCenter
@@ -45,8 +48,14 @@ inputDialogUI editorState label helpString =
         $ hLimit 100
         $ vLimit 3
         $ vBox
-            [ withAttr inputFieldAttr editorField
+            [ mainWidget
             , padTop (T.Pad 1) $ str helpString
             ]
   in  [center ui]
-  where editorField = E.renderEditor (str . unlines) True editorState
+
+-- FIXME: implement editor from Brick?
+-- https://hackage.haskell.org/package/brick-0.52/docs/Brick-Widgets-Edit.html#v:editorText
+inputPopupUI :: E.Editor String MyName -> String -> String -> [T.Widget MyName]
+inputPopupUI editorState label helpString = popup label editorWidget helpString
+  where
+   editorWidget = withAttr inputFieldAttr $ E.renderEditor (str . unlines) True editorState

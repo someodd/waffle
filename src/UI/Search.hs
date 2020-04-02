@@ -19,14 +19,14 @@ import           GopherClient                   ( makeGopherMenu
                                                 , searchGet
                                                 )
 import           UI.History
-import           UI.InputDialog
+import           UI.Popup
 import           UI.Util
 import           UI.Representation
 
 -- | Draw the search prompt. Used by UI.drawUI if the gbsRenderMode
 -- is SearchMode.
 searchInputUI :: GopherBrowserState -> [T.Widget MyName]
-searchInputUI gbs = inputDialogUI editorBuffer labelText helpText
+searchInputUI gbs = inputPopupUI editorBuffer labelText helpText
  where
   searchBuffer = getSearch gbs
   editorBuffer = sbEditorState (getSearch gbs)

@@ -110,6 +110,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
     -- Unrecognized line
     (Right _ ) -> error "Can't do anything with unrecognized line."
 
+-- FIXME: what if rendering with a popup?
 -- | The UI for rendering and viewing a menu.
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
 menuModeUI gbs = [hCenter $ vCenter view]
@@ -194,6 +195,7 @@ menuEventHandler
   -> V.Event
   -> T.EventM MyName (T.Next GopherBrowserState)
 menuEventHandler gbs e = case e of
+  -- TODO, FIXME: V.EvKey (V.KChar 'i') [] -> M.continue (lineInfoPopup gbs)
   V.EvKey V.KEnter [] ->
     liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
   V.EvKey (V.KChar 'l') [] -> M.hScrollBy myWidgetScroll 1 >> M.continue gbs
