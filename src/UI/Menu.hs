@@ -1,5 +1,9 @@
 -- FIXME: optimizations! cleanup!
-module UI.Menu where
+module UI.Menu
+  ( menuEventHandler
+  , menuModeUI
+  )
+where
 
 import           Data.List                     as List
 import qualified Data.Vector                   as Vector
