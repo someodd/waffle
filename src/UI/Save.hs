@@ -27,7 +27,6 @@ import           Brick.Widgets.Core             ( vLimitPercent
                                                 , withDefAttr
                                                 )
 
-import           UI.Util
 import           GopherClient                   ( downloadGet )
 import           UI.Style
 import           UI.Representation

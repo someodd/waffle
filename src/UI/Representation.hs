@@ -51,46 +51,37 @@ data Buffer
   | SearchBuffer Search
   | ProgressBuffer Progress
 
+updateFileBrowserBuffer :: GopherBrowserState -> (SaveBrowser -> SaveBrowser) -> GopherBrowserState
 updateFileBrowserBuffer gbs f =
   let (FileBrowserBuffer sb) = gbsBuffer gbs
   in  gbs { gbsBuffer = FileBrowserBuffer (f sb) }
 
+getMenu :: GopherBrowserState -> Menu
 getMenu gbs = let (MenuBuffer m) = gbsBuffer gbs in m
 
+getProgress :: GopherBrowserState -> Progress
 getProgress gbs = let (ProgressBuffer p) = gbsBuffer gbs in p
 
+updateProgressBuffer :: GopherBrowserState -> (Progress -> Progress) -> GopherBrowserState
 updateProgressBuffer gbs f =
   let (ProgressBuffer p) = gbsBuffer gbs
   in  gbs { gbsBuffer = ProgressBuffer (f p) }
 
 -- | Get the SaveBrowser from Buffer
+getSaveBrowser :: GopherBrowserState -> SaveBrowser
 getSaveBrowser gbs = let (FileBrowserBuffer sb) = gbsBuffer gbs in sb
 
 -- | Get the TextFile from Buffer.
+getTextFile :: GopherBrowserState -> TextFile
 getTextFile gbs = let (TextFileBuffer tf) = gbsBuffer gbs in tf
 
+getSearch :: GopherBrowserState -> Search
 getSearch gbs = let (SearchBuffer s) = gbsBuffer gbs in s
 
--- FIXME: could update to use getSaveBrowser
+updateSearchBuffer :: GopherBrowserState -> (Search -> Search) -> GopherBrowserState
 updateSearchBuffer gbs f =
   let (SearchBuffer sb) = gbsBuffer gbs
   in  gbs { gbsBuffer = SearchBuffer (f sb) }
-
--- OLD STUFF NOT USED... DELETE FIXME
-menuFromBuffer :: Buffer -> Menu
-menuFromBuffer (MenuBuffer s) = s
-
-textFileFromBuffer :: Buffer -> TextFile
-textFileFromBuffer (TextFileBuffer s) = s
-
-saveBrowserFromBuffer :: Buffer -> SaveBrowser
-saveBrowserFromBuffer (FileBrowserBuffer s) = s
-
-searchFromBuffer :: Buffer -> Search
-searchFromBuffer (SearchBuffer s) = s
-
-progressFromBuffer :: Buffer -> Progress
-progressFromBuffer (ProgressBuffer s) = s
 
 -- | The line #s which have linkable entries. Used for jumping by number and n and p hotkeys and display stuff.
 -- use get elemIndex to enumerate

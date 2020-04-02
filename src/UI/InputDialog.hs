@@ -21,7 +21,6 @@ import           Brick.Widgets.Core             ( vBox
                                                 , updateAttrMap
                                                 )
 
-import           UI.Util
 import           UI.Style
 import           UI.Representation
 
