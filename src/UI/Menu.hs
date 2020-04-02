@@ -30,7 +30,6 @@ import           Brick.Widgets.Core             ( viewport
                                                 )
 import           Web.Browser
 
-import           UI.Util
 import           UI.Style
 import           UI.History
 import           GopherClient
