@@ -210,7 +210,7 @@ explainType gopherLine = case glType gopherLine of
 explainLine
   :: Either GopherLine MalformedGopherLine -> String
 explainLine (Left gopherLine) = explainType gopherLine
-explainLine (Right malformedGopherLine) = "Malformed, unrecognized, or incorrectly parsed. " ++ (show $ mglFields malformedGopherLine)
+explainLine (Right malformedGopherLine) = "Malformed, unrecognized, or incorrectly parsed. " ++ show (mglFields malformedGopherLine)
 
 -- | Take a big string (series of lines) returned from a Gopher request and
 -- parse it into a Gopher menu (a series of GopherLines)!
