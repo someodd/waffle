@@ -72,7 +72,7 @@ jumpPrevLink gbs = updateMenuList (BrickList.listMoveTo next l)
  where
   (Menu (_, l, focusLines)) = getMenu gbs
   currentIndex = fromJust $ BrickList.listSelected l
-  next = fromMaybe (reverse focusLines !! 0)
+  next = fromMaybe (last focusLines)
                    (find (< currentIndex) $ reverse focusLines)
   -- FIXME: repeated code
   updateMenuList ls =
@@ -114,7 +114,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
 
 -- | The UI for rendering and viewing a menu.
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
-menuModeUI gbs = (if hasPopup gbs then [poppy gbs] else []) ++ [hCenter $ vCenter view]
+menuModeUI gbs = [poppy gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
  where
   poppy gbs' = centerLayer $ head $ popup (pLabel .fromJust $ gbsPopup gbs') (pWidgets . fromJust $ gbsPopup gbs') (pHelp . fromJust $ gbsPopup gbs')
   (Menu (_, l, _))          = getMenu gbs
@@ -144,7 +144,7 @@ listDrawElement
   :: GopherBrowserState -> Int -> Bool -> String -> T.Widget MyName
 listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
   lineColor
-  (lineDescriptorWidget (menuLine (gmenu) indx) <+> selStr a)
+  (lineDescriptorWidget (menuLine gmenu indx) <+> selStr a)
  where
   selStr s
     | sel && isInfoMsg (selectedMenuLine gbs) = withAttr custom2Attr (str s)
@@ -197,7 +197,7 @@ lineInfoPopup :: GopherBrowserState -> GopherBrowserState
 lineInfoPopup gbs =
   let currentLineInfo = explainLine $ selectedMenuLine gbs
   in gbs { gbsPopup = Just $ Popup { pLabel   = "Line Info"
-                                   , pWidgets = [str $ currentLineInfo]
+                                   , pWidgets = [str currentLineInfo]
                                    , pHelp    = "Currently selected line is of this type. ESC to close."
                                    }
          }

@@ -59,7 +59,7 @@ popOver label mainWidget helpString =
       vCenter
         $ hCenter
         $ padLeftRight 4
-        $ (head $ popup label mainWidget helpString)
+        (head $ popup label mainWidget helpString)
   in  [center ui]
 
 inputPopupUI :: E.Editor String MyName -> String -> String -> [T.Widget MyName]
