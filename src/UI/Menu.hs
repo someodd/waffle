@@ -20,6 +20,7 @@ import qualified Brick.Widgets.List            as BrickList
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Center           ( vCenter
                                                 , hCenter
+                                                , centerLayer
                                                 )
 import           Brick.Widgets.Edit            as E
 import           Brick.Widgets.Core             ( viewport
@@ -39,6 +40,7 @@ import           UI.History
 import           GopherClient
 import           UI.Progress
 import           UI.Representation
+import           UI.Popup
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
 selectedMenuLine gbs =
@@ -70,7 +72,7 @@ jumpPrevLink gbs = updateMenuList (BrickList.listMoveTo next l)
  where
   (Menu (_, l, focusLines)) = getMenu gbs
   currentIndex = fromJust $ BrickList.listSelected l
-  next = fromMaybe (reverse focusLines !! 0)
+  next = fromMaybe (last focusLines)
                    (find (< currentIndex) $ reverse focusLines)
   -- FIXME: repeated code
   updateMenuList ls =
@@ -110,11 +112,11 @@ newStateFromSelectedMenuItem gbs = case lineType of
     -- Unrecognized line
     (Right _ ) -> error "Can't do anything with unrecognized line."
 
--- FIXME: what if rendering with a popup?
 -- | The UI for rendering and viewing a menu.
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
-menuModeUI gbs = [hCenter $ vCenter view]
+menuModeUI gbs = [poppy gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
  where
+  poppy gbs' = centerLayer $ head $ popup (pLabel .fromJust $ gbsPopup gbs') (pWidgets . fromJust $ gbsPopup gbs') (pHelp . fromJust $ gbsPopup gbs')
   (Menu (_, l, _))          = getMenu gbs
   label                     = str " Item " <+> cur <+> str " of " <+> total -- TODO: should be renamed
   (host, port, resource, _) = gbsLocation gbs
@@ -142,7 +144,7 @@ listDrawElement
   :: GopherBrowserState -> Int -> Bool -> String -> T.Widget MyName
 listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
   lineColor
-  (lineDescriptorWidget (menuLine (gmenu) indx) <+> selStr a)
+  (lineDescriptorWidget (menuLine gmenu indx) <+> selStr a)
  where
   selStr s
     | sel && isInfoMsg (selectedMenuLine gbs) = withAttr custom2Attr (str s)
@@ -190,26 +192,42 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
 myWidgetScroll :: M.ViewportScroll MyName
 myWidgetScroll = M.viewportScroll MyWidget
 
+-- | Describe the currently selected line in the menu/map.
+lineInfoPopup :: GopherBrowserState -> GopherBrowserState
+lineInfoPopup gbs =
+  let currentLineInfo = explainLine $ selectedMenuLine gbs
+  in gbs { gbsPopup = Just $ Popup { pLabel   = "Line Info"
+                                   , pWidgets = [str currentLineInfo]
+                                   , pHelp    = "Currently selected line is of this type. ESC to close."
+                                   }
+         }
+
 menuEventHandler
   :: GopherBrowserState
   -> V.Event
   -> T.EventM MyName (T.Next GopherBrowserState)
-menuEventHandler gbs e = case e of
-  -- TODO, FIXME: V.EvKey (V.KChar 'i') [] -> M.continue (lineInfoPopup gbs)
-  V.EvKey V.KEnter [] ->
-    liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
-  V.EvKey (V.KChar 'l') [] -> M.hScrollBy myWidgetScroll 1 >> M.continue gbs
-  V.EvKey (V.KChar 'h') [] -> M.hScrollBy myWidgetScroll (-1) >> M.continue gbs
-  V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
-  V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
-  V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
-  V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
-  V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
--- check gbs if the state says we're handling a menu (list) or a text file (viewport)
-  ev -> M.continue =<< updateMenuList <$> L.handleListEventVi
-    L.handleListEvent
-    ev
-    (getMenuList gbs)
+menuEventHandler gbs e
+  -- Handle a popup (esc key to dismiss) while there is a popup present...
+  | hasPopup gbs = case e of
+      V.EvKey V.KEsc [] -> M.continue $ closePopup gbs
+      _ -> M.continue gbs
+  --- Handle controlling the menu.
+  | otherwise    = case e of
+      V.EvKey (V.KChar 'i') [] -> M.continue $ lineInfoPopup gbs
+      V.EvKey V.KEnter [] ->
+        liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
+      V.EvKey (V.KChar 'l') [] -> M.hScrollBy myWidgetScroll 1 >> M.continue gbs
+      V.EvKey (V.KChar 'h') [] -> M.hScrollBy myWidgetScroll (-1) >> M.continue gbs
+      V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
+      V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
+      V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
+      V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
+      V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
+      -- The following catch-all is to hand off the event to Brick's list handler (the special one with vi controls).
+      ev -> M.continue =<< updateMenuList <$> L.handleListEventVi
+        L.handleListEvent
+        ev
+        (getMenuList gbs)
  where
   getMenuList x = let (Menu (_, gl, _)) = getMenu x in gl
   updateMenuList x =
