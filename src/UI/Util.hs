@@ -31,6 +31,7 @@ newStateForMenu chan gm@(GopherMenu ls) location history = GopherBrowserState
   , gbsHistory    = history
   , gbsRenderMode = MenuMode
   , gbsChan       = chan
+  , gbsPopup      = Nothing
   }
  where
   glsVector = Vector.fromList $ map lineShow ls
