@@ -152,10 +152,15 @@ charToItemType 'i' = Just $ Right InformationalMessage
 charToItemType 's' = Just $ Right SoundFile
 charToItemType _   = Nothing
 
+showAddressPlus :: GopherLine -> String
+showAddressPlus gl =
+  glHost gl ++ ":" ++ show (glPort gl) ++ " " ++ glSelector gl ++ " " ++ show (glGopherPlus gl)
+
 -- Fixme: for these three... rename to explain*ItemType?
 -- FIXME: update with the description from one of those docstrings...
 explainCanonicalType :: GopherCanonicalItemType -> String
-explainCanonicalType File      = "Item is a file. Plaintext file."
+explainCanonicalType File =
+  "Item is a file. Plaintext file. "
 explainCanonicalType Directory = "Item is a directory. Gopher submenu."
 explainCanonicalType CsoPhoneBookServer =
   "Item is a CSO phone-book server. CCSO Nameserver."
@@ -187,12 +192,25 @@ explainNonCanonicalType HtmlFile = "HTML file."
 explainNonCanonicalType InformationalMessage = "Informational message."
 explainNonCanonicalType SoundFile = "Sound file (especially the WAV format)."
 
+-- FIXME: delete
+-- TODO: should actually use gopherline information to describe the type further, like info about it?
+-- FIXME: what about malformed item type?
+-- this could just all be a part of an elaborate show instance?
+
+-- TODO: explainanytype?
 -- | Explain a Gopher line/menu item type, either canonical (RFC 1436) or non canonical.
 explainType
-  :: Either GopherCanonicalItemType GopherNonCanonicalItemType -> String
-explainType itemType = case itemType of
-  Left  item -> explainCanonicalType item
-  Right item -> explainNonCanonicalType item
+  :: GopherLine -> String
+explainType gopherLine = case glType gopherLine of
+  Left  canonType    -> explainCanonicalType canonType ++ " " ++ showAddressPlus gopherLine
+  Right nonCanonType -> explainNonCanonicalType nonCanonType ++ " " ++ showAddressPlus gopherLine
+
+-- TODO: needs to be more elaborate! use the actual data to construct
+-- | Explain a line from a Gopher map/menu. Can be a GopherLine or a MalformedGopherLine.
+explainLine
+  :: Either GopherLine MalformedGopherLine -> String
+explainLine (Left gopherLine) = explainType gopherLine
+explainLine (Right malformedGopherLine) = "Malformed, unrecognized, or incorrectly parsed. " ++ (show $ mglFields malformedGopherLine)
 
 -- | Take a big string (series of lines) returned from a Gopher request and
 -- parse it into a Gopher menu (a series of GopherLines)!

@@ -1,6 +1,9 @@
 -- | Data types representing different RenderModes.
 module UI.Representation where
 
+import Data.Maybe
+
+import qualified Brick.Types                   as T
 import qualified Brick.BChan
 import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 import           Brick.Widgets.FileBrowser      ( FileBrowser )
@@ -104,6 +107,12 @@ type Location = (String, Int, String, RenderMode)
 -- think of this right now as a progress event
 newtype CustomEvent = NewStateEvent GopherBrowserState
 
+data Popup = Popup
+  { pLabel :: String
+  , pWidgets :: [T.Widget MyName]
+  , pHelp :: String
+  }
+
 -- | The application state for Brick.
 data GopherBrowserState = GopherBrowserState
   { gbsBuffer :: Buffer
@@ -113,7 +122,16 @@ data GopherBrowserState = GopherBrowserState
   -- See: History
   , gbsHistory :: History
   , gbsChan :: Brick.BChan.BChan CustomEvent
+  , gbsPopup :: Maybe Popup
   }
+
+-- Should this go in Popup.hs? NOTE
+hasPopup :: GopherBrowserState -> Bool
+hasPopup gbs = isJust $ gbsPopup gbs
+
+-- NOTE same as above: should be in Popup.hs probably!
+closePopup :: GopherBrowserState -> GopherBrowserState
+closePopup gbs = gbs { gbsPopup = Nothing }
 
 data MyName = MyViewport | MyWidget
   deriving (Show, Eq, Ord)
