@@ -36,6 +36,8 @@ Compile it with `stack build` and then try it out with
 `page down` and `page up` moves page up and page down. `g` and `home` goes to
 beginning.  `G` and `end` goes to end. 
 
+**Get info on the current line** in menu/map mode, with `i`.
+
 **Jump between menu links:** `p` (previous link), `n` (next link).
 
 **Quit:** `esc`.
