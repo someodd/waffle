@@ -76,7 +76,6 @@ data GopherNonCanonicalItemType =
   -- ^ Sound file (especially the WAV format).
   deriving (Eq, Show)
 
--- FIXME: bring back glNumber for line #
 -- | A Gopher protocol item/line is defined with tab-delimitated fields. This
 -- abstraction makes it easier to handle said lines. The line itself will look
 -- something like this (where 'F' is a tab):
