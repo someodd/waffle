@@ -13,7 +13,9 @@ goHistory :: GopherBrowserState -> Int -> IO GopherBrowserState
 goHistory gbs when = do
   let
     (history, historyMarker) = gbsHistory gbs
-    newHistoryMarker         = historyMarker + when
+    unboundIndex             = historyMarker + when
+    historyLastIndex         = length history - 1
+    newHistoryMarker         = if unboundIndex > historyLastIndex then historyLastIndex else if unboundIndex < 0 then 0 else unboundIndex
     location@(host, port, magicString, renderMode) =
       history !! newHistoryMarker
     newHistory = (history, newHistoryMarker)
