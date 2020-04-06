@@ -21,9 +21,8 @@ import qualified Brick.Main                    as M
 
 import           UI.Util
 import           UI.History
+import           UI.TextFile
 import           UI.Representation
-
-
 
 -- | The UI for rendering and viewing a text file.
 -- This is also used in the help screen/used by Help module.
@@ -41,10 +40,8 @@ helpEventHandler
   -> T.EventM MyName (T.Next GopherBrowserState)
 helpEventHandler gbs e = case e of
   -- What about left and right?!
-  V.EvKey (V.KChar 'j') [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
-  V.EvKey (V.KChar 'k') [] -> M.vScrollBy myNameScroll (-1) >> M.continue gbs
   V.EvKey V.KEsc        [] -> M.continue $ hFormerGbs $ getHelp gbs
-  _                        -> M.continue gbs
+  _                        -> basicTextFileEventHandler gbs e
 
 getHelpContents :: IO String
 getHelpContents = do
