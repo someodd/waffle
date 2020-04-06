@@ -8,10 +8,11 @@ module UI.Search
   )
 where
 
+import           Control.Monad.IO.Class
+
 import qualified Brick.Main                    as M
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Edit            as E
-import           Control.Monad.IO.Class
 import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 

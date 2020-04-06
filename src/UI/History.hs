@@ -19,7 +19,7 @@ goHistory gbs when = do
     location@(host, port, magicString, renderMode) =
       history !! newHistoryMarker
     newHistory = (history, newHistoryMarker)
-  o <- gopherGet host (show port) magicString
+  o <- gopherGet host (show port) magicString-- FIXME
   case renderMode of
     MenuMode ->
       let newMenu = makeGopherMenu o

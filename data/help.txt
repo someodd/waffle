@@ -1,0 +1,31 @@
+        _.-------._
+      .' _|_|_|_|_ '.
+     / _|_|_|_|_|_|_ \
+    | |_|_|_|_|_|_|_| |
+    |_|_|_|_|_|_|_|_|_|
+    | |_|_|_|_| | |_| | _           ___   ___  _          
+    | |_|_|_|_|( )  _  ( )        /'___)/'___)(_ )        
+     \ -|_|_|_|| | ( ) | |   _ _ | (__ | (__   | |    __  
+      '. -|_|_|| | | | | | /'_` )| ,__)| ,__)  | |  /'__`\
+        `------| (_/ \_) |( (_| || |   | |     | | (  ___/
+               `\___x___/'`\__,_)(_)   (_)    (___)`\____)
+
+                 🧇 Waffle Gopher Protocol Browser
+          Thanks to jgs for the Waffle ASCII on ascii.co.uk
+
+                       Press ESC to close.
+
+MOVING THE CURSOR & SCROLLING: `j` (down), `k` (up), `h` (left), `l` (right).
+`page down` and `page up` moves page up and page down. `g` and `home` goes to
+beginning.  `G` and `end` goes to end. To jump between menu links in menu mode
+use `p` (previous link) and `n` (next link).
+
+GET INFO ON CURRENTLY SELECTED LINE: in menu/map mode, with `i`.
+
+QUIT WAFFLE: ctrl+q.
+
+WHEN SAVING A FILE: use arrow keys and enter to choose a directory, then
+`n` to start typing a file anme to save as--use the `enter` key to accept the
+filename. This will likely change.
+
+DURING SEARCH MODE: type your query then hit `enter`. Be patient.
