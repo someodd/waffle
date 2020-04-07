@@ -12,6 +12,7 @@ module UI
 where
 
 
+import           Control.Monad.IO.Class
 import           Control.Monad                  ( void )
 
 import qualified Brick.BChan                   as B
@@ -27,6 +28,7 @@ import           UI.Search
 import           UI.Style
 import           UI.TextFile
 import           UI.Util
+import           UI.Help
 import           UI.Representation
 
 -- | The draw handler which will choose a UI based on the browser's mode.
@@ -37,6 +39,7 @@ drawUI :: GopherBrowserState -> [B.Widget MyName]
 drawUI gbs = case gbsRenderMode gbs of
   MenuMode        -> menuModeUI gbs
   TextFileMode    -> textFileModeUI gbs
+  HelpMode        -> helpModeUI gbs
   FileBrowserMode -> fileBrowserUi gbs
   SearchMode      -> searchInputUI gbs
   ProgressMode    -> drawProgressUI gbs
@@ -53,10 +56,12 @@ appEvent
   -> B.BrickEvent MyName CustomEvent
   -> B.EventM MyName (B.Next GopherBrowserState)
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt gbs
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '?') [])) = liftIO (modifyGbsForHelp gbs) >>= B.continue
 -- What about above FIXME... event types should be deicphered by event handler?
 appEvent gbs (B.VtyEvent e)
   | gbsRenderMode gbs == MenuMode        = menuEventHandler gbs e
   | gbsRenderMode gbs == TextFileMode    = textFileEventHandler gbs e
+  | gbsRenderMode gbs == HelpMode        = helpEventHandler gbs e
   | gbsRenderMode gbs == FileBrowserMode = saveEventHandler gbs e
   | gbsRenderMode gbs == SearchMode      = searchEventHandler gbs e
   |
