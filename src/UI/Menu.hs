@@ -136,7 +136,7 @@ menuModeUI gbs = [poppy gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
       $ BrickList.renderListWithIndex (listDrawElement gbs) True l
   view = vBox
     [ box
-    , vLimit 1 $ str "Esc to exit. Vi keys to browse. Enter to open." <+> label
+    , vLimit 1 $ str "? for help. " <+> label
     ]
 
 -- FIXME: this is messy! unoptimized!

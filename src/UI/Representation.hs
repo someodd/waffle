@@ -34,6 +34,10 @@ data Search = Search { sbQuery :: String
                      , sbEditorState :: EditorState
                      }
 
+data Help = Help { hText :: TextFile
+                 , hFormerGbs :: GopherBrowserState
+                 }
+
 -- | For MenuBuffer...
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
 -- The second element is the widget which is used when rendering a GopherMenu.
@@ -53,6 +57,16 @@ data Buffer
   | FileBrowserBuffer SaveBrowser
   | SearchBuffer Search
   | ProgressBuffer Progress
+  | HelpBuffer Help
+
+-- Could use with below TODO NOTE
+getHelp :: GopherBrowserState -> Help
+getHelp gbs = let (HelpBuffer help) = gbsBuffer gbs in help
+
+getHelpTextFileContents :: GopherBrowserState -> String
+getHelpTextFileContents gbs = let (HelpBuffer help) = gbsBuffer gbs in getHelpContents $ hText help
+  where
+    getHelpContents (TextFile htf) = htf
 
 updateFileBrowserBuffer :: GopherBrowserState -> (SaveBrowser -> SaveBrowser) -> GopherBrowserState
 updateFileBrowserBuffer gbs f =
@@ -141,5 +155,5 @@ type EditorState = E.Editor String MyName
 
 -- TODO: maybe rename filebrowsermode to SaveMode or SaveFileMode
 -- | Related to Buffer. Namely exists for History.
-data RenderMode = MenuMode | TextFileMode | FileBrowserMode | SearchMode | ProgressMode
+data RenderMode = MenuMode | TextFileMode | FileBrowserMode | SearchMode | ProgressMode | HelpMode
   deriving (Eq, Show)

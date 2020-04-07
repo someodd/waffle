@@ -15,11 +15,14 @@ goHistory gbs when = do
     (history, historyMarker) = gbsHistory gbs
     unboundIndex             = historyMarker + when
     historyLastIndex         = length history - 1
-    newHistoryMarker         = if unboundIndex > historyLastIndex then historyLastIndex else if unboundIndex < 0 then 0 else unboundIndex
+    newHistoryMarker
+      | unboundIndex > historyLastIndex = historyLastIndex
+      | unboundIndex < 0 = 0
+      | otherwise = unboundIndex
     location@(host, port, magicString, renderMode) =
       history !! newHistoryMarker
     newHistory = (history, newHistoryMarker)
-  o <- gopherGet host (show port) magicString
+  o <- gopherGet host (show port) magicString-- FIXME
   case renderMode of
     MenuMode ->
       let newMenu = makeGopherMenu o

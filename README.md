@@ -1,4 +1,4 @@
-# Waffle: Haskell Gopher Protocol Client
+# 🧇 Waffle: Haskell Gopher Protocol Client
 
 Both _gopher_ and _waffle_ in French is "gaufre:"
 
@@ -32,18 +32,4 @@ Compile it with `stack build` and then try it out with
 
 ### Controls
 
-**Move the cursor and scroll:** `j` (down), `k` (up), `h` (left), `l` (right).
-`page down` and `page up` moves page up and page down. `g` and `home` goes to
-beginning.  `G` and `end` goes to end. 
-
-**Get info on the current line** in menu/map mode, with `i`.
-
-**Jump between menu links:** `p` (previous link), `n` (next link).
-
-**Quit:** `esc`.
-
-**When saving a file:** use arrow keys and enter to choose a directory, then
-`n` to start typing a file anme to save as--use the `enter` key to accept the
-filename. This will likely change.
-
-**During index search mode:** type your query then hit `enter`.
+Press `?` while using the browser for full details on using it!

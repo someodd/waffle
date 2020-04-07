@@ -27,6 +27,8 @@ dependencies:
   - split
   - vty
 
+data-files: data/help.txt
+
 library:
   source-dirs: src
 
