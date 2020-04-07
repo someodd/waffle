@@ -20,7 +20,6 @@ import           Brick.Widgets.Core             ( viewport
 import qualified Brick.Main                    as M
 
 import           UI.Util
-import           UI.History
 import           UI.TextFile
 import           UI.Representation
 
@@ -50,6 +49,7 @@ getHelpContents = do
         (\e -> let err = show (e :: IOException)
                in  pure $ "Warning: Couldn't open " ++ pathToHelpFile ++ ": " ++ err)
 
+modifyGbsForHelp :: GopherBrowserState -> IO GopherBrowserState
 modifyGbsForHelp gbs = do
   helpContents <- getHelpContents
   pure gbs { gbsBuffer = HelpBuffer $ Help { hText = TextFile helpContents, hFormerGbs = gbs }, gbsRenderMode = HelpMode }

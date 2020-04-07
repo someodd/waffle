@@ -60,11 +60,13 @@ data Buffer
   | HelpBuffer Help
 
 -- Could use with below TODO NOTE
+getHelp :: GopherBrowserState -> Help
 getHelp gbs = let (HelpBuffer help) = gbsBuffer gbs in help
 
-getHelpTextFileContents gbs = let (HelpBuffer help) = gbsBuffer gbs in getContents $ hText help
+getHelpTextFileContents :: GopherBrowserState -> String
+getHelpTextFileContents gbs = let (HelpBuffer help) = gbsBuffer gbs in getHelpContents $ hText help
   where
-    getContents (TextFile htf) = htf
+    getHelpContents (TextFile htf) = htf
 
 updateFileBrowserBuffer :: GopherBrowserState -> (SaveBrowser -> SaveBrowser) -> GopherBrowserState
 updateFileBrowserBuffer gbs f =
