@@ -29,3 +29,7 @@ WHEN SAVING A FILE: use arrow keys and enter to choose a directory, then
 filename. This will likely change.
 
 DURING SEARCH MODE: type your query then hit `enter`. Be patient.
+
+TOR: You can browse Gopherspace using Tor, even visit hidden services like
+gopher://bztf2mno3tpwrqop.onion:70/1/ if you just start Waffle with `torsocks`,
+for example: `torsocks waffle`.
