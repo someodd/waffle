@@ -58,8 +58,10 @@ appEvent
   -> B.BrickEvent MyName CustomEvent
   -> B.EventM MyName (B.Next GopherBrowserState)
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt gbs
-appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'g') [V.MCtrl])) = B.continue $ initGotoMode gbs
-appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '?') [])) = liftIO (modifyGbsForHelp gbs) >>= B.continue
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'g') [V.MCtrl])) =
+  B.continue $ initGotoMode gbs
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '?') [])) =
+  liftIO (modifyGbsForHelp gbs) >>= B.continue
 -- What about above FIXME... event types should be deicphered by event handler?
 appEvent gbs (B.VtyEvent e)
   | gbsRenderMode gbs == MenuMode        = menuEventHandler gbs e
