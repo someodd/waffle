@@ -65,6 +65,7 @@ mkGotoResponseState gbs = do
                          (r) -> r
   initProgressMode gbs (host, port, resource, MenuMode)
   -- FIXME: TODO: Must return a better dummy state...
+  -- this is already done by init progress
   -- Might have to return progress mode or something idk I'll have to look at
   -- other source... I woryr if I don't then there will be a memory leak...
 
