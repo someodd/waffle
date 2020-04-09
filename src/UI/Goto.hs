@@ -11,9 +11,6 @@ import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 import           Network.URI
 
-import           GopherClient                   ( makeGopherMenu
-                                                , searchGet
-                                                )
 import           UI.History
 import           UI.Popup
 import           UI.Util
@@ -21,12 +18,12 @@ import           UI.Representation
 import           UI.Progress
 
 initGotoMode gbs = gbs
-      { gbsRenderMode = GotoMode
-      , gbsBuffer     = GotoBuffer $ Goto
-                          { gFormerBufferState = gbsBuffer gbs
-                          , gEditorState       = E.editor MyViewport Nothing ""
-                          }
-      }
+  { gbsRenderMode = GotoMode
+  , gbsBuffer     = GotoBuffer $ Goto
+                      { gFormerBufferState = gbsBuffer gbs
+                      , gEditorState       = E.editor MyViewport Nothing ""
+                      }
+  }
 
 
 -- | Draw the search prompt. Used by UI.drawUI if the gbsRenderMode
@@ -34,7 +31,7 @@ initGotoMode gbs = gbs
 gotoInputUI :: GopherBrowserState -> [T.Widget MyName]
 gotoInputUI gbs = inputPopupUI editorBuffer labelText helpText
  where
-  gotoBuffer = getGoto gbs
+  gotoBuffer   = getGoto gbs
   editorBuffer = gEditorState (getGoto gbs)
   labelText    = "Go To"
   helpText     = "Press ENTER to open the Gopher URI."
@@ -43,26 +40,28 @@ gotoInputUI gbs = inputPopupUI editorBuffer labelText helpText
 mkGotoResponseState :: GopherBrowserState -> IO GopherBrowserState
 mkGotoResponseState gbs = do
   -- get the host, port, selector
-  let unparsedURI    = filter (/='\n') $ unlines (E.getEditContents $ gEditorState $ getGoto gbs)
-      unparsedWithScheme
-        | "gopher://" `isPrefixOf` unparsedURI = unparsedURI
-        | otherwise = "gopher://" ++ unparsedURI
+  let unparsedURI = filter (/= '\n')
+        $ unlines (E.getEditContents $ gEditorState $ getGoto gbs)
+      unparsedWithScheme | "gopher://" `isPrefixOf` unparsedURI = unparsedURI
+                         | otherwise = "gopher://" ++ unparsedURI
       maybeParsedURI = parseURI unparsedWithScheme
       parsedURI      = case maybeParsedURI of
-                         (Just u) -> u
-                         Nothing -> error $ "Invalid URI: " ++ show unparsedWithScheme
-      authority      = case uriAuthority parsedURI of
-                         (Just a) -> a
-                         Nothing  -> error $ "Invalid URI (no authority): " ++ show unparsedWithScheme
-      port           = case uriPort authority of
-                         "" -> 70
-                         (p)  -> read $ tail p :: Int
-      host           = case uriRegName authority of
-                         ""  -> error $ "Invalid URI (no host): " ++ show unparsedWithScheme
-                         (h) -> h
-      resource       = case uriPath parsedURI of
-                         ""  -> ""
-                         (r) -> r
+        (Just u) -> u
+        Nothing  -> error $ "Invalid URI: " ++ show unparsedWithScheme
+      authority = case uriAuthority parsedURI of
+        (Just a) -> a
+        Nothing ->
+          error $ "Invalid URI (no authority): " ++ show unparsedWithScheme
+      port = case uriPort authority of
+        ""  -> 70
+        (p) -> read $ tail p :: Int
+      host = case uriRegName authority of
+        ""  -> error $ "Invalid URI (no host): " ++ show unparsedWithScheme
+        (h) -> h
+      resource = case uriPath parsedURI of
+        ""  -> ""
+        (r) -> r
+  -- What if it's not a menu? FIXME
   initProgressMode gbs (host, port, resource, MenuMode)
   -- FIXME: TODO: Must return a better dummy state...
   -- this is already done by init progress
@@ -79,9 +78,8 @@ gotoEventHandler gbs e = case e of
   V.EvKey V.KEnter [] -> liftIO (mkGotoResponseState gbs) >>= M.continue
   _                   -> M.continue =<< editorEventHandler gbs e
  where
-  returnGotoFormerState g = g { gbsBuffer = gFormerBufferState $ getGoto g
-                              , gbsRenderMode = MenuMode
-                              }
+  returnGotoFormerState g =
+    g { gbsBuffer = gFormerBufferState $ getGoto g, gbsRenderMode = MenuMode }
 
   -- | A modification of the default Brick.Widgets.Edit event handler; changed to
   -- return a GopherBrowserState instead of just an editor state.
