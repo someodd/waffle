@@ -24,7 +24,7 @@ GET INFO ON CURRENTLY SELECTED LINE: in menu/map mode, with `i`.
 
 QUIT WAFFLE: ctrl+q.
 
-OPEN URI: open a Gopherspace by specifying a Gopher URI.
+GOTO URI: open a Gopherspace by specifying a Gopher URI with `ctrl` + `g`.
 
 WHEN SAVING A FILE: use arrow keys and enter to choose a directory, then
 `n` to start typing a file anme to save as--use the `enter` key to accept the
