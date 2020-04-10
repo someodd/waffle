@@ -63,6 +63,8 @@ basicTextFileEventHandler gbs e = case e of
   -- What about left and right?!
   V.EvKey (V.KChar 'j') [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
   V.EvKey (V.KChar 'k') [] -> M.vScrollBy myNameScroll (-1) >> M.continue gbs
+  V.EvKey (V.KChar 'l') [] -> M.hScrollBy myNameScroll 1 >> M.continue gbs
+  V.EvKey (V.KChar 'h') [] -> M.hScrollBy myNameScroll (-1) >> M.continue gbs
   _                        -> M.continue gbs
 
 -- | Event handler for a text file location in gopherspace.
