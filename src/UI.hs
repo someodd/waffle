@@ -30,6 +30,7 @@ import           UI.TextFile
 import           UI.Util
 import           UI.Help
 import           UI.Representation
+import           UI.Goto
 
 -- | The draw handler which will choose a UI based on the browser's mode.
 -- | Picks a UI/draw function based on the current gbsRenderMode.
@@ -43,6 +44,7 @@ drawUI gbs = case gbsRenderMode gbs of
   FileBrowserMode -> fileBrowserUi gbs
   SearchMode      -> searchInputUI gbs
   ProgressMode    -> drawProgressUI gbs
+  GotoMode        -> gotoInputUI gbs
 
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
 -- some cases where we don't want history available
@@ -56,7 +58,10 @@ appEvent
   -> B.BrickEvent MyName CustomEvent
   -> B.EventM MyName (B.Next GopherBrowserState)
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt gbs
-appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '?') [])) = liftIO (modifyGbsForHelp gbs) >>= B.continue
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'g') [V.MCtrl])) =
+  B.continue $ initGotoMode gbs
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '?') [])) =
+  liftIO (modifyGbsForHelp gbs) >>= B.continue
 -- What about above FIXME... event types should be deicphered by event handler?
 appEvent gbs (B.VtyEvent e)
   | gbsRenderMode gbs == MenuMode        = menuEventHandler gbs e
@@ -64,6 +69,7 @@ appEvent gbs (B.VtyEvent e)
   | gbsRenderMode gbs == HelpMode        = helpEventHandler gbs e
   | gbsRenderMode gbs == FileBrowserMode = saveEventHandler gbs e
   | gbsRenderMode gbs == SearchMode      = searchEventHandler gbs e
+  | gbsRenderMode gbs == GotoMode        = gotoEventHandler gbs e
   |
   -- FIXME: two separate ones because of the way we pass events and pattern match
   -- | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs e

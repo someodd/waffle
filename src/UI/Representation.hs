@@ -12,7 +12,7 @@ import           Brick.Widgets.Edit            as E
 import           GopherClient
 
 -- This is used to indicate how many bytes have been downloaded
--- of a menu or a save a text flie etc, anything!
+-- of a menu or a save a text file etc, anything!
 data Progress = Progress { pbBytesDownloaded :: Int
                          , pbMessage :: String -- BETTER NAME NEEDED
                          , pbInitGbs :: GopherBrowserState
@@ -33,6 +33,10 @@ data Search = Search { sbQuery :: String
                      , sbHost :: String
                      , sbEditorState :: EditorState
                      }
+
+data Goto = Goto { gFormerBufferState :: Buffer
+                 , gEditorState :: EditorState
+                 }
 
 data Help = Help { hText :: TextFile
                  , hFormerGbs :: GopherBrowserState
@@ -58,6 +62,10 @@ data Buffer
   | SearchBuffer Search
   | ProgressBuffer Progress
   | HelpBuffer Help
+  | GotoBuffer Goto
+
+getGoto :: GopherBrowserState -> Goto
+getGoto gbs = let (GotoBuffer goto) = gbsBuffer gbs in goto
 
 -- Could use with below TODO NOTE
 getHelp :: GopherBrowserState -> Help
@@ -99,6 +107,11 @@ updateSearchBuffer :: GopherBrowserState -> (Search -> Search) -> GopherBrowserS
 updateSearchBuffer gbs f =
   let (SearchBuffer sb) = gbsBuffer gbs
   in  gbs { gbsBuffer = SearchBuffer (f sb) }
+
+updateGotoBuffer :: GopherBrowserState -> (Goto -> Goto) -> GopherBrowserState
+updateGotoBuffer gbs f =
+  let (GotoBuffer sb) = gbsBuffer gbs
+  in  gbs { gbsBuffer = GotoBuffer (f sb) }
 
 -- | The line #s which have linkable entries. Used for jumping by number and n and p hotkeys and display stuff.
 -- use get elemIndex to enumerate
@@ -155,5 +168,11 @@ type EditorState = E.Editor String MyName
 
 -- TODO: maybe rename filebrowsermode to SaveMode or SaveFileMode
 -- | Related to Buffer. Namely exists for History.
-data RenderMode = MenuMode | TextFileMode | FileBrowserMode | SearchMode | ProgressMode | HelpMode
-  deriving (Eq, Show)
+data RenderMode = MenuMode
+                | TextFileMode
+                | FileBrowserMode
+                | SearchMode
+                | ProgressMode
+                | HelpMode
+                | GotoMode
+                deriving (Eq, Show)
