@@ -45,6 +45,7 @@ initProgressMode gbs location@(_, _, _, mode) =
       , gbsBuffer     = ProgressBuffer $ Progress
                           { pbBytesDownloaded = 0
                           , pbInitGbs         = gbs
+                          , pbConnected       = False
                           , pbMessage         = "Downloading a " ++ message
                           }
       }
@@ -55,9 +56,12 @@ addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
 addProgBytes gbs' nbytes =
   let cb x = x
         { pbBytesDownloaded = pbBytesDownloaded (getProgress gbs') + nbytes
+        , pbConnected       = True
         }
   in  updateProgressBuffer gbs' cb
 
+-- TODO: stop using this so temporary files can be cached (also, what about huge
+-- files that might be too big for memory?)
 -- TODO: maybe make updating history optional? for reload. could be argument
 -- | Download something from a GopherHole to a string in memory, while sending progress
 -- events which replace the GopherBrowserState. The final event transitions to the
@@ -162,8 +166,11 @@ drawProgressUI gbs = [a]
  where
   -- FIXME: "downloaded" isn't necessarily correct. You can request more bytes than is left...
   bytesDownloaded = show (pbBytesDownloaded (getProgress gbs))
-  message = pbMessage (getProgress gbs)
-  a = str $ message ++ "\nDownloaded bytes: " ++ bytesDownloaded
+  bytesMessage = "Downloaded bytes: " ++ bytesDownloaded
+  downloadingWhat = pbMessage (getProgress gbs)
+  connectMessage =
+    if pbConnected (getProgress gbs) then bytesMessage else "⏳ Connnecting..."
+  a = str $ downloadingWhat ++ "\n" ++ connectMessage
 
 -- TODO: handleProgressEvents
 progressEventHandler
