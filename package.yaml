@@ -26,6 +26,7 @@ dependencies:
   - network-simple
   - split
   - vty
+  - network-uri
 
 data-files: data/help.txt
 
