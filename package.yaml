@@ -12,7 +12,7 @@ github: "hyperreal-gopher/waffle"
 
 dependencies:
   - base >= 4.7 && < 5
-  - brick == 0.52.1
+  - brick
   - text
   - bytestring
   - microlens
