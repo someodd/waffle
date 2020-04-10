@@ -82,7 +82,7 @@ progressDownloadMemoryString initialProgGbs location@(host, port, resource, mode
       finalState = case mode of
         TextFileMode -> initialProgGbs
           { gbsLocation   = location
-          , gbsBuffer     = TextFileBuffer $ TextFile textFile
+          , gbsBuffer     = TextFileBuffer $ TextFile { tfContents = textFile, tfTitle = resource }
           , gbsRenderMode = TextFileMode
           , gbsHistory    = newChangeHistory initialProgGbs location
           }

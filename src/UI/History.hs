@@ -28,7 +28,7 @@ goHistory gbs when = do
       let newMenu = makeGopherMenu o
       in  pure $ newStateForMenu (gbsChan gbs) newMenu location newHistory
     TextFileMode -> pure $ gbs
-      { gbsBuffer     = TextFileBuffer $ TextFile $ clean o
+      { gbsBuffer     = TextFileBuffer $ TextFile { tfContents = clean o, tfTitle = magicString}
       , gbsHistory    = newHistory
       , gbsRenderMode = TextFileMode
       }

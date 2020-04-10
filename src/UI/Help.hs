@@ -52,4 +52,4 @@ getHelpContents = do
 modifyGbsForHelp :: GopherBrowserState -> IO GopherBrowserState
 modifyGbsForHelp gbs = do
   helpContents <- getHelpContents
-  pure gbs { gbsBuffer = HelpBuffer $ Help { hText = TextFile helpContents, hFormerGbs = gbs }, gbsRenderMode = HelpMode }
+  pure gbs { gbsBuffer = HelpBuffer $ Help { hText = TextFile { tfContents = helpContents, tfTitle = "Help: Using Waffle" }, hFormerGbs = gbs }, gbsRenderMode = HelpMode }
