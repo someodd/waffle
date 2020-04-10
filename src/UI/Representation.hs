@@ -49,11 +49,12 @@ data Help = Help { hText :: TextFile
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
 newtype Menu = Menu (GopherMenu, BrickList.List MyName String, FocusLines)
 
--- FIXME: why not just type?
 -- | This is for the contents of a File to be rendered when in TextFileMode.
 -- this should be a combination of things. it should have the addres of the temporary file
 -- which should then be moved to the picked location
-newtype TextFile = TextFile String
+data TextFile = TextFile { tfContents :: String
+                         , tfTitle :: String
+                         }
 
 -- | The data from which a UI is rendered.
 data Buffer
@@ -68,14 +69,13 @@ data Buffer
 getGoto :: GopherBrowserState -> Goto
 getGoto gbs = let (GotoBuffer goto) = gbsBuffer gbs in goto
 
+-- help file should have title "Help" FIXME
 -- Could use with below TODO NOTE
 getHelp :: GopherBrowserState -> Help
 getHelp gbs = let (HelpBuffer help) = gbsBuffer gbs in help
 
 getHelpTextFileContents :: GopherBrowserState -> String
-getHelpTextFileContents gbs = let (HelpBuffer help) = gbsBuffer gbs in getHelpContents $ hText help
-  where
-    getHelpContents (TextFile htf) = htf
+getHelpTextFileContents gbs = let (HelpBuffer help) = gbsBuffer gbs in tfContents $ hText help
 
 updateFileBrowserBuffer :: GopherBrowserState -> (SaveBrowser -> SaveBrowser) -> GopherBrowserState
 updateFileBrowserBuffer gbs f =
