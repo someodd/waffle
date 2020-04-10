@@ -27,7 +27,7 @@ QUIT WAFFLE: ctrl+q.
 GOTO URI: open a Gopherspace by specifying a Gopher URI with `ctrl` + `g`.
 
 WHEN SAVING A FILE: enter to choose a directory, `n` to start typing a file
-anme to save as--use the `enter` key to accept the filename.
+name to save as--use the `enter` key to accept the filename.
 
 DURING SEARCH MODE: type your query then hit `enter`. Be patient.
 
