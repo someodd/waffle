@@ -30,10 +30,11 @@ gotoInputUI :: GopherBrowserState -> [T.Widget MyName]
 gotoInputUI gbs = inputPopupUI editorBuffer labelText helpText
  where
   editorBuffer = gEditorState (getGoto gbs)
-  labelText    = "Go To"
+  labelText    = "Go To Menu"
   helpText     = "Press ENTER to open the Gopher URI."
 
 -- FIXME: what if bad input?! what if can't resolve? errors in network need better handling
+-- FIXME: what if NOT a menu!
 mkGotoResponseState :: GopherBrowserState -> IO GopherBrowserState
 mkGotoResponseState gbs = do
   -- get the host, port, selector
@@ -51,13 +52,13 @@ mkGotoResponseState gbs = do
           error $ "Invalid URI (no authority): " ++ show unparsedWithScheme
       port = case uriPort authority' of
         ""  -> 70
-        (p) -> read $ tail p :: Int
+        p -> read $ tail p :: Int
       host = case uriRegName authority' of
         ""  -> error $ "Invalid URI (no host): " ++ show unparsedWithScheme
-        (h) -> h
+        h -> h
       resource = case uriPath parsedURI of
         ""  -> ""
-        (r) -> r
+        r -> r
   -- What if it's not a menu? FIXME
   initProgressMode gbs (host, port, resource, MenuMode)
   -- FIXME: TODO: Must return a better dummy state...
