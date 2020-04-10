@@ -36,8 +36,8 @@ initProgressMode :: GopherBrowserState -> Location -> IO GopherBrowserState
 initProgressMode gbs location@(_, _, _, mode) =
   let
     (downloader, message) = case mode of
-      TextFileMode    -> (progressDownloadMemoryString, "text file")
-      MenuMode        -> (progressDownloadMemoryString, "menu")
+      TextFileMode    -> (progressDownloadMemoryString, "text file 📄")
+      MenuMode        -> (progressDownloadMemoryString, "menu 📂")
       FileBrowserMode -> (progressDownloadBytes, "binary file")
       m -> error $ "Unspported mode requested for progress mode: " ++ show m
     initialProgGbs = gbs
@@ -160,8 +160,10 @@ progressDownloadBytes gbs (host, port, resource, _) =
 drawProgressUI :: GopherBrowserState -> [T.Widget MyName]
 drawProgressUI gbs = [a]
  where
-    -- FIXME: "downloaded" isn't necessarily correct. You can request more bytes than is left...
-  a = str $ "Downloaded bytes: " ++ show (pbBytesDownloaded (getProgress gbs))
+  -- FIXME: "downloaded" isn't necessarily correct. You can request more bytes than is left...
+  bytesDownloaded = show (pbBytesDownloaded (getProgress gbs))
+  message = pbMessage (getProgress gbs)
+  a = str $ message ++ "\nDownloaded bytes: " ++ bytesDownloaded
 
 -- TODO: handleProgressEvents
 progressEventHandler
