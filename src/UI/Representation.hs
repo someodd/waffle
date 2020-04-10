@@ -12,7 +12,7 @@ import           Brick.Widgets.Edit            as E
 import           GopherClient
 
 -- This is used to indicate how many bytes have been downloaded
--- of a menu or a save a text flie etc, anything!
+-- of a menu or a save a text file etc, anything!
 data Progress = Progress { pbBytesDownloaded :: Int
                          , pbMessage :: String -- BETTER NAME NEEDED
                          , pbInitGbs :: GopherBrowserState
@@ -35,9 +35,6 @@ data Search = Search { sbQuery :: String
                      }
 
 data Goto = Goto { gFormerBufferState :: Buffer
-                 , gSelector :: String
-                 , gPort :: Int
-                 , gHost :: String
                  , gEditorState :: EditorState
                  }
 

@@ -11,12 +11,11 @@ import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 import           Network.URI
 
-import           UI.History
 import           UI.Popup
-import           UI.Util
 import           UI.Representation
 import           UI.Progress
 
+initGotoMode :: GopherBrowserState -> GopherBrowserState
 initGotoMode gbs = gbs
   { gbsRenderMode = GotoMode
   , gbsBuffer     = GotoBuffer $ Goto
@@ -25,13 +24,11 @@ initGotoMode gbs = gbs
                       }
   }
 
-
 -- | Draw the search prompt. Used by UI.drawUI if the gbsRenderMode
 -- is SearchMode.
 gotoInputUI :: GopherBrowserState -> [T.Widget MyName]
 gotoInputUI gbs = inputPopupUI editorBuffer labelText helpText
  where
-  gotoBuffer   = getGoto gbs
   editorBuffer = gEditorState (getGoto gbs)
   labelText    = "Go To"
   helpText     = "Press ENTER to open the Gopher URI."
@@ -48,14 +45,14 @@ mkGotoResponseState gbs = do
       parsedURI      = case maybeParsedURI of
         (Just u) -> u
         Nothing  -> error $ "Invalid URI: " ++ show unparsedWithScheme
-      authority = case uriAuthority parsedURI of
+      authority' = case uriAuthority parsedURI of
         (Just a) -> a
         Nothing ->
           error $ "Invalid URI (no authority): " ++ show unparsedWithScheme
-      port = case uriPort authority of
+      port = case uriPort authority' of
         ""  -> 70
         (p) -> read $ tail p :: Int
-      host = case uriRegName authority of
+      host = case uriRegName authority' of
         ""  -> error $ "Invalid URI (no host): " ++ show unparsedWithScheme
         (h) -> h
       resource = case uriPath parsedURI of
