@@ -39,7 +39,7 @@ initProgressMode gbs location@(_, _, _, mode) =
       TextFileMode    -> (progressDownloadMemoryString, "text file 📄")
       MenuMode        -> (progressDownloadMemoryString, "menu 📂")
       FileBrowserMode -> (progressDownloadBytes, "binary file")
-      m -> error $ "Unspported mode requested for progress mode: " ++ show m
+      m -> error $ "Unsupported mode requested for progress mode: " ++ show m
     initialProgGbs = gbs
       { gbsRenderMode = ProgressMode
       , gbsBuffer     = ProgressBuffer $ Progress
@@ -82,7 +82,7 @@ progressDownloadMemoryString initialProgGbs location@(host, port, resource, mode
       finalState = case mode of
         TextFileMode -> initialProgGbs
           { gbsLocation   = location
-          , gbsBuffer     = TextFileBuffer $ TextFile { tfContents = textFile, tfTitle = resource }
+          , gbsBuffer     = TextFileBuffer $ TextFile { tfContents = textFile, tfTitle = locationAsString location }
           , gbsRenderMode = TextFileMode
           , gbsHistory    = newChangeHistory initialProgGbs location
           }

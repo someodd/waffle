@@ -13,6 +13,11 @@ import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 import           GopherClient
 import           UI.Representation
 
+-- TODO: document and give a repl example
+locationAsString :: Location -> String
+locationAsString (host, port, resource, mode) =
+  host ++ ":" ++ show port ++ resource ++ " (" ++ show mode ++ ")"
+
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
 -- based on passing it the mode and other info! newStateForMenu?
 --
