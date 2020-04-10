@@ -103,6 +103,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
     _         -> initProgressMode gbs (host, port, resource, FileBrowserMode)
   (Right nct) -> case nct of
     HtmlFile -> openBrowser (drop 4 resource) >> pure gbs
+    InformationalMessage -> pure gbs
     -- FIXME: same as previous comment...
     _        -> initProgressMode gbs (host, port, resource, FileBrowserMode)
  where
