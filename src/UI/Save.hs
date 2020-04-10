@@ -55,7 +55,9 @@ downloadState gbs host port resource = do
   selectNothing :: FB.FileInfo -> Bool
   selectNothing _ = False
 
+-- FIXME, TODO: document the features in handleFileBrowserEvent!
 -- FIXME: only need to return GopherBrowserState actually
+-- TODO: could just use built-in editor?
 -- | Overrides handling file browse revents because we have a special text entry mode!
 --- See also: handleFileBrowserEvent
 handleFileBrowserEvent'
@@ -69,19 +71,24 @@ handleFileBrowserEvent' gbs e b
     -- FIXME: okay this is very wrong/messed up. take another look at regular handleFIleBrowserEvent'
     not isNamingFile && e == V.EvKey (V.KChar 'n') []
   = (initiateNamingState, pure b)
+  -- If we are naming a file, then interpret events as we are in the file name input...
   | isNamingFile
   = case e of
+    -- Enter key means we're done naming the file.
     V.EvKey V.KEnter [] ->
       ( finalOutFilePath $ FB.getWorkingDirectory b ++ "/" ++ curOutFilePath
       , pure b
       )
+    -- Delete a character.
     V.EvKey V.KBS [] ->
       ( updateOutFilePath $ take (length curOutFilePath - 1) curOutFilePath
       , pure b
       )
+    -- Entering in a character/appending a letter to name a file!
     V.EvKey (V.KChar c) [] ->
       (updateOutFilePath $ curOutFilePath ++ [c], pure b)
     _ -> (gbs, FB.handleFileBrowserEvent e b)
+  -- Otherwise send things off to the default brick event handler!
   | otherwise
   = (gbs, FB.handleFileBrowserEvent e b)
  where
@@ -134,11 +141,14 @@ saveEventHandler
   -> V.Event
   -> T.EventM MyName (T.Next GopherBrowserState)
 saveEventHandler gbs e = case e of
-    -- instances of 'b' need to tap into gbsbuffer
+  -- instances of 'b' need to tap into gbsbuffer
+  -- TODO: document why this does so many checks to allow ESC to former state
   V.EvKey V.KEsc []
     | not
       (FB.fileBrowserIsSearching $ fromFileBrowserBuffer (getSaveBrowser gbs))
     -> M.continue $ returnFormerState gbs
+  -- Handle a file browser event with Brick's file brower event handler, but
+  -- with some added magic!
   _ -> do
     let (gbs', bUnOpen') = handleFileBrowserEvent'
           gbs
