@@ -129,10 +129,9 @@ fileBrowserUi gbs =
       Nothing -> emptyWidget
       Just e ->
         hCenter $ withDefAttr errorAttr $ txt $ Text.pack $ displayException e
-    , hCenter $ txt "Up/Down: select"
     , hCenter $ txt "/: search, Ctrl-C or Esc: cancel search"
-    , hCenter $ txt "Enter: change directory or select file"
-    , hCenter $ txt "Esc: quit"
+    , hCenter $ txt "Esc: quit/cancel save"
+    , hCenter $ txt "n: name the output file and then hit enter"
     , hCenter $ str $ fbFileOutPath (getSaveBrowser gbs)
     ]
 
