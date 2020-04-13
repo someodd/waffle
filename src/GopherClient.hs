@@ -329,15 +329,11 @@ searchSelector :: String -> String -> String
 searchSelector resource query =
   if null resource then query else resource ++ "\t" ++ query
 
--- TODO: delete after implementing caching because it won't be used anymore due
--- to UI.Progress!
 -- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
 -- if you don't wish to specify.
 gopherGet :: String -> String -> String -> IO String
 gopherGet host port resource = connect host port $ \(connectionSocket, _) -> do
   send connectionSocket (B8.pack $ resource ++ "\r\n")
-  -- need to only fetch as many bytes as it takes to get period on a line by itself to
-  -- close the connection.
   wow <- getAllBytes (pure Nothing) 1024 (pure BS.empty) connectionSocket
   pure $ U8.toString wow
 
