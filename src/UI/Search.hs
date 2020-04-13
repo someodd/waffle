@@ -17,7 +17,8 @@ import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 
 import           GopherClient                   ( makeGopherMenu
-                                                , searchGet
+                                                , gopherGet
+                                                , searchSelector
                                                 )
 import           UI.History
 import           UI.Popup
@@ -41,7 +42,8 @@ mkSearchResponseState gbs = do
       port     = sbPort $ getSearch gbs
       resource = sbSelector $ getSearch gbs
       query    = unlines (E.getEditContents $ sbEditorState $ getSearch gbs)
-  (o, selector) <- searchGet host (show port) resource query
+      selector = searchSelector resource query
+  o <- gopherGet host (show port) selector
   let newMenu  = makeGopherMenu o
       location = (host, port, selector, MenuMode)
   pure $ newStateForMenu (gbsChan gbs)

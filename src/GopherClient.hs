@@ -325,19 +325,9 @@ getAllBytes callback recvChunks acc connectionSocket = do
                   (pure $ BS.append wacc chnk)
                   connectionSocket
 
--- TODO/FIXME: implement progressmode! it'd be almost exactly like menu
--- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
--- if you don't wish to specify.
-searchGet :: String -> String -> String -> String -> IO (String, String)
-searchGet host port resource query = do
-  let selector = if null resource then query else resource ++ "\t" ++ query
-  o <- connect host port $ \(connectionSocket, _) -> do
-    send connectionSocket (U8.fromString $ selector ++ "\r\n")
-    -- need to only fetch as many bytes as it takes to get period on a line by itself to
-    -- close the connection.
-    wow <- getAllBytes (pure Nothing) 1024 (pure BS.empty) connectionSocket
-    pure $ B8.unpack wow--FIXME: u8.toString
-  pure (o, selector)
+searchSelector :: String -> String -> String
+searchSelector resource query =
+  if null resource then query else resource ++ "\t" ++ query
 
 -- TODO: delete after implementing caching because it won't be used anymore due
 -- to UI.Progress!
