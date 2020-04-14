@@ -24,6 +24,7 @@ import           UI.History
 import           UI.Popup
 import           UI.Util
 import           UI.Representation
+import           UI.Progress
 
 -- | Draw the search prompt. Used by UI.drawUI if the gbsRenderMode
 -- is SearchMode.
@@ -43,13 +44,7 @@ mkSearchResponseState gbs = do
       resource = sbSelector $ getSearch gbs
       query    = unlines (E.getEditContents $ sbEditorState $ getSearch gbs)
       selector = searchSelector resource query
-  o <- gopherGet host (show port) selector
-  let newMenu  = makeGopherMenu o
-      location = (host, port, selector, MenuMode)
-  pure $ newStateForMenu (gbsChan gbs)
-                         newMenu
-                         location
-                         (newChangeHistory gbs location)
+  initProgressMode gbs (host, port, selector, MenuMode)
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
