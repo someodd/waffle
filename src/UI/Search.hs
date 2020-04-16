@@ -44,7 +44,7 @@ mkSearchResponseState gbs = do
       resource = sbSelector $ getSearch gbs
       query    = unlines (E.getEditContents $ sbEditorState $ getSearch gbs)
       selector = searchSelector resource query
-  initProgressMode gbs (host, port, selector, MenuMode)
+  initProgressMode gbs Nothing (host, port, selector, MenuMode)
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.

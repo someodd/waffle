@@ -60,7 +60,7 @@ mkGotoResponseState gbs = do
         ""  -> ""
         r -> r
   -- What if it's not a menu? FIXME
-  initProgressMode gbs (host, port, resource, MenuMode)
+  initProgressMode gbs Nothing (host, port, resource, MenuMode)
   -- FIXME: TODO: Must return a better dummy state...
   -- this is already done by init progress
   -- Might have to return progress mode or something idk I'll have to look at

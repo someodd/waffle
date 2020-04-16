@@ -27,7 +27,7 @@ import           Brick.Widgets.Core             ( viewport
 import qualified Brick.Main                    as M
 
 import           UI.Util
-import           UI.History
+import           UI.Progress
 import           UI.Representation
 import           UI.Style
 
