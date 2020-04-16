@@ -1,5 +1,5 @@
 -- FIXME, TODO: history shouldn't be in here. who knows if you're refreshing or not! It's just
--- a weird mixture of responsibilities!
+-- a weird mixture of responsibilities! otherwise just make a toggle for it as an arg? or bool?
 -- Can we just use temp files created for caching? maybe in that case we should also stop
 -- using memory string and always download temp files for everything...
 -- TODO: could even implement the loader in the status bar instead of new screen... what about cancelling loading also
@@ -36,8 +36,8 @@ initProgressMode :: GopherBrowserState -> Location -> IO GopherBrowserState
 initProgressMode gbs location@(_, _, _, mode) =
   let
     (downloader, message) = case mode of
-      TextFileMode    -> (progressDownloadMemoryString, "text file 📄")
-      MenuMode        -> (progressDownloadMemoryString, "menu 📂")
+      TextFileMode    -> (progressCacheable, "text file 📄")
+      MenuMode        -> (progressCacheable, "menu 📂")
       FileBrowserMode -> (progressDownloadBytes, "binary file")
       m -> error $ "Unsupported mode requested for progress mode: " ++ show m
     initialProgGbs = gbs
@@ -60,50 +60,79 @@ addProgBytes gbs' nbytes =
         }
   in  updateProgressBuffer gbs' cb
 
--- TODO: stop using this so temporary files can be cached (also, what about huge
--- files that might be too big for memory?)
--- TODO: maybe make updating history optional? for reload. could be argument
--- | Download something from a GopherHole to a string in memory, while sending progress
--- events which replace the GopherBrowserState. The final event transitions to the
--- UI.Util.RenderMode corresponding to what is being downloaded.
-progressDownloadMemoryString :: GopherBrowserState -> Location -> IO ()
-progressDownloadMemoryString initialProgGbs location@(host, port, resource, mode)
+-- | Download bytes via Gopher, using progress events to report status. Eventually
+-- gives back the path to the new temporary file it has created. This is used to
+-- download bytes and create a new temp/cache file based on the download, while
+-- handling progress events. This is not for downloading binary files, but instead
+-- for downloading textual data to be displayed by Waffle.
+progressGetBytes :: GopherBrowserState -> Location -> IO ()
+progressGetBytes initialProgGbs location@(host, port, resource, mode)
   = connect host (show port) $ \(connectionSocket, _) -> do
-    let chan = gbsChan initialProgGbs
+    -- Send the magic/selector string (request a path) to the websocket we're connected to.
+    -- This allows us to later receive the bytes located at this "path."
     send connectionSocket (B8.pack $ resource ++ "\r\n")
+    -- Send the first event which is just the GBS we received to begin with... IDK, actually,
+    -- why I even bother to do this!
+    let chan = gbsChan initialProgGbs
     Brick.BChan.writeBChan chan (NewStateEvent initialProgGbs)
-    o <- getAllBytes
-      (pure $ Just $ GetAllBytesCallback (getAllBytesCallback, initialProgGbs))
-      1024
-      (pure B8.empty)
-      connectionSocket
-    let
-      textFile   = clean (U8.toString o)
-      finalState = case mode of
-        TextFileMode -> initialProgGbs
-          { gbsLocation   = location
-          , gbsBuffer     = TextFileBuffer $ TextFile { tfContents = textFile, tfTitle = locationAsString location }
-          , gbsRenderMode = TextFileMode
-          , gbsHistory    = newChangeHistory initialProgGbs location
-          }
-        MenuMode -> newStateForMenu
-          chan
-          (makeGopherMenu $ U8.toString o)
-          location
-          (newChangeHistory initialProgGbs location)
-        m -> error $ "Cannot download as a string into memory for: " ++ show m
-    -- The final progress event, which changes the state to the render mode specified;
-    -- utilizing the string downloaded into memory.
-    Brick.BChan.writeBChan chan (NewStateEvent finalState)
-    pure ()
- where
-    -- FIXME: this doesn't use chan!
-  getAllBytesCallback
-    :: GopherBrowserState -> B8.ByteString -> IO GopherBrowserState
-  getAllBytesCallback gbs' chnk = do
-    let newGbs = addProgBytes gbs' (B8.length chnk)
-    Brick.BChan.writeBChan (gbsChan gbs') (NewStateEvent newGbs)
-    pure newGbs
+    -- Now we fill a temporary file with the contents we receive via TCP, as mentioned earlier,
+    -- since we've selected the remote file with the selector string. We get back the path
+    -- to the temporary file and we also get its contents. The file path is used for the cache.
+    -- The contents is used to update GBS with the appropriate mode (as a UTF8 string).
+    tempFilePath <- emptySystemTempFile "waffle.download.tmp"
+    writeAllString initialProgGbs connectionSocket tempFilePath
+    -- NOTE: it's a bit silly to write all bytes and then read from the file we wrote, but
+    -- I'll mark this fix as a TODO, because I just did a major refactor and it's not a huge
+    -- deal...
+    contents <- readFile tempFilePath
+    -- Prepare the cache with this new temporary file that was created above.
+    -- FIXME: what if location already exists? like if we're refreshing?
+    let newCache = cacheInsert location tempFilePath (gbsCache initialProgGbs)
+    -- Finally we setup the final event with a GBS of the specified render mode.
+    doFinalEvent chan initialProgGbs location contents newCache
+    -- TODO: this could be modularized; it's re-used!
+
+-- | This is for final events that change the render mode based on the contents
+doFinalEvent
+  :: Brick.BChan.BChan CustomEvent
+  -> GopherBrowserState
+  -> Location
+  -> String
+  -> Cache
+  -> IO ()
+doFinalEvent chan initialProgGbs location@(host, port, resource, mode) contents newCache = do
+  let
+    finalState = case mode of
+      TextFileMode -> initialProgGbs
+        { gbsLocation   = location
+        , gbsBuffer     = TextFileBuffer $ TextFile { tfContents = clean contents, tfTitle = locationAsString location }
+        , gbsRenderMode = TextFileMode
+        , gbsHistory    = newChangeHistory initialProgGbs location--FIXME: what if we're just refreshing?
+        , gbsCache      = newCache
+        }
+      MenuMode -> newStateForMenu
+        chan
+        (makeGopherMenu contents)--FIXME: doesn't this need clean first? or is this handled by newStateForMenu?
+        location
+        (newChangeHistory initialProgGbs location)--FIXME: what if we're just refreshing?
+        newCache
+      m -> error $ "Cannot create a final progress state for: " ++ show m
+  -- The final progress event, which changes the state to the render mode specified, using
+  -- the GBS created above.
+  Brick.BChan.writeBChan chan (NewStateEvent finalState)
+  pure ()
+
+-- FIXME: the initial message should say something about loading cache if it is loading from cache
+-- | The progress downloader for resources we want to cache, which also end
+-- in a render mode associated with the resource requested. Not for save mode.
+progressCacheable :: GopherBrowserState -> Location -> IO ()
+progressCacheable gbs location@(host, port, resource, _) = do
+  let cacheResult = cacheLookup location (gbsCache gbs)
+  case cacheResult of
+    (Just pathToCachedFile) -> do
+      contents <- readFile pathToCachedFile
+      doFinalEvent (gbsChan gbs) gbs location contents (gbsCache gbs)
+    Nothing -> progressGetBytes gbs location
 
 -- TODO: make a version of this for huge text files, or even huge menus!
 -- | Emits events of a new application state (GBS). Starts by only
@@ -145,20 +174,39 @@ progressDownloadBytes gbs (host, port, resource, _) =
           }
     Brick.BChan.writeBChan chan (NewStateEvent finalState)
     pure ()
- where
-    -- FIXME: could make gopherclient thing
-  recvChunks = 1024
-  writeAllBytes :: GopherBrowserState -> Socket -> String -> IO ()
-  writeAllBytes gbs' connectionSocket tempFilePath = do
-    gosh <- recv connectionSocket recvChunks
-    let newGbs = addProgBytes gbs' recvChunks
-    Brick.BChan.writeBChan (gbsChan gbs') (NewStateEvent newGbs)
-    case gosh of
-      Nothing -> pure ()
-      -- Doesn't set to started in status TODO FIXME
-      Just chnk ->
-        ByteString.appendFile tempFilePath chnk
-          >> writeAllBytes newGbs connectionSocket tempFilePath
+
+-- Higher order function to replace writeAllString and writeAllBytes TODO
+--writeAll :: GopherBrowserState -> Socket -> (a -> IO ()) -> uh(ByteString.ByteString -> b) String -> IO ()
+
+-- | Forces UTF-8.
+writeAllString :: GopherBrowserState -> Socket -> String -> IO ()
+writeAllString gbs' connectionSocket tempFilePath = do
+  gosh <- recv connectionSocket recvChunkSize
+  let newGbs = addProgBytes gbs' recvChunkSize
+  Brick.BChan.writeBChan (gbsChan gbs') (NewStateEvent newGbs)
+  case gosh of
+    Nothing -> pure ()
+    -- Doesn't set to started in status TODO FIXME
+    Just chnk ->
+      appendFile tempFilePath (U8.toString chnk)
+        >> writeAllBytes newGbs connectionSocket tempFilePath
+  where
+   recvChunkSize = 1024
+
+-- | This is for... FIXME
+writeAllBytes :: GopherBrowserState -> Socket -> String -> IO ()
+writeAllBytes gbs' connectionSocket tempFilePath = do
+  gosh <- recv connectionSocket recvChunkSize
+  let newGbs = addProgBytes gbs' recvChunkSize
+  Brick.BChan.writeBChan (gbsChan gbs') (NewStateEvent newGbs)
+  case gosh of
+    Nothing -> pure ()
+    -- Doesn't set to started in status TODO FIXME
+    Just chnk ->
+      ByteString.appendFile tempFilePath chnk
+        >> writeAllBytes newGbs connectionSocket tempFilePath
+  where
+   recvChunkSize = 1024
 
 -- TODO: progressUI...
 drawProgressUI :: GopherBrowserState -> [T.Widget MyName]
