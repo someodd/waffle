@@ -98,5 +98,5 @@ uiMain gm (host, port, magicString) = do
   initialVty <- buildVty
   let trueLocationType = (host, port, magicString, MenuMode)
       initialState =
-        newStateForMenu eventChan gm trueLocationType ([trueLocationType], 0)
+        newStateForMenu eventChan gm trueLocationType ([trueLocationType], 0) emptyCache
   void $ B.customMain initialVty buildVty (Just eventChan) theApp initialState

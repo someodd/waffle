@@ -7,6 +7,7 @@ import           UI.Util
 import           UI.Representation
 import           GopherClient
 
+-- FIXME: the only reason not using progress is because of progress auto history
 -- FIXME: can get an index error! should resolve with a dialog box.
 -- Shares similarities with menu item selection
 goHistory :: GopherBrowserState -> Int -> IO GopherBrowserState
@@ -26,7 +27,7 @@ goHistory gbs when = do
   case renderMode of
     MenuMode ->
       let newMenu = makeGopherMenu o
-      in  pure $ newStateForMenu (gbsChan gbs) newMenu location newHistory
+      in  pure $ newStateForMenu (gbsChan gbs) newMenu location newHistory (gbsCache gbs)
     TextFileMode -> pure $ gbs
       { gbsBuffer     = TextFileBuffer $ TextFile { tfContents = clean o, tfTitle = locationAsString location}
       , gbsHistory    = newHistory
@@ -64,3 +65,4 @@ goParentDirectory gbs = do
                          newMenu
                          newLocation
                          (newChangeHistory gbs newLocation)
+                         (gbsCache gbs)
