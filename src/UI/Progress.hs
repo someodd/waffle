@@ -17,7 +17,6 @@ import qualified Data.ByteString.Char8         as B8
 import qualified Brick.Types                   as T
 import           System.IO.Temp                 ( emptySystemTempFile )
 import qualified Data.ByteString.UTF8          as U8
-import qualified Codec.Binary.UTF8.String      as UString
 
 import           UI.Util
 import           UI.History
