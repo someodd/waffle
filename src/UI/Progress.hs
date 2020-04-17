@@ -87,7 +87,7 @@ progressGetBytes initialProgGbs history location@(host, port, resource, mode)
     -- to the temporary file and we also get its contents. The file path is used for the cache.
     -- The contents is used to update GBS with the appropriate mode (as a UTF8 string).
     tempFilePath <- emptySystemTempFile "waffle.cache.tmp"-- TODO: needs better template/pattern filename
-    writeAllString initialProgGbs connectionSocket tempFilePath
+    writeAllBytes initialProgGbs connectionSocket tempFilePath
     -- NOTE: it's a bit silly to write all bytes and then read from the file we wrote, but
     -- I'll mark this fix as a TODO, because I just did a major refactor and it's not a huge
     -- deal...
@@ -186,24 +186,6 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
           }
     Brick.BChan.writeBChan chan (NewStateEvent finalState)
     pure ()
-
--- Higher order function to replace writeAllString and writeAllBytes TODO
---writeAll :: GopherBrowserState -> Socket -> (a -> IO ()) -> uh(ByteString.ByteString -> b) String -> IO ()
-
--- | Forces UTF-8.
-writeAllString :: GopherBrowserState -> Socket -> String -> IO ()
-writeAllString gbs' connectionSocket tempFilePath = do
-  gosh <- recv connectionSocket recvChunkSize
-  let newGbs = addProgBytes gbs' recvChunkSize
-  Brick.BChan.writeBChan (gbsChan gbs') (NewStateEvent newGbs)
-  case gosh of
-    Nothing -> pure ()
-    -- Doesn't set to started in status TODO FIXME
-    Just chnk ->
-      ByteString.appendFile tempFilePath chnk
-        >> writeAllBytes newGbs connectionSocket tempFilePath
-  where
-   recvChunkSize = 1024
 
 -- | This is for... FIXME
 writeAllBytes :: GopherBrowserState -> Socket -> String -> IO ()
