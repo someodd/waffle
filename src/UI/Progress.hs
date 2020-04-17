@@ -1,10 +1,3 @@
--- FIXME, TODO: history shouldn't be in here. who knows if you're refreshing or not! It's just
--- a weird mixture of responsibilities! otherwise just make a toggle for it as an arg? or bool?
--- Can we just use temp files created for caching? maybe in that case we should also stop
--- using memory string and always download temp files for everything...
--- TODO: could even implement the loader in the status bar instead of new screen... what about cancelling loading also
--- TODO: document
-
 -- | Handle indication of download progress for various UI.Util.RenderMode types, like downloading
 -- menus, text files, and binary file downloads.
 module UI.Progress where
@@ -27,13 +20,14 @@ import qualified Data.ByteString.UTF8          as U8
 import qualified Codec.Binary.UTF8.String      as UString
 
 import           UI.Util
-import           UI.History--TODO: make this in top level not just UI? or it's all app state so idk
+import           UI.History
 import           UI.Representation
 import           GopherClient
 
 selectNothing :: FB.FileInfo -> Bool
 selectNothing _ = False
 
+-- | The entrypoint for using "progress mode" which...
 initProgressMode :: GopherBrowserState -> Maybe History -> Location -> IO GopherBrowserState
 initProgressMode gbs history location@(_, _, _, mode) =
   let
