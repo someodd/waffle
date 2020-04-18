@@ -20,14 +20,12 @@ import qualified Brick.Main                    as B
 import qualified Brick.Types                   as B
 import qualified Graphics.Vty                  as V
 
-import           GopherClient
 import           UI.Menu
 import           UI.Progress
 import           UI.Save
 import           UI.Search
 import           UI.Style
 import           UI.TextFile
-import           UI.Util
 import           UI.Help
 import           UI.Representation
 import           UI.Goto
@@ -91,12 +89,27 @@ theApp = B.App { B.appDraw         = drawUI
 -- link is a menu is a horrible hack...
 --
 -- | Start the Brick app at a specific Gopher menu in Gopherspace.
-uiMain :: GopherMenu -> (String, Int, String) -> IO ()
-uiMain gm (host, port, magicString) = do
+uiMain :: (String, Int, String) -> IO ()
+uiMain (host, port, magicString) = do
   eventChan <- B.newBChan 10
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
+  -- FIXME: use progress.hs
   let trueLocationType = (host, port, magicString, MenuMode)
-      initialState =
-        newStateForMenu eventChan gm trueLocationType ([trueLocationType], 0) emptyCache
+      -- FIXME: what a horrible hack to produce a beginning state in order
+      -- to use initProgressMode! Especially the buffer part...
+      history = ([trueLocationType], 0)
+      initialGbs = GopherBrowserState
+        { gbsBuffer = TextFileBuffer $ TextFile
+                        { tfContents = ""
+                        , tfTitle = ""
+                        }
+        , gbsLocation = trueLocationType
+        , gbsRenderMode = MenuMode
+        , gbsHistory = history
+        , gbsChan = eventChan
+        , gbsPopup = Nothing
+        , gbsCache = emptyCache
+        }
+  initialState <- initProgressMode initialGbs (Just history) trueLocationType
   void $ B.customMain initialVty buildVty (Just eventChan) theApp initialState
