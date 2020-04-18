@@ -48,8 +48,6 @@ data Help = Help { hText :: TextFile
 -- tempfile. Maybe I should define "String" type as synonym CacheKey? or...
 -- LocationString?
 type Cache = Map.Map String FilePath
--- cache = Map.fromList [("...", "...")]
--- Map.lookup somelocation cache
 
 emptyCache :: Cache
 emptyCache = Map.empty
