@@ -16,13 +16,8 @@ import           Brick.Widgets.Edit            as E
 import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 
-import           GopherClient                   ( makeGopherMenu
-                                                , gopherGet
-                                                , searchSelector
-                                                )
-import           UI.History
+import           GopherClient                   ( searchSelector )
 import           UI.Popup
-import           UI.Util
 import           UI.Representation
 import           UI.Progress
 

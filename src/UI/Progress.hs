@@ -19,7 +19,6 @@ import           System.IO.Temp                 ( emptySystemTempFile )
 import qualified Data.ByteString.UTF8          as U8
 
 import           UI.Util
-import           UI.History
 import           UI.Representation
 import           GopherClient
 
@@ -66,7 +65,7 @@ addProgBytes gbs' nbytes =
 -- This is important for refreshing or navigating history (you don't want to update
 -- the history in those cases, so you supply Nothing).
 progressGetBytes :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressGetBytes initialProgGbs history location@(host, port, resource, mode)
+progressGetBytes initialProgGbs history location@(host, port, resource, _)
   = connect host (show port) $ \(connectionSocket, _) -> do
     -- Send the magic/selector string (request a path) to the websocket we're connected to.
     -- This allows us to later receive the bytes located at this "path."
@@ -101,7 +100,7 @@ doFinalEvent
   -> String
   -> Cache
   -> IO ()
-doFinalEvent chan initialProgGbs history location@(host, port, resource, mode) contents newCache = do
+doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCache = do
   let
     finalState = case mode of
       TextFileMode -> initialProgGbs
@@ -131,7 +130,7 @@ doFinalEvent chan initialProgGbs history location@(host, port, resource, mode) c
 -- | The progress downloader for resources we want to cache, which also end
 -- in a render mode associated with the resource requested. Not for save mode.
 progressCacheable :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressCacheable gbs history location@(host, port, resource, _) = do
+progressCacheable gbs history location@(_, _, _, _) = do
   let cacheResult = cacheLookup location (gbsCache gbs)
   case cacheResult of
     (Just pathToCachedFile) -> do
@@ -221,7 +220,7 @@ progressEventHandler gbs e = case e of
 -- FIXME: can get an index error! should resolve with a dialog box.
 -- Shares similarities with menu item selection
 goHistory :: GopherBrowserState -> Int -> IO GopherBrowserState
-goHistory gbs when = do
+goHistory gbs when =
   let
     (history, historyMarker) = gbsHistory gbs
     unboundIndex             = historyMarker + when
@@ -230,10 +229,9 @@ goHistory gbs when = do
       | unboundIndex > historyLastIndex = historyLastIndex
       | unboundIndex < 0 = 0
       | otherwise = unboundIndex
-    location@(host, port, magicString, renderMode) =
-      history !! newHistoryMarker
+    location = history !! newHistoryMarker
     newHistory = (history, newHistoryMarker)
-  initProgressMode gbs (Just newHistory) location
+  in initProgressMode gbs (Just newHistory) location
 
 -- | Create a new history after visiting a new page.
 --
