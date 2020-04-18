@@ -4,6 +4,7 @@ module UI.Util where
 
 import qualified Brick.BChan
 import qualified Data.Vector                   as Vector
+import qualified Data.Map                      as Map
 
 import           Brick.Main                     ( ViewportScroll
                                                 , viewportScroll
@@ -13,22 +14,35 @@ import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 import           GopherClient
 import           UI.Representation
 
+-- WRONG TYPE, MAYBE IS NECESSARY
+cacheLookup :: Location -> Cache -> Maybe FilePath
+cacheLookup location = Map.lookup (locationAsString location)
+
+cacheInsert :: Location -> FilePath -> Cache -> Cache
+cacheInsert location = Map.insert (locationAsString location)
+
 -- TODO: document and give a repl example
 locationAsString :: Location -> String
 locationAsString (host, port, resource, mode) =
   host ++ ":" ++ show port ++ resource ++ " (" ++ show mode ++ ")"
 
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
+-- FIXME: update for cache
 -- based on passing it the mode and other info! newStateForMenu?
 --
 -- probs needs to be IO
+--
+-- | Make a new GopherBrowserState for a GopherMenu based on a few
+-- necessary parts that must be carried over, like History and
+-- Cache.
 newStateForMenu
   :: Brick.BChan.BChan CustomEvent
   -> GopherMenu
   -> Location
   -> History
+  -> Cache
   -> GopherBrowserState
-newStateForMenu chan gm@(GopherMenu ls) location history = GopherBrowserState
+newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserState
   { gbsBuffer     =
     MenuBuffer
       $ Menu (gm, BrickList.list MyViewport glsVector 1, mkFocusLinesIndex gm)
@@ -37,6 +51,7 @@ newStateForMenu chan gm@(GopherMenu ls) location history = GopherBrowserState
   , gbsRenderMode = MenuMode
   , gbsChan       = chan
   , gbsPopup      = Nothing
+  , gbsCache      = cache-- FIXME: should I be updating this?
   }
  where
   glsVector = Vector.fromList $ map lineShow ls

@@ -1,7 +1,8 @@
 -- | Data types representing different RenderModes.
 module UI.Representation where
 
-import Data.Maybe
+import           Data.Maybe
+import qualified Data.Map as Map
 
 import qualified Brick.Types                   as T
 import qualified Brick.BChan
@@ -42,6 +43,14 @@ data Goto = Goto { gFormerBufferState :: Buffer
 data Help = Help { hText :: TextFile
                  , hFormerGbs :: GopherBrowserState
                  }
+
+-- The first string is the locationAsString and the second is filepath to the
+-- tempfile. Maybe I should define "String" type as synonym CacheKey? or...
+-- LocationString?
+type Cache = Map.Map String FilePath
+
+emptyCache :: Cache
+emptyCache = Map.empty
 
 -- | For MenuBuffer...
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
@@ -141,6 +150,7 @@ data Popup = Popup
   , pHelp :: String
   }
 
+-- TODO: maybe define an empty gbs?
 -- | The application state for Brick.
 data GopherBrowserState = GopherBrowserState
   { gbsBuffer :: Buffer
@@ -151,6 +161,7 @@ data GopherBrowserState = GopherBrowserState
   , gbsHistory :: History
   , gbsChan :: Brick.BChan.BChan CustomEvent
   , gbsPopup :: Maybe Popup
+  , gbsCache :: Cache
   }
 
 -- Should this go in Popup.hs? NOTE

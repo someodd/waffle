@@ -16,13 +16,8 @@ import           Brick.Widgets.Edit            as E
 import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 
-import           GopherClient                   ( makeGopherMenu
-                                                , gopherGet
-                                                , searchSelector
-                                                )
-import           UI.History
+import           GopherClient                   ( searchSelector )
 import           UI.Popup
-import           UI.Util
 import           UI.Representation
 import           UI.Progress
 
@@ -44,7 +39,7 @@ mkSearchResponseState gbs = do
       resource = sbSelector $ getSearch gbs
       query    = unlines (E.getEditContents $ sbEditorState $ getSearch gbs)
       selector = searchSelector resource query
-  initProgressMode gbs (host, port, selector, MenuMode)
+  initProgressMode gbs Nothing (host, port, selector, MenuMode)
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
