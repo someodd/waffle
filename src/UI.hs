@@ -60,7 +60,11 @@ appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'g') [V.MCtrl])) =
   B.continue $ initGotoMode gbs
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '?') [])) =
   liftIO (modifyGbsForHelp gbs) >>= B.continue
+-- FIXME: this could be easily fixed just by doing appEvent gbs e instead of vtyevent
+-- and leaving it up to eventhandlers
 -- What about above FIXME... event types should be deicphered by event handler?
+-- FIXME: just do vague event type discerning and don't say B.VtyEvent so it leaves it
+-- to the event handlers in case they want custom events
 appEvent gbs (B.VtyEvent e)
   | gbsRenderMode gbs == MenuMode        = menuEventHandler gbs e
   | gbsRenderMode gbs == TextFileMode    = textFileEventHandler gbs e
@@ -68,13 +72,13 @@ appEvent gbs (B.VtyEvent e)
   | gbsRenderMode gbs == FileBrowserMode = saveEventHandler gbs e
   | gbsRenderMode gbs == SearchMode      = searchEventHandler gbs e
   | gbsRenderMode gbs == GotoMode        = gotoEventHandler gbs e
-  |
   -- FIXME: two separate ones because of the way we pass events and pattern match
-  -- | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs e
+  | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs (Right e)
+  |
     otherwise                            = error $ "Unrecognized mode in event: " ++ show (gbsRenderMode gbs)
 -- Seems hacky FIXME (for customevent)
 appEvent gbs e
-  | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs e
+  | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs (Left e)
   | otherwise                         = B.continue gbs
 
 theApp :: B.App GopherBrowserState CustomEvent MyName

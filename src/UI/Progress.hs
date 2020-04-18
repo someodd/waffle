@@ -17,6 +17,7 @@ import qualified Data.ByteString.Char8         as B8
 import qualified Brick.Types                   as T
 import           System.IO.Temp                 ( emptySystemTempFile )
 import qualified Data.ByteString.UTF8          as U8
+import qualified Graphics.Vty                  as V
 
 import           UI.Util
 import           UI.Representation
@@ -206,14 +207,20 @@ drawProgressUI gbs = [a]
     if pbConnected (getProgress gbs) then bytesMessage else "⏳ Connnecting..."
   a = str $ downloadingWhat ++ "\n" ++ connectMessage
 
+-- FIXME: maybe this needs to just have generic B.BrickEvent MyName CustomEvent
+-- and match from there
 -- TODO: handleProgressEvents
+-- FIXME: no need for this left/right nonsense because they're both
+-- B.BrickEvent MyName CustomEvent and you can decipher from there like in UI...
+-- should do this soon...
 progressEventHandler
   :: GopherBrowserState
-  -> T.BrickEvent MyName CustomEvent
+  -> Either (T.BrickEvent MyName CustomEvent) (V.Event)
   -> T.EventM MyName (T.Next GopherBrowserState)
-progressEventHandler gbs e = case e of
-  T.AppEvent (NewStateEvent gbs') -> M.continue gbs'
-  _                               -> M.continue gbs
+progressEventHandler gbs (Left e)  = case e of
+  T.AppEvent (NewStateEvent gbs')  -> M.continue gbs'
+  _                                -> M.continue gbs
+progressEventHandler gbs (Right _) = M.continue gbs
 
 -- FIXME: this is a hacky way to avoid circular imports
 -- FIXME: the only reason not using progress is because of progress auto history
