@@ -71,7 +71,7 @@ appEvent gbs (B.VtyEvent e)
   |
   -- FIXME: two separate ones because of the way we pass events and pattern match
   -- | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs e
-    otherwise                            = error "Unrecognized mode in event."
+    otherwise                            = error $ "Unrecognized mode in event: " ++ show (gbsRenderMode gbs)
 -- Seems hacky FIXME (for customevent)
 appEvent gbs e
   | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs e
