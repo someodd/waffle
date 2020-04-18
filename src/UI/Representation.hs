@@ -163,7 +163,6 @@ data GopherBrowserState = GopherBrowserState
   , gbsPopup :: Maybe Popup
   , gbsCache :: Cache
   }
--- NOTE: there is an inherent relationship between Cache and History tho... hrm
 
 -- Should this go in Popup.hs? NOTE
 hasPopup :: GopherBrowserState -> Bool
