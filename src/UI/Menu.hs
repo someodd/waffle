@@ -84,8 +84,8 @@ jumpPrevLink gbs = updateMenuList (BrickList.listMoveTo next l)
 newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
 newStateFromSelectedMenuItem gbs = case lineType of
   (Left ct) -> case ct of
-    Directory -> initProgressMode gbs (host, port, resource, MenuMode)
-    File -> initProgressMode gbs (host, port, resource, TextFileMode)
+    Directory -> initProgressMode gbs Nothing (host, port, resource, MenuMode)
+    File -> initProgressMode gbs Nothing (host, port, resource, TextFileMode)
     IndexSearchServer -> pure gbs
       { gbsRenderMode = SearchMode
       , gbsBuffer     = SearchBuffer $ Search
@@ -97,15 +97,15 @@ newStateFromSelectedMenuItem gbs = case lineType of
                           , sbEditorState       = E.editor MyViewport Nothing ""
                           }
       }
-    ImageFile -> initProgressMode gbs (host, port, resource, FileBrowserMode)
+    ImageFile -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
     -- FIXME: it's possible this could be an incorrect exception if everything isn't covered, like telnet
     -- so I need to implement those modes above and then of course this can be the catchall...
-    _         -> initProgressMode gbs (host, port, resource, FileBrowserMode)
+    _         -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
   (Right nct) -> case nct of
     HtmlFile -> openBrowser (drop 4 resource) >> pure gbs
     InformationalMessage -> pure gbs
     -- FIXME: same as previous comment...
-    _        -> initProgressMode gbs (host, port, resource, FileBrowserMode)
+    _        -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
  where
   (host, port, resource, lineType) = case selectedMenuLine gbs of
     -- GopherLine
