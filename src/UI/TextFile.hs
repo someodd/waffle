@@ -5,23 +5,18 @@ import           Control.Monad.IO.Class
 
 import qualified Graphics.Vty                  as V
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Center           ( center
-                                                , vCenter
+import           Brick.Widgets.Center           ( vCenter
                                                 , hCenter
                                                 )
-import           Brick.Widgets.Border           ( border
-                                                , borderWithLabel
-                                                )
+import           Brick.Widgets.Border           ( borderWithLabel )
 import           Brick.AttrMap                  ( applyAttrMappings )
 import           Brick.Widgets.Core             ( viewport
                                                 , vBox
                                                 , str
                                                 , hLimitPercent
-                                                , vLimitPercent
                                                 , withAttr
                                                 , withBorderStyle
                                                 , vLimit
-                                                , (<+>)
                                                 , updateAttrMap
                                                 )
 import qualified Brick.Main                    as M
