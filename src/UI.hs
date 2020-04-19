@@ -12,6 +12,7 @@ module UI
 where
 
 
+import           Data.Maybe
 import           Control.Monad.IO.Class
 import           Control.Monad                  ( void )
 
@@ -93,27 +94,45 @@ theApp = B.App { B.appDraw         = drawUI
 -- link is a menu is a horrible hack...
 --
 -- | Start the Brick app at a specific Gopher menu in Gopherspace.
-uiMain :: (String, Int, String) -> IO ()
-uiMain (host, port, magicString) = do
+uiMain :: Maybe (String, Int, String) -> IO ()
+uiMain possibleLocation = do
   eventChan <- B.newBChan 10
   let buildVty = V.mkVty V.defaultConfig
   initialVty <- buildVty
-  -- FIXME: use progress.hs
-  let trueLocationType = (host, port, magicString, MenuMode)
-      -- FIXME: what a horrible hack to produce a beginning state in order
-      -- to use initProgressMode! Especially the buffer part...
-      history = ([trueLocationType], 0)
-      initialGbs = GopherBrowserState
-        { gbsBuffer = TextFileBuffer $ TextFile
-                        { tfContents = ""
-                        , tfTitle = ""
-                        }
-        , gbsLocation = trueLocationType
-        , gbsRenderMode = MenuMode
-        , gbsHistory = history
-        , gbsChan = eventChan
-        , gbsPopup = Nothing
-        , gbsCache = emptyCache
-        }
-  initialState <- initProgressMode initialGbs (Just history) trueLocationType
+
+  let dummyStateToOverride = GopherBrowserState {
+      gbsBuffer = TextFileBuffer $ TextFile
+                    { tfContents = ""
+                    , tfTitle = ""
+                    }
+    , gbsLocation = ("", 0, "", TextFileMode)
+    , gbsRenderMode = TextFileMode
+    , gbsHistory = ([], -1)
+    , gbsChan = eventChan
+    , gbsPopup = Nothing
+    , gbsCache = emptyCache
+    }
+
+  initialState <- if null possibleLocation then
+      -- if we didn't get a location passed to us, then we want to
+      -- start with the help page!
+      modifyGbsForHelp dummyStateToOverride
+    else
+      -- ...otherwise let's open the page supplied!
+      let (host, port, magicString) = fromJust possibleLocation
+          trueLocationType = (host, port, magicString, MenuMode)
+          -- FIXME: what a horrible hack to produce a beginning state in order
+          -- to use initProgressMode! Especially the buffer part...
+          history = ([trueLocationType], 0)
+          initialGbs = dummyStateToOverride
+            { gbsBuffer = TextFileBuffer $ TextFile
+                            { tfContents = ""
+                            , tfTitle = ""
+                            }
+            , gbsLocation = trueLocationType
+            , gbsRenderMode = MenuMode
+            , gbsHistory = history
+            }
+      in initProgressMode initialGbs (Just history) trueLocationType
+
   void $ B.customMain initialVty buildVty (Just eventChan) theApp initialState
