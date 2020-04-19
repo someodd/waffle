@@ -215,7 +215,7 @@ drawProgressUI gbs = [a]
 -- should do this soon...
 progressEventHandler
   :: GopherBrowserState
-  -> Either (T.BrickEvent MyName CustomEvent) (V.Event)
+  -> Either (T.BrickEvent MyName CustomEvent) V.Event
   -> T.EventM MyName (T.Next GopherBrowserState)
 progressEventHandler gbs (Left e)  = case e of
   T.AppEvent (NewStateEvent gbs')  -> M.continue gbs'
@@ -227,7 +227,7 @@ progressEventHandler gbs (Right _) = M.continue gbs
 -- FIXME: can get an index error! should resolve with a dialog box.
 -- Shares similarities with menu item selection
 goHistory :: GopherBrowserState -> Int -> IO GopherBrowserState
-goHistory gbs when =
+goHistory gbs when = do
   let
     (history, historyMarker) = gbsHistory gbs
     unboundIndex             = historyMarker + when
@@ -238,7 +238,9 @@ goHistory gbs when =
       | otherwise = unboundIndex
     location = history !! newHistoryMarker
     newHistory = (history, newHistoryMarker)
-  in initProgressMode gbs (Just newHistory) location
+  if historyMarker == newHistoryMarker
+    then pure gbs
+    else initProgressMode gbs (Just newHistory) location
 
 -- | Create a new history after visiting a new page.
 --
