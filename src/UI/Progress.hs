@@ -210,7 +210,7 @@ drawProgressUI gbs = [a]
   bytesMessage = "Downloaded bytes: " ++ bytesDownloaded
   downloadingWhat = pbMessage (getProgress gbs)
   connectMessage =
-    if pbConnected (getProgress gbs) then bytesMessage else "⏳ Connnecting..."
+    if pbConnected (getProgress gbs) then bytesMessage else "⏳ Connecting..."
   a = str $ downloadingWhat ++ "\n" ++ connectMessage
 
 -- FIXME: maybe this needs to just have generic B.BrickEvent MyName CustomEvent
