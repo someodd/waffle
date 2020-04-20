@@ -18,6 +18,7 @@ data Progress = Progress { pbBytesDownloaded :: Int
                          , pbMessage :: String -- BETTER NAME NEEDED
                          , pbInitGbs :: GopherBrowserState
                          , pbConnected :: Bool
+                         , pbIsFromCache :: Bool
                          }
 
 data SaveBrowser = SaveBrowser { fbFileBrowser :: FileBrowser MyName

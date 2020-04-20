@@ -41,6 +41,7 @@ initProgressMode gbs history location@(_, _, _, mode) =
                           { pbBytesDownloaded = 0
                           , pbInitGbs         = gbs
                           , pbConnected       = False
+                          , pbIsFromCache     = isCached location (gbsCache gbs)
                           , pbMessage         = "Downloading a " ++ message
                           }
       }
@@ -209,8 +210,10 @@ drawProgressUI gbs = [a]
   bytesDownloaded = show (pbBytesDownloaded (getProgress gbs))
   bytesMessage = "Downloaded bytes: " ++ bytesDownloaded
   downloadingWhat = pbMessage (getProgress gbs)
-  connectMessage =
-    if pbConnected (getProgress gbs) then bytesMessage else "⏳ Connecting..."
+  connectMessage
+    | pbIsFromCache (getProgress gbs) = "⏳ Loading from cache..."
+    | pbConnected (getProgress gbs)   = bytesMessage
+    | otherwise                       = "⏳ Connecting..."
   a = str $ downloadingWhat ++ "\n" ++ connectMessage
 
 -- FIXME: maybe this needs to just have generic B.BrickEvent MyName CustomEvent
