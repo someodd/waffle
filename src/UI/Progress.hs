@@ -90,9 +90,8 @@ progressGetBytes initialProgGbs history location@(host, port, resource, _)
     let newCache = cacheInsert location tempFilePath (gbsCache initialProgGbs)
     -- Finally we setup the final event with a GBS of the specified render mode.
     doFinalEvent chan initialProgGbs history location (U8.toString contents) newCache
-    -- TODO: this could be modularized; it's re-used!
 
--- | This is for final events that change the render mode based on the contents
+-- | This is for final events that change the render mode based on the contents.
 doFinalEvent
   :: Brick.BChan.BChan CustomEvent
   -> GopherBrowserState
@@ -131,12 +130,14 @@ doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCa
 -- | The progress downloader for resources we want to cache, which also end
 -- in a render mode associated with the resource requested. Not for save mode.
 progressCacheable :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressCacheable gbs history location@(_, _, _, _) = do
-  let cacheResult = cacheLookup location (gbsCache gbs)
-  case cacheResult of
+progressCacheable gbs history location@(_, _, _, _) =
+  case cacheLookup location $ gbsCache gbs of
+    -- There is a cache for the requested location, so let's load that, instead...
     (Just pathToCachedFile) -> do
       contents <- ByteString.readFile pathToCachedFile
+      -- We use "doFinalEvent" because it will switch the mode/state for the content of the cache file!
       doFinalEvent (gbsChan gbs) gbs history location (U8.toString contents) (gbsCache gbs)
+    -- There is no cache for the requested location, so we must make a request and cache it!
     Nothing -> progressGetBytes gbs history location
 
 -- TODO: make a version of this for huge text files, or even huge menus!
@@ -184,7 +185,12 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
 writeAllBytes :: GopherBrowserState -> Socket -> String -> IO ()
 writeAllBytes gbs' connectionSocket tempFilePath = do
   gosh <- recv connectionSocket recvChunkSize
-  let newGbs = addProgBytes gbs' recvChunkSize
+  let bytesReceived = case gosh of
+        Nothing  -> 0
+        -- We count the bytes each time because the second-to-last response can have
+        -- under the recvChunkSize. The last response will always be Nothing.
+        (Just n) -> ByteString.length n
+      newGbs        = addProgBytes gbs' bytesReceived
   Brick.BChan.writeBChan (gbsChan gbs') (NewStateEvent newGbs)
   case gosh of
     Nothing -> pure ()
