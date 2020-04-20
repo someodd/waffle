@@ -18,6 +18,11 @@ import           UI.Representation
 cacheLookup :: Location -> Cache -> Maybe FilePath
 cacheLookup location = Map.lookup (locationAsString location)
 
+isCached :: Location -> Cache -> Bool
+isCached location cache = case Map.lookup (locationAsString location) cache of
+  (Just _) -> True
+  Nothing  -> False
+
 cacheInsert :: Location -> FilePath -> Cache -> Cache
 cacheInsert location = Map.insert (locationAsString location)
 
