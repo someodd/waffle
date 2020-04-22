@@ -1,3 +1,5 @@
+-- FIXME: implement network error dialog boxes here and return state if fail?
+-- this would imply the need to have a fallback state, right?
 -- | Handle indication of download progress for various UI.Util.RenderMode types, like downloading
 -- menus, text files, and binary file downloads.
 module UI.Progress where
@@ -34,6 +36,7 @@ initProgressMode gbs history location@(_, _, _, mode) =
       TextFileMode    -> (progressCacheable, "text file 📄")
       MenuMode        -> (progressCacheable, "menu 📂")
       FileBrowserMode -> (progressDownloadBytes, "binary file")
+      -- This error should be a dialog box instead...
       m -> error $ "Unsupported mode requested for progress mode: " ++ show m
     initialProgGbs = gbs
       { gbsRenderMode = ProgressMode
@@ -46,6 +49,7 @@ initProgressMode gbs history location@(_, _, _, mode) =
                           }
       }
   in
+    -- Should catch network error in a popup (representational).
     forkIO (downloader initialProgGbs history location) >> pure initialProgGbs
 
 addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
