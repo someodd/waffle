@@ -38,6 +38,7 @@ import           Web.Browser
 import           UI.Style
 import           GopherClient
 import           UI.Progress
+import           UI.Util
 import           UI.Representation
 import           UI.Popup
 
@@ -112,32 +113,20 @@ newStateFromSelectedMenuItem gbs = case lineType of
     -- Unrecognized line
     (Right _ ) -> error "Can't do anything with unrecognized line."
 
--- | The UI for rendering and viewing a menu.
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
-menuModeUI gbs = [poppy gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
- where
-  poppy gbs' = centerLayer $ head $ popup (pLabel .fromJust $ gbsPopup gbs') (pWidgets . fromJust $ gbsPopup gbs') (pHelp . fromJust $ gbsPopup gbs')
-  (Menu (_, l, _))          = getMenu gbs
-  label                     = str " Item " <+> cur <+> str " of " <+> total -- TODO: should be renamed
-  (host, port, resource, _) = gbsLocation gbs
-  title = " " ++ host ++ ":" ++ show port ++ if not $ List.null resource
-    then " (" ++ resource ++ ") "
-    else " "
-  cur = case l ^. BrickList.listSelectedL of
-    Nothing -> str "-"
-    Just i  -> str (show (i + 1))
-  total = str $ show $ Vector.length $ l ^. BrickList.listElementsL
-  box =
-    updateAttrMap (applyAttrMappings borderMappings)
-      $ withBorderStyle customBorder
-      $ borderWithLabel (withAttr titleAttr $ str title)
-      $ viewport MyWidget T.Horizontal
-      $ hLimitPercent 100
-      $ BrickList.renderListWithIndex (listDrawElement gbs) True l
-  view = vBox
-    [ box
-    , vLimit 1 $ str "? for help. " <+> label
-    ]
+menuModeUI gbs = defaultBrowserUI gbs titleWidget mainWidget statusWidget
+  where
+   (Menu (_, l, _)) = getMenu gbs
+   titleWidget =
+     let (host, port, resource, _) = gbsLocation gbs
+     in str $ " " ++ host ++ ":" ++ show port ++ if not $ List.null resource then " (" ++ resource ++ ") " else " "
+   statusWidget =
+     let cur              = case l ^. BrickList.listSelectedL of
+                              Nothing -> str "-"
+                              Just i  -> str (show (i + 1))
+         total            = str $ show $ Vector.length $ l ^. BrickList.listElementsL
+     in  str "? for help. " <+> str " Item " <+> cur <+> str " of " <+> total
+   mainWidget = BrickList.renderListWithIndex (listDrawElement gbs) True l
 
 -- FIXME: this is messy! unoptimized!
 listDrawElement

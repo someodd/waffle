@@ -19,6 +19,10 @@ import           Control.Monad                  ( void )
 import qualified Brick.BChan                   as B
 import qualified Brick.Main                    as B
 import qualified Brick.Types                   as B
+import           Brick.Widgets.Center          as B
+import           Brick.Widgets.Core            as B
+import           Brick.Widgets.Border          as B
+import           Brick.AttrMap                 as B
 import qualified Graphics.Vty                  as V
 
 import           UI.Menu
@@ -28,6 +32,7 @@ import           UI.Search
 import           UI.Style
 import           UI.TextFile
 import           UI.Help
+import           UI.Popup
 import           UI.Representation
 import           UI.Goto
 
@@ -36,14 +41,16 @@ import           UI.Goto
 --
 -- Used as Brick.Main.appDraw when constructing the Brick app.
 drawUI :: GopherBrowserState -> [B.Widget MyName]
-drawUI gbs = case gbsRenderMode gbs of
-  MenuMode        -> menuModeUI gbs
-  TextFileMode    -> textFileModeUI gbs
-  HelpMode        -> helpModeUI gbs
-  FileBrowserMode -> fileBrowserUi gbs
-  SearchMode      -> searchInputUI gbs
-  ProgressMode    -> drawProgressUI gbs
-  GotoMode        -> gotoInputUI gbs
+drawUI gbs = modeUI $ gbsRenderMode gbs
+  where
+   modeUI mode = case mode of
+     MenuMode        -> menuModeUI gbs
+     TextFileMode    -> textFileModeUI gbs
+     HelpMode        -> helpModeUI gbs
+     FileBrowserMode -> fileBrowserUi gbs
+     SearchMode      -> searchInputUI gbs
+     ProgressMode    -> drawProgressUI gbs
+     GotoMode        -> modeUI (seFormerMode $ fromJust $ gbsStatus gbs)
 
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
 -- some cases where we don't want history available
@@ -74,6 +81,9 @@ appEvent gbs (B.VtyEvent e)
   | gbsRenderMode gbs == SearchMode      = searchEventHandler gbs e
   | gbsRenderMode gbs == GotoMode        = gotoEventHandler gbs e
   -- FIXME: two separate ones because of the way we pass events and pattern match
+  -- i.e., one for vtyhandler and one for the custom app events, which we should
+  -- soon conflate by not matching specifically for VtyEvent (thus passing all events
+  -- to the appropriate mode's handler)
   | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs (Right e)
   |
     otherwise                            = error $ "Unrecognized mode in event: " ++ show (gbsRenderMode gbs)
