@@ -114,7 +114,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
     (Right _ ) -> error "Can't do anything with unrecognized line."
 
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
-menuModeUI gbs = defaultBrowserUI gbs (viewport MainViewport T.Horizontal) titleWidget mainWidget statusWidget
+menuModeUI gbs = defaultBrowserUI gbs (viewport MenuViewport T.Horizontal) titleWidget mainWidget statusWidget
   where
    (Menu (_, l, _)) = getMenu gbs
    titleWidget =

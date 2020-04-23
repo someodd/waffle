@@ -94,7 +94,7 @@ newStateForMenu
 newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserState
   { gbsBuffer     =
     MenuBuffer
-      $ Menu (gm, BrickList.list MenuViewport glsVector 1, mkFocusLinesIndex gm)
+      $ Menu (gm, BrickList.list MyWidget glsVector 1, mkFocusLinesIndex gm)
   , gbsLocation   = location
   , gbsHistory    = history
   , gbsRenderMode = MenuMode
