@@ -33,14 +33,14 @@ makePopupWidget gbs =
 -- FIXME: poppys and statusWidget both relevant!
 -- I need a better name for this, but basically it's the default view you see
 -- for everything! There are only a few exceptions.
-defaultBrowserUI :: GopherBrowserState -> B.Widget MyName -> B.Widget MyName -> B.Widget MyName -> [B.Widget MyName]
-defaultBrowserUI gbs titleWidget mainWidget statusWidget = [makePopupWidget gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
+--defaultBrowserUI :: GopherBrowserState -> B.Viewport -> B.Widget MyName -> B.Widget MyName -> B.Widget MyName -> [B.Widget MyName]
+defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePopupWidget gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
  where
   box =
     updateAttrMap (B.applyAttrMappings borderMappings)
       $ withBorderStyle customBorder
       $ B.borderWithLabel (withAttr titleAttr titleWidget)
-      $ viewport MyWidget B.Horizontal
+      $ mainViewport
       $ hLimitPercent 100 mainWidget
   -- Maybe statusWidget should be Maybe so can override?
   status =
@@ -94,7 +94,7 @@ newStateForMenu
 newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserState
   { gbsBuffer     =
     MenuBuffer
-      $ Menu (gm, BrickList.list MyViewport glsVector 1, mkFocusLinesIndex gm)
+      $ Menu (gm, BrickList.list MenuViewport glsVector 1, mkFocusLinesIndex gm)
   , gbsLocation   = location
   , gbsHistory    = history
   , gbsRenderMode = MenuMode
@@ -133,3 +133,12 @@ clean = replaceTabs . replaceReturns
 
 myNameScroll :: ViewportScroll MyName
 myNameScroll = viewportScroll MyViewport
+
+mainViewportScroll :: ViewportScroll MyName
+mainViewportScroll = viewportScroll MainViewport
+
+menuViewportScroll :: ViewportScroll MyName
+menuViewportScroll = viewportScroll MenuViewport
+
+textViewportScroll :: ViewportScroll MyName
+textViewportScroll = viewportScroll TextViewport
