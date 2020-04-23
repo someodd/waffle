@@ -114,7 +114,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
     (Right _ ) -> error "Can't do anything with unrecognized line."
 
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
-menuModeUI gbs = defaultBrowserUI gbs titleWidget mainWidget statusWidget
+menuModeUI gbs = defaultBrowserUI gbs (viewport MainViewport T.Horizontal) titleWidget mainWidget statusWidget
   where
    (Menu (_, l, _)) = getMenu gbs
    titleWidget =
@@ -205,8 +205,8 @@ menuEventHandler gbs e
       V.EvKey (V.KChar 'i') [] -> M.continue $ lineInfoPopup gbs
       V.EvKey V.KEnter [] ->
         liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
-      V.EvKey (V.KChar 'l') [] -> M.hScrollBy myWidgetScroll 1 >> M.continue gbs
-      V.EvKey (V.KChar 'h') [] -> M.hScrollBy myWidgetScroll (-1) >> M.continue gbs
+      V.EvKey (V.KChar 'l') [] -> M.hScrollBy menuViewportScroll 1 >> M.continue gbs
+      V.EvKey (V.KChar 'h') [] -> M.hScrollBy menuViewportScroll (-1) >> M.continue gbs
       V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
       V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
       V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue

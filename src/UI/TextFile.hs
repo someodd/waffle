@@ -27,7 +27,7 @@ import           UI.Representation
 import           UI.Style
 
 textFileModeUI :: GopherBrowserState -> [T.Widget MyName]
-textFileModeUI gbs = defaultBrowserUI gbs titleWidget mainWidget statusWidget
+textFileModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
   where
    mainWidget   = let textFileContents = tfContents $ getTextFile gbs
                   in  str $ clean textFileContents
@@ -42,10 +42,10 @@ basicTextFileEventHandler
   -> T.EventM MyName (T.Next GopherBrowserState)
 basicTextFileEventHandler gbs e = case e of
   -- What about left and right?!
-  V.EvKey (V.KChar 'j') [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
-  V.EvKey (V.KChar 'k') [] -> M.vScrollBy myNameScroll (-1) >> M.continue gbs
-  V.EvKey (V.KChar 'l') [] -> M.hScrollBy myNameScroll 1 >> M.continue gbs
-  V.EvKey (V.KChar 'h') [] -> M.hScrollBy myNameScroll (-1) >> M.continue gbs
+  V.EvKey (V.KChar 'j') [] -> M.vScrollBy textViewportScroll 1 >> M.continue gbs
+  V.EvKey (V.KChar 'k') [] -> M.vScrollBy textViewportScroll (-1) >> M.continue gbs
+  V.EvKey (V.KChar 'l') [] -> M.hScrollBy textViewportScroll 1 >> M.continue gbs
+  V.EvKey (V.KChar 'h') [] -> M.hScrollBy textViewportScroll (-1) >> M.continue gbs
   _                        -> M.continue gbs
 
 -- | Event handler for a text file location in gopherspace.

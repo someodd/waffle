@@ -174,7 +174,7 @@ hasPopup gbs = isJust $ gbsPopup gbs
 closePopup :: GopherBrowserState -> GopherBrowserState
 closePopup gbs = gbs { gbsPopup = Nothing }
 
-data MyName = MyViewport | EditorViewport | MyWidget
+data MyName = MyViewport | MainViewport | EditorViewport | MyWidget | TextViewport | MenuViewport
   deriving (Show, Eq, Ord)
 
 data EditName = Edit1 deriving (Ord, Show, Eq)
