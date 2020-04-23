@@ -125,7 +125,7 @@ menuModeUI gbs = defaultBrowserUI gbs titleWidget mainWidget statusWidget
                               Nothing -> str "-"
                               Just i  -> str (show (i + 1))
          total            = str $ show $ Vector.length $ l ^. BrickList.listElementsL
-     in  str "? for help. " <+> str " Item " <+> cur <+> str " of " <+> total
+     in  str "? for help. Menu mode. " <+> str "Item " <+> cur <+> str " of " <+> total
    mainWidget = BrickList.renderListWithIndex (listDrawElement gbs) True l
 
 -- FIXME: this is messy! unoptimized!
