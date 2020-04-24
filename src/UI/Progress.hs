@@ -134,7 +134,7 @@ doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCa
       m -> error $ "Cannot create a final progress state for: " ++ show m
   -- The final progress event, which changes the state to the render mode specified, using
   -- the GBS created above.
-  Brick.BChan.writeBChan chan (NewStateEvent finalState)
+  Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
   pure ()
   where
    maybeHistory = case history of
@@ -193,7 +193,8 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
                               , fbFormerBufferState = formerBufferState
                               }
           }
-    Brick.BChan.writeBChan chan (NewStateEvent finalState)
+    -- We don't use doFinalEvent, because the file saver (which this is for) works a bit differently!
+    Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
     pure ()
 
 -- | This is for... FIXME
@@ -242,8 +243,9 @@ progressEventHandler
   -> T.EventM MyName (T.Next GopherBrowserState)
 progressEventHandler gbs (Left e)  = case e of
   -- This is extremely hacky!
-  T.AppEvent (NewStateEvent gbs')  -> modeTransition >> M.continue gbs'
-  _                                -> M.continue gbs
+  T.AppEvent (NewStateEvent gbs')       -> M.continue gbs'
+  T.AppEvent (FinalNewStateEvent gbs')  -> modeTransition >> M.continue gbs'
+  _                                     -> M.continue gbs
 progressEventHandler gbs (Right _) = M.continue gbs
 
 -- FIXME: this is a hacky way to avoid circular imports

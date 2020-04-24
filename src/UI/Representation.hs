@@ -129,9 +129,10 @@ type History = ([Location], HistoryIndex)
 -- and the BrowserMode used to render it.
 type Location = (String, Int, String, RenderMode)
 
+-- FinalNewStateEvent is used for transition handlers and for sending the new state (like the new page; setting it as the new gbs)
 -- | Carries through the entire state I guess!
 -- think of this right now as a progress event
-newtype CustomEvent = NewStateEvent GopherBrowserState
+data CustomEvent = NewStateEvent GopherBrowserState | FinalNewStateEvent GopherBrowserState
 
 -- FIXME: But what if we don't want a label, widgets, help? maybe there should be different
 -- types of popups!
