@@ -23,7 +23,6 @@ import qualified Data.ByteString.UTF8          as U8
 import qualified Graphics.Vty                  as V
 
 import           UI.Util
-import           UI.Save
 import           UI.Representation
 import           GopherClient
 
@@ -31,8 +30,10 @@ import           GopherClient
 selectNothing :: FB.FileInfo -> Bool
 selectNothing _ = False
 
--- FIXME: can't you just iterate over algebraic data type's values?
+-- FIXME: need to combine vScroll and hScroll into a single event! because otherwise
+-- it's only giving back the event for hScroll!
 -- Things to do when switching modes! Namely reset viewports...
+modeTransition :: T.EventM MyName ()
 modeTransition = do
   --M.vScrollToBeginning myNameScroll
   traverse_ M.vScrollToBeginning [myNameScroll, mainViewportScroll, menuViewportScroll, textViewportScroll]

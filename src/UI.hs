@@ -12,7 +12,6 @@ module UI
 where
 
 
-import           Data.Foldable
 import           Data.Maybe
 import           Control.Monad.IO.Class
 import           Control.Monad                  ( void )
@@ -20,10 +19,6 @@ import           Control.Monad                  ( void )
 import qualified Brick.BChan                   as B
 import qualified Brick.Main                    as B
 import qualified Brick.Types                   as B
-import           Brick.Widgets.Center          as B
-import           Brick.Widgets.Core            as B
-import           Brick.Widgets.Border          as B
-import           Brick.AttrMap                 as B
 import qualified Graphics.Vty                  as V
 
 import           UI.Menu
@@ -33,10 +28,8 @@ import           UI.Search
 import           UI.Style
 import           UI.TextFile
 import           UI.Help
-import           UI.Popup
 import           UI.Representation
 import           UI.Goto
-import           UI.Util
 
 -- | The draw handler which will choose a UI based on the browser's mode.
 -- | Picks a UI/draw function based on the current gbsRenderMode.
@@ -124,6 +117,7 @@ uiMain possibleLocation = do
     , gbsChan = eventChan
     , gbsPopup = Nothing
     , gbsCache = emptyCache
+    , gbsStatus = Nothing
     }
 
   initialState <- if null possibleLocation then

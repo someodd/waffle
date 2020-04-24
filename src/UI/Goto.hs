@@ -12,7 +12,6 @@ import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 import           Network.URI
 
-import           UI.Popup
 import           UI.Representation
 import           UI.Progress
 
@@ -75,7 +74,8 @@ gotoEventHandler gbs e = case e of
   -- return a GopherBrowserState instead of just an editor state.
   editorEventHandler
     :: GopherBrowserState -> Event -> T.EventM MyName GopherBrowserState
-  editorEventHandler gbs' e' =
+  -- TODO: e' is unused!
+  editorEventHandler _ e' =
     -- Maybe this should be a general function in Representation.
     let updateEditorInStatus x = gbs { gbsStatus = Just $ (fromJust $ gbsStatus gbs) { seEditorState = x } }
     in  updateEditorInStatus

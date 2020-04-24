@@ -14,10 +14,6 @@ import           Brick.Widgets.Center          as B
 import           Brick.Widgets.Core            as B
 import           Brick.Widgets.Border          as B
 import           Brick.AttrMap                 as B
-import qualified Graphics.Vty                  as V
-import           Brick.Main                     ( ViewportScroll
-                                                , viewportScroll
-                                                )
 import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 
 import           GopherClient
@@ -34,6 +30,13 @@ makePopupWidget gbs =
 -- I need a better name for this, but basically it's the default view you see
 -- for everything! There are only a few exceptions.
 --defaultBrowserUI :: GopherBrowserState -> B.Viewport -> B.Widget MyName -> B.Widget MyName -> B.Widget MyName -> [B.Widget MyName]
+defaultBrowserUI ::
+  GopherBrowserState
+  -> (B.Widget n -> B.Widget MyName)
+  -> B.Widget MyName
+  -> B.Widget n
+  -> B.Widget MyName
+  -> [B.Widget MyName]
 defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePopupWidget gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
  where
   box =
@@ -131,14 +134,14 @@ clean = replaceTabs . replaceReturns
   replaceTabs    = map (\x -> if x == '\t' then ' ' else x)
   replaceReturns = map (\x -> if x == '\r' then ' ' else x)
 
-myNameScroll :: ViewportScroll MyName
-myNameScroll = viewportScroll MyViewport
+myNameScroll :: B.ViewportScroll MyName
+myNameScroll = B.viewportScroll MyViewport
 
-mainViewportScroll :: ViewportScroll MyName
-mainViewportScroll = viewportScroll MainViewport
+mainViewportScroll :: B.ViewportScroll MyName
+mainViewportScroll = B.viewportScroll MainViewport
 
-menuViewportScroll :: ViewportScroll MyName
-menuViewportScroll = viewportScroll MenuViewport
+menuViewportScroll :: B.ViewportScroll MyName
+menuViewportScroll = B.viewportScroll MenuViewport
 
-textViewportScroll :: ViewportScroll MyName
-textViewportScroll = viewportScroll TextViewport
+textViewportScroll :: B.ViewportScroll MyName
+textViewportScroll = B.viewportScroll TextViewport
