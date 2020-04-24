@@ -5,20 +5,41 @@
 -- TODO: implement metadata that is in between ========================== that. also null.host?
 -- TODO: left is preferred for errors. There is a reason for this. Read about that in LYAH
 -- TODO: content detection. if not diretory then use text mode to display or another mode to download...
-module GopherClient where
+
+-- | Models the Gopher protocol; protocol representation.
+--
+-- I found these resources very useful in implementing the models herein:
+--
+--   * RFC 1436 - The Internet Gopher Protocol (a distributed document search and retrieval protocol)
+--     https://tools.ietf.org/html/rfc1436
+--   * Gopher (protocol) - Wikipedia
+--     https://en.wikipedia.org/wiki/Gopher_(protocol)
+--   * Gopher+ documentation... FIXME
+module GopherClient
+  ( GopherMenu(GopherMenu)
+  -- TODO: GopherLine = RecognizedGopherLine | UnrecognizedGopherLine
+  , GopherLine(..)
+  , MalformedGopherLine
+  , isInfoMsg
+  -- TODO: GopherItemType = GopherNonCanonicalItemType | GopherCanonicalItemType
+  -- and then explain:
+  --
+  -- RFC 1436 states "The client software decides what items are available by looking at
+  -- the first character of each line in a directory listing."
+  , GopherNonCanonicalItemType(..)
+  , GopherCanonicalItemType(..)
+  , makeGopherMenu
+  , parentDirectory
+  , searchSelector
+  , menuLine
+  , explainLine
+  ) where
 
 import           Data.List
-import qualified Data.ByteString.Char8         as B8
-import qualified Data.ByteString               as BS
-import qualified Data.ByteString.UTF8          as U8
 import           Data.List.Split
 
-import           Network.Simple.TCP
-
--- FIXME: these comment descriptions should aso go to the explain function...
--- | Gopher Protocol/RFC 1435 canonical item type characters.
--- "The client software decides what items are available by looking at
--- the first character of each line in a directory listing."
+-- | The types of lines in a Gopher menu which are types specified by the original
+-- Gopher protocol specification (RFC 1435).
 data GopherCanonicalItemType =
   File |
   -- ^ Item is a (plaintext) file. The item is a TextFile Entity. Client
@@ -63,8 +84,8 @@ data GopherCanonicalItemType =
   -- host is in the selector string.
   deriving (Eq, Show)
 
--- | Item types improvised by Gopher client authors and others after RFC 1436,
--- see the Gopher+ specification...
+-- | Item types improvised by Gopher client authors and others after the original
+-- Gopher protocol specification (RFC 1436).
 data GopherNonCanonicalItemType =
   Doc |
   -- ^ Doc. Seen used alongside PDFs and .DOCs.
@@ -76,7 +97,11 @@ data GopherNonCanonicalItemType =
   -- ^ Sound file (especially the WAV format).
   deriving (Eq, Show)
 
--- | A Gopher protocol item/line is defined with tab-delimitated fields. This
+-- NOTE: maybe GopherLine should have wo constructors: RecognizedGopherLine and
+-- UnrecognizedGopherLine to do away with the Either everywhere...
+-- | Representation of a line in a GopherMenu.
+--
+-- A Gopher protocol item/line is defined with tab-delimitated fields. This
 -- abstraction makes it easier to handle said lines. The line itself will look
 -- something like this (where 'F' is a tab):
 --
@@ -105,7 +130,8 @@ data GopherLine = GopherLine
   }
 
 -- NOTE: for name, Malformed or Unrecognized?
--- | For Gopher lines which are not formatted correctly
+-- | Representation of a line in a GopherMenu which is either of an unrecognized
+-- type or is simply not formatted correctly.
 newtype MalformedGopherLine = MalformedGopherLine
   { mglFields :: [String]
   }
@@ -204,15 +230,14 @@ explainType gopherLine = case glType gopherLine of
   Left  canonType    -> explainCanonicalType canonType ++ " " ++ showAddressPlus gopherLine
   Right nonCanonType -> explainNonCanonicalType nonCanonType ++ " " ++ showAddressPlus gopherLine
 
--- TODO: needs to be more elaborate! use the actual data to construct
--- | Explain a line from a Gopher map/menu. Can be a GopherLine or a MalformedGopherLine.
+-- TODO/FIXME: better haddock string, use REPL example too?
+-- | Describe any line from a Gopher menu.
 explainLine
   :: Either GopherLine MalformedGopherLine -> String
 explainLine (Left gopherLine) = explainType gopherLine
 explainLine (Right malformedGopherLine) = "Malformed, unrecognized, or incorrectly parsed. " ++ show (mglFields malformedGopherLine)
 
--- | Take a big string (series of lines) returned from a Gopher request and
--- parse it into a Gopher menu (a series of GopherLines)!
+-- | Parse a Gopher-menu-formatted String into a GopherMenu representation.
 makeGopherMenu :: String -> GopherMenu
 makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
  where
@@ -243,12 +268,8 @@ makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
   makeGopherLine malformed =
     Right $ MalformedGopherLine { mglFields = malformed }
 
--- | As you can see, a GopherMenu is simply an ordered sequence of
--- GopherLines.
+-- | Representation of Gopher menus: a list of Malformed/GopherLines.
 newtype GopherMenu = GopherMenu [Either GopherLine MalformedGopherLine]
-
-fromMenu :: GopherMenu -> [Either GopherLine MalformedGopherLine]
-fromMenu (GopherMenu m) = m
 
 -- | Easily represent a GopherMenu as a string, formatted as it might be rendered.
 instance Show GopherMenu where
@@ -260,8 +281,7 @@ instance Show GopherMenu where
     -- is malformed line
     gopherLineShow (Right x) = show x ++ "(MALFORMED LINE)"-- Does this have potential to break?
 
--- Nice benefit: AFAIK info msgs are the only kind that aren't followable
--- NOTE: should only be used in cases where there's no point in nested cases otherwise
+-- | Detect if a Gopher menu line is of the noncanonical "info message" type.
 isInfoMsg :: Either GopherLine MalformedGopherLine -> Bool
 isInfoMsg line = case line of
   -- It's a GopherLine
@@ -273,7 +293,11 @@ isInfoMsg line = case line of
   -- It's a MalformedGopherLine
   (Right _) -> False
 
--- | Get the magic string for the parent directory/menu, if possible (may already be at root).
+-- TODO: I don't like that this removes the leading / from some paths, like in the
+-- last REPL example.
+-- | Get the selector (also referred to as the "path" or "magic string"
+-- for the parent directory/menu of the supplied selector, if possible
+-- (may already be at root).
 --
 -- >> parentDirectory "/"
 -- Nothing
@@ -288,54 +312,23 @@ parentDirectory magicString
   | magicString == "/" || null magicString = Nothing
   | otherwise = Just $ intercalate "/" (init $ wordsBy (== '/') magicString)
 
--- TODO: delete after implementing caching because it won't be used anymore due
--- to UI.Progress!
--- Lots of redundancy
-downloadGet :: String -> String -> String -> IO BS.ByteString
-downloadGet host port resource = connect host port $ \(connectionSocket, _) ->
-  do
-    send connectionSocket (B8.pack $ resource ++ "\r\n")
-    -- need to only fetch as many bytes as it takes to get period on a line by itself to
-    -- close the connection.
-    getAllBytes (pure Nothing) 1024 (pure BS.empty) connectionSocket
+-- | Given the search "endpoint" (the selector for the search), create a
+-- new selector for querying the supplied endpoint for the supplied query.
+--
+-- This is very similar to the URLs you'd expect from GET requests and
+-- query strings in HTTP.
+--
+-- >> searchSelector "/somesearch" "foo bar"
+-- "/somesearch\tfoo bar"
 
-newtype GetAllBytesCallback st = GetAllBytesCallback (st -> BS.ByteString -> IO st, st)
-
--- TODO: What about modifying this with a callback for progress...
-getAllBytes
-  :: IO (Maybe (GetAllBytesCallback a))
-  -> Int
-  -> IO BS.ByteString
-  -> Socket
-  -> IO BS.ByteString
-getAllBytes callback recvChunks acc connectionSocket = do
-  gosh <- recv connectionSocket recvChunks
-  wacc <- acc
-  case gosh of
-    Nothing   -> acc
-    Just chnk -> do
-      cb <- callback
-      let newCallbackArg = case cb of
-            Just (GetAllBytesCallback (callback', gbs)) -> do
-              newGbs <- callback' gbs chnk
-              pure $ Just $ GetAllBytesCallback (callback', newGbs)
-            Nothing -> pure Nothing
-      getAllBytes newCallbackArg
-                  recvChunks
-                  (pure $ BS.append wacc chnk)
-                  connectionSocket
-
+-- >> searchSelector "" "foo bar"
+-- "foo bar"
 searchSelector :: String -> String -> String
 searchSelector resource query =
+  -- FIXME: I don't think this if null resource then query bit would actually work
+  -- as seen in the REPL example, would it?
   if null resource then query else resource ++ "\t" ++ query
 
--- | Gopher protocol TCP/IP request. Leave "resource" as an empty/blank string
--- if you don't wish to specify.
-gopherGet :: String -> String -> String -> IO String
-gopherGet host port resource = connect host port $ \(connectionSocket, _) -> do
-  send connectionSocket (B8.pack $ resource ++ "\r\n")
-  wow <- getAllBytes (pure Nothing) 1024 (pure BS.empty) connectionSocket
-  pure $ U8.toString wow
-
+-- | Get the nth line from a GopherMenu.
 menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx

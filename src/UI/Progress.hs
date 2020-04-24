@@ -284,17 +284,10 @@ newChangeHistory gbs newLoc =
       newHistoryMarker         = historyMarker + 1
   in  (newHistory, newHistoryMarker)
 
--- This should go in progress, too, and use initProgress... FIXME
--- | Change the state to the parent menu by network request.
+-- | Go up a directory; go to the parent menu of whatever the current selector is.
 goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
-goParentDirectory gbs = do
+goParentDirectory gbs =
   let (host, port, magicString, _) = gbsLocation gbs
       parentMagicString            = fromMaybe "/" (parentDirectory magicString)
-  o <- gopherGet host (show port) parentMagicString
-  let newMenu     = makeGopherMenu o
       newLocation = (host, port, parentMagicString, MenuMode)
-  pure $ newStateForMenu (gbsChan gbs)
-                         newMenu
-                         newLocation
-                         (newChangeHistory gbs newLocation)
-                         (gbsCache gbs)
+  in  initProgressMode gbs Nothing newLocation
