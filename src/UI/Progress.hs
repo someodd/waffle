@@ -24,7 +24,7 @@ import qualified Graphics.Vty                  as V
 
 import           UI.Util
 import           UI.Representation
-import           GopherClient
+import           Gopher
 
 -- FIXME: also used by save.hs
 selectNothing :: FB.FileInfo -> Bool

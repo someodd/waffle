@@ -1,10 +1,6 @@
 -- TODO: more stuff from UI needs to go in here for clearer separation?
 -- TODO: resource is misnamed. it's "selector string."
 -- TODO: menu and directory seem to be synonymous
--- TODO: handle network problems
--- TODO: implement metadata that is in between ========================== that. also null.host?
--- TODO: left is preferred for errors. There is a reason for this. Read about that in LYAH
--- TODO: content detection. if not diretory then use text mode to display or another mode to download...
 
 -- | Models the Gopher protocol; protocol representation.
 --
@@ -15,7 +11,7 @@
 --   * Gopher (protocol) - Wikipedia
 --     https://en.wikipedia.org/wiki/Gopher_(protocol)
 --   * Gopher+ documentation... FIXME
-module GopherClient
+module Gopher
   ( GopherMenu(GopherMenu)
   -- TODO: GopherLine = RecognizedGopherLine | UnrecognizedGopherLine
   , GopherLine(..)

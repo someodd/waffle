@@ -25,7 +25,7 @@ import           Brick.Widgets.Core             ( viewport
 import           Web.Browser
 
 import           UI.Style
-import           GopherClient
+import           Gopher
 import           UI.Progress
 import           UI.Util
 import           UI.Representation
