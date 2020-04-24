@@ -5,48 +5,22 @@ import           Control.Monad.IO.Class
 
 import qualified Graphics.Vty                  as V
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Center           ( vCenter
-                                                , hCenter
-                                                )
-import           Brick.Widgets.Border           ( borderWithLabel )
-import           Brick.AttrMap                  ( applyAttrMappings )
 import           Brick.Widgets.Core             ( viewport
-                                                , vBox
                                                 , str
-                                                , hLimitPercent
-                                                , withAttr
-                                                , withBorderStyle
-                                                , vLimit
-                                                , updateAttrMap
                                                 )
 import qualified Brick.Main                    as M
 
 import           UI.Util
 import           UI.Progress
 import           UI.Representation
-import           UI.Style
 
--- FIXME: could even put a default view box in Style.hs? maybe DefaultView.hs?
--- FIXME: I want a file title in the title/label
--- | The UI for rendering and viewing a text file.
--- This is also used in the help screen/used by Help module.
 textFileModeUI :: GopherBrowserState -> [T.Widget MyName]
-textFileModeUI gbs = ui
+textFileModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
   where
-    textFileContents = tfContents $ getTextFile gbs
-    textFileTitle = tfTitle $ getTextFile gbs
-    box =
-      updateAttrMap (applyAttrMappings borderMappings)
-        $ withBorderStyle customBorder
-        $ borderWithLabel (withAttr titleAttr $ str textFileTitle)
-        $ viewport MyViewport T.Both
-        $ hLimitPercent 100
-        $ str (clean textFileContents)
-    view = vBox
-      [ box
-      , vLimit 1 $ str "? for help."
-      ]
-    ui = [hCenter $ vCenter view]
+   mainWidget   = let textFileContents = tfContents $ getTextFile gbs
+                  in  str $ clean textFileContents
+   titleWidget  = str $ tfTitle $ getTextFile gbs
+   statusWidget = str "? for help. Text file mode."
 
 -- | Basic text file controls, modularized so that the Help screen can use
 -- too, without including the history stuff. See the Help module.
@@ -56,10 +30,10 @@ basicTextFileEventHandler
   -> T.EventM MyName (T.Next GopherBrowserState)
 basicTextFileEventHandler gbs e = case e of
   -- What about left and right?!
-  V.EvKey (V.KChar 'j') [] -> M.vScrollBy myNameScroll 1 >> M.continue gbs
-  V.EvKey (V.KChar 'k') [] -> M.vScrollBy myNameScroll (-1) >> M.continue gbs
-  V.EvKey (V.KChar 'l') [] -> M.hScrollBy myNameScroll 1 >> M.continue gbs
-  V.EvKey (V.KChar 'h') [] -> M.hScrollBy myNameScroll (-1) >> M.continue gbs
+  V.EvKey (V.KChar 'j') [] -> M.vScrollBy textViewportScroll 1 >> M.continue gbs
+  V.EvKey (V.KChar 'k') [] -> M.vScrollBy textViewportScroll (-1) >> M.continue gbs
+  V.EvKey (V.KChar 'l') [] -> M.hScrollBy textViewportScroll 1 >> M.continue gbs
+  V.EvKey (V.KChar 'h') [] -> M.hScrollBy textViewportScroll (-1) >> M.continue gbs
   _                        -> M.continue gbs
 
 -- | Event handler for a text file location in gopherspace.

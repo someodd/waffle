@@ -37,10 +37,6 @@ data Search = Search { sbQuery :: String
                      , sbEditorState :: EditorState
                      }
 
-data Goto = Goto { gFormerBufferState :: Buffer
-                 , gEditorState :: EditorState
-                 }
-
 data Help = Help { hText :: TextFile
                  , hFormerGbs :: GopherBrowserState
                  }
@@ -66,6 +62,7 @@ data TextFile = TextFile { tfContents :: String
                          , tfTitle :: String
                          }
 
+-- TODO: maybe break down buffer items into separate rep file and make rep subpackage...
 -- | The data from which a UI is rendered.
 data Buffer
   = MenuBuffer Menu
@@ -74,10 +71,6 @@ data Buffer
   | SearchBuffer Search
   | ProgressBuffer Progress
   | HelpBuffer Help
-  | GotoBuffer Goto
-
-getGoto :: GopherBrowserState -> Goto
-getGoto gbs = let (GotoBuffer goto) = gbsBuffer gbs in goto
 
 -- help file should have title "Help" FIXME
 -- Could use with below TODO NOTE
@@ -119,11 +112,6 @@ updateSearchBuffer gbs f =
   let (SearchBuffer sb) = gbsBuffer gbs
   in  gbs { gbsBuffer = SearchBuffer (f sb) }
 
-updateGotoBuffer :: GopherBrowserState -> (Goto -> Goto) -> GopherBrowserState
-updateGotoBuffer gbs f =
-  let (GotoBuffer sb) = gbsBuffer gbs
-  in  gbs { gbsBuffer = GotoBuffer (f sb) }
-
 -- | The line #s which have linkable entries. Used for jumping by number and n and p hotkeys and display stuff.
 -- use get elemIndex to enumerate
 type FocusLines = [Int]
@@ -141,15 +129,29 @@ type History = ([Location], HistoryIndex)
 -- and the BrowserMode used to render it.
 type Location = (String, Int, String, RenderMode)
 
+-- FinalNewStateEvent is used for transition handlers and for sending the new state (like the new page; setting it as the new gbs)
 -- | Carries through the entire state I guess!
 -- think of this right now as a progress event
-newtype CustomEvent = NewStateEvent GopherBrowserState
+data CustomEvent = NewStateEvent GopherBrowserState | FinalNewStateEvent GopherBrowserState
 
+-- FIXME: But what if we don't want a label, widgets, help? maybe there should be different
+-- types of popups!
 data Popup = Popup
   { pLabel :: String
   , pWidgets :: [T.Widget MyName]
   , pHelp :: String
   }
+
+-- Works in conjunction with other modes like GotoMode which handles editing the statusEditor state
+-- and using that to go to a certain URL.
+-- Note that GotoMode isn't necessarily a "rendermode" but an event mode...
+data StatusEditor = StatusEditor { seLabel :: String, seEditorState :: EditorState, seFormerMode :: RenderMode }
+
+isStatusEditing :: GopherBrowserState -> Bool
+isStatusEditing gbs = case gbsStatus gbs of
+  -- Is this pattern even right? FIXME
+  (Just StatusEditor {}) -> True
+  _                      -> False
 
 -- TODO: maybe define an empty gbs?
 -- | The application state for Brick.
@@ -157,12 +159,13 @@ data GopherBrowserState = GopherBrowserState
   { gbsBuffer :: Buffer
   -- | The current location.
   , gbsLocation :: Location
-  , gbsRenderMode :: RenderMode
+  , gbsRenderMode :: RenderMode -- Should just be "gbsMode" and "Mode" FIXME
   -- See: History
   , gbsHistory :: History
   , gbsChan :: Brick.BChan.BChan CustomEvent
   , gbsPopup :: Maybe Popup
   , gbsCache :: Cache
+  , gbsStatus :: Maybe StatusEditor
   }
 
 -- Should this go in Popup.hs? NOTE
@@ -173,12 +176,13 @@ hasPopup gbs = isJust $ gbsPopup gbs
 closePopup :: GopherBrowserState -> GopherBrowserState
 closePopup gbs = gbs { gbsPopup = Nothing }
 
-data MyName = MyViewport | MyWidget
+data MyName = MyViewport | MainViewport | EditorViewport | MyWidget | TextViewport | MenuViewport
   deriving (Show, Eq, Ord)
 
 data EditName = Edit1 deriving (Ord, Show, Eq)
 type EditorState = E.Editor String MyName
 
+-- FIXME: maybe "rendermode" is bad now and should jsut be called "mode"
 -- TODO: maybe rename filebrowsermode to SaveMode or SaveFileMode
 -- | Related to Buffer. Namely exists for History.
 data RenderMode = MenuMode

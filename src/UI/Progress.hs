@@ -1,7 +1,10 @@
+-- FIXME: implement network error dialog boxes here and return state if fail?
+-- this would imply the need to have a fallback state, right?
 -- | Handle indication of download progress for various UI.Util.RenderMode types, like downloading
 -- menus, text files, and binary file downloads.
 module UI.Progress where
 
+import           Data.Foldable
 import           Data.Maybe
 import qualified Data.ByteString               as ByteString
 import           Control.Concurrent             ( forkIO )
@@ -23,9 +26,20 @@ import           UI.Util
 import           UI.Representation
 import           GopherClient
 
+-- FIXME: also used by save.hs
 selectNothing :: FB.FileInfo -> Bool
 selectNothing _ = False
 
+-- FIXME: need to combine vScroll and hScroll into a single event! because otherwise
+-- it's only giving back the event for hScroll!
+-- Things to do when switching modes! Namely reset viewports...
+modeTransition :: T.EventM MyName ()
+modeTransition = do
+  --M.vScrollToBeginning myNameScroll
+  traverse_ M.vScrollToBeginning [myNameScroll, mainViewportScroll, menuViewportScroll, textViewportScroll]
+  traverse_ M.hScrollToBeginning [myNameScroll, mainViewportScroll, menuViewportScroll, textViewportScroll]
+
+-- FIXME: could reset the scroll here...?
 -- | The entrypoint for using "progress mode" which...
 initProgressMode :: GopherBrowserState -> Maybe History -> Location -> IO GopherBrowserState
 initProgressMode gbs history location@(_, _, _, mode) =
@@ -34,6 +48,7 @@ initProgressMode gbs history location@(_, _, _, mode) =
       TextFileMode    -> (progressCacheable, "text file 📄")
       MenuMode        -> (progressCacheable, "menu 📂")
       FileBrowserMode -> (progressDownloadBytes, "binary file")
+      -- This error should be a dialog box instead...
       m -> error $ "Unsupported mode requested for progress mode: " ++ show m
     initialProgGbs = gbs
       { gbsRenderMode = ProgressMode
@@ -45,8 +60,8 @@ initProgressMode gbs history location@(_, _, _, mode) =
                           , pbMessage         = "Downloading a " ++ message
                           }
       }
-  in
-    forkIO (downloader initialProgGbs history location) >> pure initialProgGbs
+  -- Should catch network error in a popup (representational).
+  in forkIO (downloader initialProgGbs history location) >> pure initialProgGbs
 
 addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
 addProgBytes gbs' nbytes =
@@ -120,7 +135,7 @@ doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCa
       m -> error $ "Cannot create a final progress state for: " ++ show m
   -- The final progress event, which changes the state to the render mode specified, using
   -- the GBS created above.
-  Brick.BChan.writeBChan chan (NewStateEvent finalState)
+  Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
   pure ()
   where
    maybeHistory = case history of
@@ -179,7 +194,8 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
                               , fbFormerBufferState = formerBufferState
                               }
           }
-    Brick.BChan.writeBChan chan (NewStateEvent finalState)
+    -- We don't use doFinalEvent, because the file saver (which this is for) works a bit differently!
+    Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
     pure ()
 
 -- | This is for... FIXME
@@ -227,8 +243,10 @@ progressEventHandler
   -> Either (T.BrickEvent MyName CustomEvent) V.Event
   -> T.EventM MyName (T.Next GopherBrowserState)
 progressEventHandler gbs (Left e)  = case e of
-  T.AppEvent (NewStateEvent gbs')  -> M.continue gbs'
-  _                                -> M.continue gbs
+  -- This is extremely hacky!
+  T.AppEvent (NewStateEvent gbs')       -> M.continue gbs'
+  T.AppEvent (FinalNewStateEvent gbs')  -> modeTransition >> M.continue gbs'
+  _                                     -> M.continue gbs
 progressEventHandler gbs (Right _) = M.continue gbs
 
 -- FIXME: this is a hacky way to avoid circular imports

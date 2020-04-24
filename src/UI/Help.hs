@@ -9,13 +9,8 @@ import           Control.Exception
 
 import qualified Graphics.Vty                  as V
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Center           ( center )
-import           Brick.Widgets.Border           ( border )
 import           Brick.Widgets.Core             ( viewport
-                                                , vBox
                                                 , str
-                                                , hLimitPercent
-                                                , vLimitPercent
                                                 )
 import qualified Brick.Main                    as M
 
@@ -23,13 +18,12 @@ import           UI.Util
 import           UI.TextFile
 import           UI.Representation
 
--- | The UI for rendering and viewing a text file.
--- This is also used in the help screen/used by Help module.
 helpModeUI :: GopherBrowserState -> [T.Widget MyName]
-helpModeUI gbs =
-  let textFileContents = getHelpTextFileContents gbs
-      ui = viewport MyViewport T.Both $ vBox [str $ clean textFileContents]
-  in  [center $ border $ hLimitPercent 100 $ vLimitPercent 100 ui]
+helpModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
+  where
+   mainWidget   = str . clean $ getHelpTextFileContents gbs
+   titleWidget  = str "Waffle Help"
+   statusWidget = str "Help mode. Use arrows or hjkl to scroll."
 
 -- | Basic text file controls, modularized so that the Help screen can use
 -- too, without including the history stuff. See the Help module.
