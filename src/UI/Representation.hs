@@ -10,7 +10,7 @@ import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 import           Brick.Widgets.FileBrowser      ( FileBrowser )
 import           Brick.Widgets.Edit            as E
 
-import           GopherClient
+import           Gopher
 
 -- This is used to indicate how many bytes have been downloaded
 -- of a menu or a save a text file etc, anything!

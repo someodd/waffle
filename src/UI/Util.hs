@@ -16,7 +16,7 @@ import           Brick.Widgets.Border          as B
 import           Brick.AttrMap                 as B
 import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 
-import           GopherClient
+import           Gopher
 import           UI.Representation
 import           UI.Popup
 import           UI.Style
