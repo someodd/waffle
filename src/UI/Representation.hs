@@ -147,6 +147,7 @@ data Popup = Popup
 -- Note that GotoMode isn't necessarily a "rendermode" but an event mode...
 data StatusEditor = StatusEditor { seLabel :: String, seEditorState :: EditorState, seFormerMode :: RenderMode }
 
+isStatusEditing :: GopherBrowserState -> Bool
 isStatusEditing gbs = case gbsStatus gbs of
   -- Is this pattern even right? FIXME
   (Just StatusEditor {}) -> True

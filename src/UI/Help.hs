@@ -9,13 +9,8 @@ import           Control.Exception
 
 import qualified Graphics.Vty                  as V
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Center           ( center )
-import           Brick.Widgets.Border           ( border )
 import           Brick.Widgets.Core             ( viewport
-                                                , vBox
                                                 , str
-                                                , hLimitPercent
-                                                , vLimitPercent
                                                 )
 import qualified Brick.Main                    as M
 

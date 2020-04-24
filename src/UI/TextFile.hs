@@ -5,26 +5,14 @@ import           Control.Monad.IO.Class
 
 import qualified Graphics.Vty                  as V
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Center           ( vCenter
-                                                , hCenter
-                                                )
-import           Brick.Widgets.Border           ( borderWithLabel )
-import           Brick.AttrMap                  ( applyAttrMappings )
 import           Brick.Widgets.Core             ( viewport
-                                                , vBox
                                                 , str
-                                                , hLimitPercent
-                                                , withAttr
-                                                , withBorderStyle
-                                                , vLimit
-                                                , updateAttrMap
                                                 )
 import qualified Brick.Main                    as M
 
 import           UI.Util
 import           UI.Progress
 import           UI.Representation
-import           UI.Style
 
 textFileModeUI :: GopherBrowserState -> [T.Widget MyName]
 textFileModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget

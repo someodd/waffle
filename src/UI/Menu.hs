@@ -14,24 +14,13 @@ import qualified Graphics.Vty                  as V
 import qualified Brick.Main                    as M
 import qualified Brick.Widgets.List            as L
 import           Lens.Micro                     ( (^.) )
-import           Brick.Widgets.Border           ( borderWithLabel )
-import           Brick.AttrMap                  ( applyAttrMappings )
 import qualified Brick.Widgets.List            as BrickList
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Center           ( vCenter
-                                                , hCenter
-                                                , centerLayer
-                                                )
 import           Brick.Widgets.Edit            as E
 import           Brick.Widgets.Core             ( viewport
                                                 , str
                                                 , withAttr
-                                                , withBorderStyle
-                                                , vBox
-                                                , vLimit
-                                                , hLimitPercent
                                                 , (<+>)
-                                                , updateAttrMap
                                                 )
 import           Web.Browser
 
@@ -40,7 +29,6 @@ import           GopherClient
 import           UI.Progress
 import           UI.Util
 import           UI.Representation
-import           UI.Popup
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
 selectedMenuLine gbs =
@@ -177,9 +165,6 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
         _ -> withAttr genericTypeAttr $ str $ "[" ++ show nct ++ "] "
     -- it's a malformed line
     (Right _) -> str ""
-
-myWidgetScroll :: M.ViewportScroll MyName
-myWidgetScroll = M.viewportScroll MyWidget
 
 -- | Describe the currently selected line in the menu/map.
 lineInfoPopup :: GopherBrowserState -> GopherBrowserState
