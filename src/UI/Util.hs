@@ -2,17 +2,64 @@
 -- soon/later.
 module UI.Util where
 
-import qualified Brick.BChan
+import           Data.Maybe
 import qualified Data.Vector                   as Vector
 import qualified Data.Map                      as Map
 
-import           Brick.Main                     ( ViewportScroll
-                                                , viewportScroll
-                                                )
+import qualified Brick.Widgets.Edit            as B
+import qualified Brick.BChan                   as B
+import qualified Brick.Main                    as B
+import qualified Brick.Types                   as B
+import           Brick.Widgets.Center          as B
+import           Brick.Widgets.Core            as B
+import           Brick.Widgets.Border          as B
+import           Brick.AttrMap                 as B
 import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 
 import           GopherClient
 import           UI.Representation
+import           UI.Popup
+import           UI.Style
+
+makePopupWidget :: GopherBrowserState -> B.Widget MyName
+makePopupWidget gbs = 
+  B.centerLayer $ head $ popup (pLabel .fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
+
+-- FIXME: okay so this is nice and all but how will we handle editor input once activated? how do we tell it's activated?
+-- FIXME: poppys and statusWidget both relevant!
+-- I need a better name for this, but basically it's the default view you see
+-- for everything! There are only a few exceptions.
+--defaultBrowserUI :: GopherBrowserState -> B.Viewport -> B.Widget MyName -> B.Widget MyName -> B.Widget MyName -> [B.Widget MyName]
+defaultBrowserUI ::
+  GopherBrowserState
+  -> (B.Widget n -> B.Widget MyName)
+  -> B.Widget MyName
+  -> B.Widget n
+  -> B.Widget MyName
+  -> [B.Widget MyName]
+defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePopupWidget gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
+ where
+  box =
+    updateAttrMap (B.applyAttrMappings borderMappings)
+      $ withBorderStyle customBorder
+      $ B.borderWithLabel (withAttr titleAttr titleWidget)
+      $ mainViewport
+      $ hLimitPercent 100 mainWidget
+  -- Maybe statusWidget should be Maybe so can override?
+  status =
+    if isStatusEditing gbs then
+      let editWidget      = withAttr inputFieldAttr $ B.renderEditor (str . unlines) True (seEditorState $ fromJust $ gbsStatus gbs)
+          editLabelWidget = str (seLabel $ fromJust $ gbsStatus gbs)
+      in editLabelWidget <+> editWidget
+    else
+      statusWidget
+  view = vBox
+    [ box
+    -- This needs to be better... it needs to detect the status mode and then construct the widget for either...?
+    , vLimit 1 status
+    -- TODO: status should work like popup. including edit Maybe and put this in represent
+    -- Maybe have an Either status widget where it's either display status or edit field
+    ]
 
 -- WRONG TYPE, MAYBE IS NECESSARY
 cacheLookup :: Location -> Cache -> Maybe FilePath
@@ -41,7 +88,7 @@ locationAsString (host, port, resource, mode) =
 -- necessary parts that must be carried over, like History and
 -- Cache.
 newStateForMenu
-  :: Brick.BChan.BChan CustomEvent
+  :: B.BChan CustomEvent
   -> GopherMenu
   -> Location
   -> History
@@ -50,13 +97,14 @@ newStateForMenu
 newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserState
   { gbsBuffer     =
     MenuBuffer
-      $ Menu (gm, BrickList.list MyViewport glsVector 1, mkFocusLinesIndex gm)
+      $ Menu (gm, BrickList.list MyWidget glsVector 1, mkFocusLinesIndex gm)
   , gbsLocation   = location
   , gbsHistory    = history
   , gbsRenderMode = MenuMode
   , gbsChan       = chan
   , gbsPopup      = Nothing
   , gbsCache      = cache-- FIXME: should I be updating this?
+  , gbsStatus     = Nothing
   }
  where
   glsVector = Vector.fromList $ map lineShow ls
@@ -86,5 +134,14 @@ clean = replaceTabs . replaceReturns
   replaceTabs    = map (\x -> if x == '\t' then ' ' else x)
   replaceReturns = map (\x -> if x == '\r' then ' ' else x)
 
-myNameScroll :: ViewportScroll MyName
-myNameScroll = viewportScroll MyViewport
+myNameScroll :: B.ViewportScroll MyName
+myNameScroll = B.viewportScroll MyViewport
+
+mainViewportScroll :: B.ViewportScroll MyName
+mainViewportScroll = B.viewportScroll MainViewport
+
+menuViewportScroll :: B.ViewportScroll MyName
+menuViewportScroll = B.viewportScroll MenuViewport
+
+textViewportScroll :: B.ViewportScroll MyName
+textViewportScroll = B.viewportScroll TextViewport

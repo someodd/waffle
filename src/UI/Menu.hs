@@ -14,32 +14,21 @@ import qualified Graphics.Vty                  as V
 import qualified Brick.Main                    as M
 import qualified Brick.Widgets.List            as L
 import           Lens.Micro                     ( (^.) )
-import           Brick.Widgets.Border           ( borderWithLabel )
-import           Brick.AttrMap                  ( applyAttrMappings )
 import qualified Brick.Widgets.List            as BrickList
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Center           ( vCenter
-                                                , hCenter
-                                                , centerLayer
-                                                )
 import           Brick.Widgets.Edit            as E
 import           Brick.Widgets.Core             ( viewport
                                                 , str
                                                 , withAttr
-                                                , withBorderStyle
-                                                , vBox
-                                                , vLimit
-                                                , hLimitPercent
                                                 , (<+>)
-                                                , updateAttrMap
                                                 )
 import           Web.Browser
 
 import           UI.Style
 import           GopherClient
 import           UI.Progress
+import           UI.Util
 import           UI.Representation
-import           UI.Popup
 
 selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
 selectedMenuLine gbs =
@@ -112,32 +101,20 @@ newStateFromSelectedMenuItem gbs = case lineType of
     -- Unrecognized line
     (Right _ ) -> error "Can't do anything with unrecognized line."
 
--- | The UI for rendering and viewing a menu.
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
-menuModeUI gbs = [poppy gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
- where
-  poppy gbs' = centerLayer $ head $ popup (pLabel .fromJust $ gbsPopup gbs') (pWidgets . fromJust $ gbsPopup gbs') (pHelp . fromJust $ gbsPopup gbs')
-  (Menu (_, l, _))          = getMenu gbs
-  label                     = str " Item " <+> cur <+> str " of " <+> total -- TODO: should be renamed
-  (host, port, resource, _) = gbsLocation gbs
-  title = " " ++ host ++ ":" ++ show port ++ if not $ List.null resource
-    then " (" ++ resource ++ ") "
-    else " "
-  cur = case l ^. BrickList.listSelectedL of
-    Nothing -> str "-"
-    Just i  -> str (show (i + 1))
-  total = str $ show $ Vector.length $ l ^. BrickList.listElementsL
-  box =
-    updateAttrMap (applyAttrMappings borderMappings)
-      $ withBorderStyle customBorder
-      $ borderWithLabel (withAttr titleAttr $ str title)
-      $ viewport MyWidget T.Horizontal
-      $ hLimitPercent 100
-      $ BrickList.renderListWithIndex (listDrawElement gbs) True l
-  view = vBox
-    [ box
-    , vLimit 1 $ str "? for help. " <+> label
-    ]
+menuModeUI gbs = defaultBrowserUI gbs (viewport MenuViewport T.Horizontal) titleWidget mainWidget statusWidget
+  where
+   (Menu (_, l, _)) = getMenu gbs
+   titleWidget =
+     let (host, port, resource, _) = gbsLocation gbs
+     in str $ " " ++ host ++ ":" ++ show port ++ if not $ List.null resource then " (" ++ resource ++ ") " else " "
+   statusWidget =
+     let cur              = case l ^. BrickList.listSelectedL of
+                              Nothing -> str "-"
+                              Just i  -> str (show (i + 1))
+         total            = str $ show $ Vector.length $ l ^. BrickList.listElementsL
+     in  str "? for help. Menu mode. " <+> str "Item " <+> cur <+> str " of " <+> total
+   mainWidget = BrickList.renderListWithIndex (listDrawElement gbs) True l
 
 -- FIXME: this is messy! unoptimized!
 listDrawElement
@@ -189,9 +166,6 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
     -- it's a malformed line
     (Right _) -> str ""
 
-myWidgetScroll :: M.ViewportScroll MyName
-myWidgetScroll = M.viewportScroll MyWidget
-
 -- | Describe the currently selected line in the menu/map.
 lineInfoPopup :: GopherBrowserState -> GopherBrowserState
 lineInfoPopup gbs =
@@ -216,8 +190,8 @@ menuEventHandler gbs e
       V.EvKey (V.KChar 'i') [] -> M.continue $ lineInfoPopup gbs
       V.EvKey V.KEnter [] ->
         liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
-      V.EvKey (V.KChar 'l') [] -> M.hScrollBy myWidgetScroll 1 >> M.continue gbs
-      V.EvKey (V.KChar 'h') [] -> M.hScrollBy myWidgetScroll (-1) >> M.continue gbs
+      V.EvKey (V.KChar 'l') [] -> M.hScrollBy menuViewportScroll 1 >> M.continue gbs
+      V.EvKey (V.KChar 'h') [] -> M.hScrollBy menuViewportScroll (-1) >> M.continue gbs
       V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
       V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
       V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue

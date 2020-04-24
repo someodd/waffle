@@ -36,14 +36,16 @@ import           UI.Goto
 --
 -- Used as Brick.Main.appDraw when constructing the Brick app.
 drawUI :: GopherBrowserState -> [B.Widget MyName]
-drawUI gbs = case gbsRenderMode gbs of
-  MenuMode        -> menuModeUI gbs
-  TextFileMode    -> textFileModeUI gbs
-  HelpMode        -> helpModeUI gbs
-  FileBrowserMode -> fileBrowserUi gbs
-  SearchMode      -> searchInputUI gbs
-  ProgressMode    -> drawProgressUI gbs
-  GotoMode        -> gotoInputUI gbs
+drawUI gbs = modeUI $ gbsRenderMode gbs
+  where
+   modeUI mode = case mode of
+     MenuMode        -> menuModeUI gbs
+     TextFileMode    -> textFileModeUI gbs
+     HelpMode        -> helpModeUI gbs
+     FileBrowserMode -> fileBrowserUi gbs
+     SearchMode      -> searchInputUI gbs
+     ProgressMode    -> drawProgressUI gbs
+     GotoMode        -> modeUI (seFormerMode $ fromJust $ gbsStatus gbs)
 
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
 -- some cases where we don't want history available
@@ -59,6 +61,7 @@ appEvent
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt gbs
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'g') [V.MCtrl])) =
   B.continue $ initGotoMode gbs
+-- TODO: needs to reset viewport
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '?') [])) =
   liftIO (modifyGbsForHelp gbs) >>= B.continue
 -- FIXME: this could be easily fixed just by doing appEvent gbs e instead of vtyevent
@@ -74,6 +77,9 @@ appEvent gbs (B.VtyEvent e)
   | gbsRenderMode gbs == SearchMode      = searchEventHandler gbs e
   | gbsRenderMode gbs == GotoMode        = gotoEventHandler gbs e
   -- FIXME: two separate ones because of the way we pass events and pattern match
+  -- i.e., one for vtyhandler and one for the custom app events, which we should
+  -- soon conflate by not matching specifically for VtyEvent (thus passing all events
+  -- to the appropriate mode's handler)
   | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs (Right e)
   |
     otherwise                            = error $ "Unrecognized mode in event: " ++ show (gbsRenderMode gbs)
@@ -111,6 +117,7 @@ uiMain possibleLocation = do
     , gbsChan = eventChan
     , gbsPopup = Nothing
     , gbsCache = emptyCache
+    , gbsStatus = Nothing
     }
 
   initialState <- if null possibleLocation then
