@@ -3,7 +3,6 @@
 module UI.Save where
 
 import           Control.Monad.IO.Class
-import qualified Data.ByteString               as ByteString
 import qualified Data.Text                     as Text
 import           Control.Exception              ( displayException )
 
@@ -15,7 +14,6 @@ import           Brick.Widgets.Center           ( center
                                                 , hCenter
                                                 )
 import           Brick.Widgets.Border           ( borderWithLabel )
-import           System.FilePath                ( takeFileName )
 import           Brick.Widgets.Core             ( vLimitPercent
                                                 , hLimitPercent
                                                 , (<=>)
@@ -27,33 +25,8 @@ import           Brick.Widgets.Core             ( vLimitPercent
                                                 , withDefAttr
                                                 )
 
-import           GopherClient                   ( downloadGet )
 import           UI.Style
 import           UI.Representation
-
-downloadState
-  :: GopherBrowserState -> String -> Int -> String -> IO GopherBrowserState
-downloadState gbs host port resource = do
-  o <- downloadGet host (show port) resource
-  --BS.writeFile "usefilechoserhere" o >> pure gbs-- XXX FIXME
-  x <- FB.newFileBrowser selectNothing MyViewport Nothing
-  pure $ gbs
-    { gbsRenderMode = FileBrowserMode
-    , gbsBuffer     = FileBrowserBuffer $ SaveBrowser
-                        { fbFileBrowser       = x
-                                                  -- should be move FIXME
-                        , fbCallBack          = (`ByteString.writeFile` o)
-                        , fbIsNamingFile      = False
-                        , fbFileOutPath       = ""
-                        , fbOriginalFileName  = takeFileName resource
-                        , fbFormerBufferState = gbsBuffer gbs
-                        }
-    }
- where
-    -- | This is for FileBrowser, because we don't want to overwrite anything,
-    -- we want to browse through directories and then enter in a file name.
-  selectNothing :: FB.FileInfo -> Bool
-  selectNothing _ = False
 
 -- FIXME, TODO: document the features in handleFileBrowserEvent!
 -- FIXME: only need to return GopherBrowserState actually
