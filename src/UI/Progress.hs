@@ -4,6 +4,7 @@
 -- menus, text files, and binary file downloads.
 module UI.Progress where
 
+import           Data.Foldable
 import           Data.Maybe
 import qualified Data.ByteString               as ByteString
 import           Control.Concurrent             ( forkIO )
@@ -22,12 +23,22 @@ import qualified Data.ByteString.UTF8          as U8
 import qualified Graphics.Vty                  as V
 
 import           UI.Util
+import           UI.Save
 import           UI.Representation
 import           GopherClient
 
+-- FIXME: also used by save.hs
 selectNothing :: FB.FileInfo -> Bool
 selectNothing _ = False
 
+-- FIXME: can't you just iterate over algebraic data type's values?
+-- Things to do when switching modes! Namely reset viewports...
+modeTransition = do
+  --M.vScrollToBeginning myNameScroll
+  traverse_ M.vScrollToBeginning [myNameScroll, mainViewportScroll, menuViewportScroll, textViewportScroll]
+  traverse_ M.hScrollToBeginning [myNameScroll, mainViewportScroll, menuViewportScroll, textViewportScroll]
+
+-- FIXME: could reset the scroll here...?
 -- | The entrypoint for using "progress mode" which...
 initProgressMode :: GopherBrowserState -> Maybe History -> Location -> IO GopherBrowserState
 initProgressMode gbs history location@(_, _, _, mode) =
@@ -48,9 +59,8 @@ initProgressMode gbs history location@(_, _, _, mode) =
                           , pbMessage         = "Downloading a " ++ message
                           }
       }
-  in
-    -- Should catch network error in a popup (representational).
-    forkIO (downloader initialProgGbs history location) >> pure initialProgGbs
+  -- Should catch network error in a popup (representational).
+  in forkIO (downloader initialProgGbs history location) >> pure initialProgGbs
 
 addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
 addProgBytes gbs' nbytes =
@@ -231,7 +241,8 @@ progressEventHandler
   -> Either (T.BrickEvent MyName CustomEvent) V.Event
   -> T.EventM MyName (T.Next GopherBrowserState)
 progressEventHandler gbs (Left e)  = case e of
-  T.AppEvent (NewStateEvent gbs')  -> M.continue gbs'
+  -- This is extremely hacky!
+  T.AppEvent (NewStateEvent gbs')  -> modeTransition >> M.continue gbs'
   _                                -> M.continue gbs
 progressEventHandler gbs (Right _) = M.continue gbs
 
