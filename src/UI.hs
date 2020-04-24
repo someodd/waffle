@@ -12,6 +12,7 @@ module UI
 where
 
 
+import           Data.Foldable
 import           Data.Maybe
 import           Control.Monad.IO.Class
 import           Control.Monad                  ( void )
@@ -35,6 +36,7 @@ import           UI.Help
 import           UI.Popup
 import           UI.Representation
 import           UI.Goto
+import           UI.Util
 
 -- | The draw handler which will choose a UI based on the browser's mode.
 -- | Picks a UI/draw function based on the current gbsRenderMode.
@@ -66,6 +68,7 @@ appEvent
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt gbs
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'g') [V.MCtrl])) =
   B.continue $ initGotoMode gbs
+-- TODO: needs to reset viewport
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '?') [])) =
   liftIO (modifyGbsForHelp gbs) >>= B.continue
 -- FIXME: this could be easily fixed just by doing appEvent gbs e instead of vtyevent
