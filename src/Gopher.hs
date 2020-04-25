@@ -13,9 +13,8 @@
 --   * Gopher+ documentation... FIXME
 module Gopher
   ( GopherMenu(GopherMenu)
-  -- TODO: GopherLine = RecognizedGopherLine | UnrecognizedGopherLine
-  , GopherLine(..)
-  , MalformedGopherLine
+  , RecognizedGopherLine(..)
+  , UnrecognizedGopherLine
   , isInfoMsg
   -- TODO: GopherItemType = GopherNonCanonicalItemType | GopherCanonicalItemType
   -- and then explain:
@@ -93,16 +92,15 @@ data GopherNonCanonicalItemType =
   -- ^ Sound file (especially the WAV format).
   deriving (Eq, Show)
 
--- NOTE: maybe GopherLine should have wo constructors: RecognizedGopherLine and
--- UnrecognizedGopherLine to do away with the Either everywhere...
--- | Representation of a line in a GopherMenu.
+-- | Representation of a recognized (something I can interpret; formatted as expected)
+-- line in a GopherMenu.
 --
 -- A Gopher protocol item/line is defined with tab-delimitated fields. This
 -- abstraction makes it easier to handle said lines. The line itself will look
 -- something like this (where 'F' is a tab):
 --
 --    1Display stringFselector stringFhostFportFextrastuff\CRLF
-data GopherLine = GopherLine
+data RecognizedGopherLine = RecognizedGopherLine
   { glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
   -- ^ The first character on each line tells you whether the line/item
   -- describes a document, directory, or search device. AKA "definition."
@@ -125,22 +123,25 @@ data GopherLine = GopherLine
   -- Gopher Protocol specification.
   }
 
--- NOTE: for name, Malformed or Unrecognized?
 -- | Representation of a line in a GopherMenu which is either of an unrecognized
--- type or is simply not formatted correctly.
-newtype MalformedGopherLine = MalformedGopherLine
+-- type or is simply not formatted correctly/malformed.
+--
+-- If it's not a RecognizedGopherLine then it's this.
+newtype UnrecognizedGopherLine = UnrecognizedGopherLine
   { mglFields :: [String]
   }
 
+-- data GopherLine = RecognizedGopherLine | UnrecognizedGopherLine
+
 -- | The way a GopherLine is displayed (string) after being parsed, namely used by the UI
-instance Show GopherLine where
+instance Show RecognizedGopherLine where
   show x = indent x ++ glDisplayString x
    where
     indent l =
       if glType l == Right InformationalMessage then "          " else ""
 
 -- | Displaying a malformed Gopher line (string) after being parsed, namely used by the UI
-instance Show MalformedGopherLine where
+instance Show UnrecognizedGopherLine where
   show x = "    " ++ show (mglFields x)--FIXME: might this not error? add "ERROR" to end?
 
 -- | Take the character from a menu line delivered from a Gopher server and give
@@ -173,7 +174,7 @@ charToItemType 'i' = Just $ Right InformationalMessage
 charToItemType 's' = Just $ Right SoundFile
 charToItemType _   = Nothing
 
-showAddressPlus :: GopherLine -> String
+showAddressPlus :: RecognizedGopherLine -> String
 showAddressPlus gl =
   glHost gl ++ ":" ++ show (glPort gl) ++ " " ++ glSelector gl ++ " " ++ show (glGopherPlus gl)
 
@@ -221,7 +222,7 @@ explainNonCanonicalType SoundFile = "Sound file (especially the WAV format)."
 -- TODO: explainanytype?
 -- | Explain a Gopher line/menu item type, either canonical (RFC 1436) or non canonical.
 explainType
-  :: GopherLine -> String
+  :: RecognizedGopherLine -> String
 explainType gopherLine = case glType gopherLine of
   Left  canonType    -> explainCanonicalType canonType ++ " " ++ showAddressPlus gopherLine
   Right nonCanonType -> explainNonCanonicalType nonCanonType ++ " " ++ showAddressPlus gopherLine
@@ -229,7 +230,7 @@ explainType gopherLine = case glType gopherLine of
 -- TODO/FIXME: better haddock string, use REPL example too?
 -- | Describe any line from a Gopher menu.
 explainLine
-  :: Either GopherLine MalformedGopherLine -> String
+  :: Either RecognizedGopherLine UnrecognizedGopherLine -> String
 explainLine (Left gopherLine) = explainType gopherLine
 explainLine (Right malformedGopherLine) = "Malformed, unrecognized, or incorrectly parsed. " ++ show (mglFields malformedGopherLine)
 
@@ -247,25 +248,25 @@ makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
 
   -- NOTE: this pattern match works well because everything after port gets lumped
   -- into a list of Gopher+ fields. Otherwise, it'll just be an empty list!
-  makeGopherLine :: [String] -> Either GopherLine MalformedGopherLine
+  makeGopherLine :: [String] -> Either RecognizedGopherLine UnrecognizedGopherLine
   makeGopherLine allFields@(typeCharAndDisplayString : selector : host : port : gopherPlus)
     = do
       let typeChar      = head $ take 1 typeCharAndDisplayString-- NOTE: Seems a hacky way to string to char...
       let displayString = drop 1 typeCharAndDisplayString
       case charToItemType typeChar of
-        Just x -> Left $ GopherLine { glType          = x
-                                    , glDisplayString = displayString
-                                    , glSelector      = selector
-                                    , glHost          = host
-                                    , glPort          = read port--FIXME: what if this fails to int?
-                                    , glGopherPlus    = gopherPlus
-                                    }
-        Nothing -> Right $ MalformedGopherLine { mglFields = allFields }
+        Just x -> Left $ RecognizedGopherLine { glType          = x
+                                              , glDisplayString = displayString
+                                              , glSelector      = selector
+                                              , glHost          = host
+                                              , glPort          = read port--FIXME: what if this fails to int?
+                                              , glGopherPlus    = gopherPlus
+                                              }
+        Nothing -> Right $ UnrecognizedGopherLine { mglFields = allFields }
   makeGopherLine malformed =
-    Right $ MalformedGopherLine { mglFields = malformed }
+    Right $ UnrecognizedGopherLine { mglFields = malformed }
 
--- | Representation of Gopher menus: a list of Malformed/GopherLines.
-newtype GopherMenu = GopherMenu [Either GopherLine MalformedGopherLine]
+-- | Representation of Gopher menus: a list of GopherLines.
+newtype GopherMenu = GopherMenu [Either RecognizedGopherLine UnrecognizedGopherLine]
 
 -- | Easily represent a GopherMenu as a string, formatted as it might be rendered.
 instance Show GopherMenu where
@@ -278,15 +279,15 @@ instance Show GopherMenu where
     gopherLineShow (Right x) = show x ++ "(MALFORMED LINE)"-- Does this have potential to break?
 
 -- | Detect if a Gopher menu line is of the noncanonical "info message" type.
-isInfoMsg :: Either GopherLine MalformedGopherLine -> Bool
+isInfoMsg :: Either RecognizedGopherLine UnrecognizedGopherLine -> Bool
 isInfoMsg line = case line of
-  -- It's a GopherLine
+  -- It's a RecognizedGopherLine
   (Left gl) -> case glType gl of
     -- Canonical type
     (Left  _  ) -> False
     -- Noncanonical type
     (Right nct) -> nct == InformationalMessage
-  -- It's a MalformedGopherLine
+  -- It's an UnrecognizedGopherLine
   (Right _) -> False
 
 -- TODO: I don't like that this removes the leading / from some paths, like in the
@@ -326,5 +327,5 @@ searchSelector resource query =
   if null resource then query else resource ++ "\t" ++ query
 
 -- | Get the nth line from a GopherMenu.
-menuLine :: GopherMenu -> Int -> Either GopherLine MalformedGopherLine
+menuLine :: GopherMenu -> Int -> Either RecognizedGopherLine UnrecognizedGopherLine
 menuLine (GopherMenu ls) indx = ls !! indx

@@ -30,7 +30,7 @@ import           UI.Progress
 import           UI.Util
 import           UI.Representation
 
-selectedMenuLine :: GopherBrowserState -> Either GopherLine MalformedGopherLine
+selectedMenuLine :: GopherBrowserState -> Either RecognizedGopherLine UnrecognizedGopherLine
 selectedMenuLine gbs =
   -- given the scope of this function, i believe this error message is not horribly accurate in all cases where it might be used
   let
@@ -96,7 +96,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
     _        -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
  where
   (host, port, resource, lineType) = case selectedMenuLine gbs of
-    -- GopherLine
+    -- RecognizedGopherLine
     (Left  gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
     -- Unrecognized line
     (Right _ ) -> error "Can't do anything with unrecognized line."
@@ -147,7 +147,7 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
     else str ""
     where numberPad = (replicate (biggestIndexDigits - curIndexDigits) ' ' ++)
 
-  lineDescriptorWidget :: Either GopherLine MalformedGopherLine -> T.Widget n
+  lineDescriptorWidget :: Either RecognizedGopherLine UnrecognizedGopherLine -> T.Widget n
   lineDescriptorWidget line = case line of
     -- it's a gopherline
     (Left gl) -> case glType gl of
@@ -163,7 +163,7 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
         InformationalMessage -> str $ replicate (biggestIndexDigits + 2) ' '
         HtmlFile -> withAttr directoryAttr $ str "🌐 [HTMLFile] "
         _ -> withAttr genericTypeAttr $ str $ "[" ++ show nct ++ "] "
-    -- it's a malformed line
+    -- it's a malformed/unrecognized line
     (Right _) -> str ""
 
 -- | Describe the currently selected line in the menu/map.

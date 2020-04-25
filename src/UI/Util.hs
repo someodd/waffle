@@ -112,7 +112,7 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
     map fst $ filter (not . isInfoMsg . snd) (zip [0 ..] m)
 
   -- | Used for filling up a list with display strings.
-  lineShow :: Either GopherLine MalformedGopherLine -> String
+  lineShow :: Either RecognizedGopherLine UnrecognizedGopherLine -> String
   lineShow line = case line of
     -- It's a GopherLine
     (Left gl) -> case glType gl of
