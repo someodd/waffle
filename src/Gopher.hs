@@ -1,15 +1,23 @@
 -- TODO: more stuff from UI needs to go in here for clearer separation?
 -- TODO: resource is misnamed. it's "selector string."
 -- TODO: menu and directory seem to be synonymous
+-- TODO: GopherItemType = GopherNonCanonicalItemType | GopherCanonicalItemType
+-- and then explain:
+--
+-- RFC 1436 states "The client software decides what items are available by looking at
+-- the first character of each line in a directory listing."
 
--- | Models the Gopher protocol; protocol representation.
+-- | Models the Gopher protocol; protocol representation, as per RFC 1436, with
+-- some leniency for noncanonical features.
+--
+-- Currently no support for Gopher+.
 --
 -- Mostly handles parsing Gopher menus from text to representations/types. A Gopher
 -- menu in its raw form is essentially just tab-delimited text, where each row is a
--- "menu item." These menu lines are represented by MenuLine in two forms: Parsed
--- and Unparseable. Sometimes you come across rows that are malformed for one reason
+-- "menu item." These menu lines are represented by 'MenuLine' in two forms: 'Parsed'
+-- and 'Unparseable'. Sometimes you come across rows that are malformed for one reason
 -- or another, or they have some custom implementation, so it's better just to display
--- the Unparseable lines as-is and render the Parsed (recognized) lines as
+-- the 'Unparseable' lines as-is and render the 'Parsed' (recognized) lines as
 -- expected.
 --
 -- I found these resources very useful in implementing the models herein:
@@ -18,20 +26,19 @@
 --     https://tools.ietf.org/html/rfc1436
 --   * Gopher (protocol) - Wikipedia
 --     https://en.wikipedia.org/wiki/Gopher_(protocol)
---   * Gopher+ documentation... FIXME
+--   * Gopher+ - Wikipedia
+--     https://en.wikipedia.org/wiki/Gopher%2B
 module Gopher
-  ( GopherMenu(GopherMenu)
+  (
+  -- * Models for Gopher menus
+    GopherMenu(GopherMenu)
   , MenuLine(..)
   , ParsedLine(..)
   , UnparseableLine
-  , isInfoMsg
-  -- TODO: GopherItemType = GopherNonCanonicalItemType | GopherCanonicalItemType
-  -- and then explain:
-  --
-  -- RFC 1436 states "The client software decides what items are available by looking at
-  -- the first character of each line in a directory listing."
   , GopherNonCanonicalItemType(..)
   , GopherCanonicalItemType(..)
+  -- * Utilities for Gopher menu models
+  , isInfoMsg
   , makeGopherMenu
   , parentDirectory
   , searchSelector
@@ -104,13 +111,13 @@ data GopherNonCanonicalItemType =
 
 -- TODO, FIXME: change the gl prefix
 -- | Representation of a recognized (something I can interpret; formatted as expected)
--- line in a GopherMenu.
+-- line in a 'GopherMenu'.
 --
 -- A Gopher protocol item/line is defined with tab-delimitated fields. This
 -- abstraction makes it easier to handle said lines. The line itself will look
 -- something like this (where 'F' is a tab):
 --
---    1Display stringFselector stringFhostFportFextrastuff\CRLF
+-- > 1Display stringFselector stringFhostFportFextrastuff\CRLF
 data ParsedLine = ParsedLine
   -- TODO: I want to just make a MenuItemType = CanonicalItemType | NonCanonicalItemType
   { glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
@@ -142,11 +149,10 @@ data ParsedLine = ParsedLine
 -- If it's not a ParsedLine then it's this.
 newtype UnparseableLine = UnparseableLine [String]
 
+-- | A line in a 'GopherMenu'.
 data MenuLine = Parsed ParsedLine | Unparseable UnparseableLine
 
--- data GopherLine = ParsedLine | UnparseableLine
-
--- | The way a GopherLine is displayed (string) after being parsed, namely used by the UI
+-- | The way a ParsedLine is displayed (string) after being parsed, namely used by the UI
 instance Show ParsedLine where
   show x = indent x ++ glDisplayString x
    where
@@ -251,7 +257,7 @@ explainLine (Parsed parsedLine)        = explainType parsedLine
 explainLine (Unparseable unparsedLine) =
   "Malformed, unrecognized, or incorrectly parsed. " ++ show unparsedLine
 
--- | Parse a Gopher-menu-formatted String into a GopherMenu representation.
+-- | Parse a Gopher-menu-formatted String into a 'GopherMenu' representation.
 makeGopherMenu :: String -> GopherMenu
 makeGopherMenu rawString = GopherMenu $ map makeMenuLine rowsOfFields
  where
@@ -297,7 +303,7 @@ makeGopherMenu rawString = GopherMenu $ map makeMenuLine rowsOfFields
   -- We do not have all of the necessary fields to create a ParsedLine...
   parseMenuLine _ = Nothing
 
--- | Representation of Gopher menus: a list of GopherLines.
+-- | Representation of Gopher menus: a list of 'MenuLine's.
 newtype GopherMenu = GopherMenu [MenuLine]
 
 -- | Easily represent a GopherMenu as a string, formatted as it might be rendered.
@@ -310,7 +316,7 @@ instance Show GopherMenu where
     -- is malformed line
     gopherLineShow (Unparseable unparsedLine) = show unparsedLine ++ "(MALFORMED LINE)"-- NOTE: Does this have potential to break?
 
--- | Detect if a Gopher menu line is of the noncanonical "info message" type.
+-- | Detect if a Gopher menu line is of the noncanonical 'InformationalMessage' type.
 isInfoMsg :: MenuLine -> Bool
 isInfoMsg line = case line of
   -- It's a ParsedLine
@@ -328,10 +334,10 @@ isInfoMsg line = case line of
 -- for the parent directory/menu of the supplied selector, if possible
 -- (may already be at root).
 --
--- >> parentDirectory "/"
+-- >>> parentDirectory "/"
 -- Nothing
 --
--- >> parentDirectory ""
+-- >>> parentDirectory ""
 -- Nothing
 --
 -- >> parentDirectory "/foo/bar/hello/world"
@@ -358,6 +364,6 @@ searchSelector resource query =
   -- as seen in the REPL example, would it?
   if null resource then query else resource ++ "\t" ++ query
 
--- | Get the nth line from a GopherMenu.
+-- | Get the nth line from a 'GopherMenu'.
 menuLine :: GopherMenu -> Int -> MenuLine
 menuLine (GopherMenu ls) indx = ls !! indx
