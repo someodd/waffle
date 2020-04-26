@@ -10,15 +10,9 @@
 -- | Models the Gopher protocol; protocol representation, as per RFC 1436, with
 -- some leniency for noncanonical features.
 --
--- Currently no support for Gopher+.
+-- Mostly handles parsing Gopher menus from text to representations/types.
 --
--- Mostly handles parsing Gopher menus from text to representations/types. A Gopher
--- menu in its raw form is essentially just tab-delimited text, where each row is a
--- "menu item." These menu lines are represented by 'MenuLine' in two forms: 'Parsed'
--- and 'Unparseable'. Sometimes you come across rows that are malformed for one reason
--- or another, or they have some custom implementation, so it's better just to display
--- the 'Unparseable' lines as-is and render the 'Parsed' (recognized) lines as
--- expected.
+-- Currently no support for Gopher+.
 --
 -- I found these resources very useful in implementing the models herein:
 --
@@ -31,13 +25,14 @@
 module Gopher
   (
   -- * Models for Gopher menus
+  -- $gopherMenus
     GopherMenu(GopherMenu)
   , MenuLine(..)
   , ParsedLine(..)
   , UnparseableLine
   , GopherNonCanonicalItemType(..)
   , GopherCanonicalItemType(..)
-  -- * Utilities for Gopher menu models
+  -- ** Utilities for Gopher menu models
   , isInfoMsg
   , makeGopherMenu
   , parentDirectory
@@ -367,3 +362,16 @@ searchSelector resource query =
 -- | Get the nth line from a 'GopherMenu'.
 menuLine :: GopherMenu -> Int -> MenuLine
 menuLine (GopherMenu ls) indx = ls !! indx
+
+{- $gopherMenus
+
+A Gopher
+menu in its raw form is essentially just tab-delimited text, where each row is a
+"menu item." These menu lines are represented by 'MenuLine' in two forms: 'Parsed'
+and 'Unparseable'. Sometimes you come across rows that are malformed for one reason
+or another, or they have some custom implementation, so it's better just to display
+the 'Unparseable' lines as-is and render the 'Parsed' (recognized) lines as
+expected.
+
+-}
+
