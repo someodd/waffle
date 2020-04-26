@@ -127,9 +127,7 @@ data RecognizedGopherLine = RecognizedGopherLine
 -- type or is simply not formatted correctly/malformed.
 --
 -- If it's not a RecognizedGopherLine then it's this.
-newtype UnrecognizedGopherLine = UnrecognizedGopherLine
-  { mglFields :: [String]
-  }
+newtype UnrecognizedGopherLine = UnrecognizedGopherLine [String]
 
 -- data GopherLine = RecognizedGopherLine | UnrecognizedGopherLine
 
@@ -142,7 +140,7 @@ instance Show RecognizedGopherLine where
 
 -- | Displaying a malformed Gopher line (string) after being parsed, namely used by the UI
 instance Show UnrecognizedGopherLine where
-  show x = "    " ++ show (mglFields x)--FIXME: might this not error? add "ERROR" to end?
+  show (UnrecognizedGopherLine x) = "    " ++ show x--FIXME: might this not error? add "ERROR" to end?
 
 -- | Take the character from a menu line delivered from a Gopher server and give
 -- back the type of the item that line describes.
@@ -232,7 +230,7 @@ explainType gopherLine = case glType gopherLine of
 explainLine
   :: Either RecognizedGopherLine UnrecognizedGopherLine -> String
 explainLine (Left gopherLine) = explainType gopherLine
-explainLine (Right malformedGopherLine) = "Malformed, unrecognized, or incorrectly parsed. " ++ show (mglFields malformedGopherLine)
+explainLine (Right malformedGopherLine) = "Malformed, unrecognized, or incorrectly parsed. " ++ show malformedGopherLine
 
 -- | Parse a Gopher-menu-formatted String into a GopherMenu representation.
 makeGopherMenu :: String -> GopherMenu
@@ -261,9 +259,9 @@ makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
                                               , glPort          = read port--FIXME: what if this fails to int?
                                               , glGopherPlus    = gopherPlus
                                               }
-        Nothing -> Right $ UnrecognizedGopherLine { mglFields = allFields }
+        Nothing -> Right $ UnrecognizedGopherLine allFields
   makeGopherLine malformed =
-    Right $ UnrecognizedGopherLine { mglFields = malformed }
+    Right $ UnrecognizedGopherLine malformed
 
 -- | Representation of Gopher menus: a list of GopherLines.
 newtype GopherMenu = GopherMenu [Either RecognizedGopherLine UnrecognizedGopherLine]
