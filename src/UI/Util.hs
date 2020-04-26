@@ -112,10 +112,10 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
     map fst $ filter (not . isInfoMsg . snd) (zip [0 ..] m)
 
   -- | Used for filling up a list with display strings.
-  lineShow :: Either ParsedLine UnparseableLine -> String
+  lineShow :: MenuLine -> String
   lineShow line = case line of
     -- It's a GopherLine
-    (Left gl) -> case glType gl of
+    (Parsed gl) -> case glType gl of
       -- Canonical type
       (Left _) -> clean $ glDisplayString gl
       -- Noncanonical type
@@ -124,7 +124,7 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
           then " "
           else clean $ glDisplayString gl
     -- It's a MalformedGopherLine
-    (Right mgl) -> clean $ show mgl
+    (Unparseable mgl) -> clean $ show mgl
 
 -- FIXME: Is this appropriate for here? maybe another module?
 -- | Replaces certain characters to ensure the Brick UI doesn't get "corrupted."

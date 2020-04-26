@@ -4,6 +4,14 @@
 
 -- | Models the Gopher protocol; protocol representation.
 --
+-- Mostly handles parsing Gopher menus from text to representations/types. A Gopher
+-- menu in its raw form is essentially just tab-delimited text, where each row is a
+-- "menu item." These menu lines are represented by MenuLine in two forms: Parsed
+-- and Unparseable. Sometimes you come across rows that are malformed for one reason
+-- or another, or they have some custom implementation, so it's better just to display
+-- the Unparseable lines as-is and render the Parsed (recognized) lines as
+-- expected.
+--
 -- I found these resources very useful in implementing the models herein:
 --
 --   * RFC 1436 - The Internet Gopher Protocol (a distributed document search and retrieval protocol)
@@ -13,6 +21,7 @@
 --   * Gopher+ documentation... FIXME
 module Gopher
   ( GopherMenu(GopherMenu)
+  , MenuLine(..)
   , ParsedLine(..)
   , UnparseableLine
   , isInfoMsg
@@ -30,6 +39,7 @@ module Gopher
   , explainLine
   ) where
 
+import           Text.Read
 import           Data.List
 import           Data.List.Split
 
@@ -92,6 +102,7 @@ data GopherNonCanonicalItemType =
   -- ^ Sound file (especially the WAV format).
   deriving (Eq, Show)
 
+-- TODO, FIXME: change the gl prefix
 -- | Representation of a recognized (something I can interpret; formatted as expected)
 -- line in a GopherMenu.
 --
@@ -101,6 +112,7 @@ data GopherNonCanonicalItemType =
 --
 --    1Display stringFselector stringFhostFportFextrastuff\CRLF
 data ParsedLine = ParsedLine
+  -- TODO: I want to just make a MenuItemType = CanonicalItemType | NonCanonicalItemType
   { glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
   -- ^ The first character on each line tells you whether the line/item
   -- describes a document, directory, or search device. AKA "definition."
@@ -123,11 +135,14 @@ data ParsedLine = ParsedLine
   -- Gopher Protocol specification.
   }
 
+-- NOTE: is "Unrecognized" better than "Unparseable."
 -- | Representation of a line in a GopherMenu which is either of an unrecognized
 -- type or is simply not formatted correctly/malformed.
 --
 -- If it's not a ParsedLine then it's this.
 newtype UnparseableLine = UnparseableLine [String]
+
+data MenuLine = Parsed ParsedLine | Unparseable UnparseableLine
 
 -- data GopherLine = ParsedLine | UnparseableLine
 
@@ -141,6 +156,10 @@ instance Show ParsedLine where
 -- | Displaying a malformed Gopher line (string) after being parsed, namely used by the UI
 instance Show UnparseableLine where
   show (UnparseableLine x) = "    " ++ show x--FIXME: might this not error? add "ERROR" to end?
+
+instance Show MenuLine where
+  show (Parsed parsedLine)        = show parsedLine
+  show (Unparseable unparsedLine) = show unparsedLine
 
 -- | Take the character from a menu line delivered from a Gopher server and give
 -- back the type of the item that line describes.
@@ -227,14 +246,14 @@ explainType gopherLine = case glType gopherLine of
 
 -- TODO/FIXME: better haddock string, use REPL example too?
 -- | Describe any line from a Gopher menu.
-explainLine
-  :: Either ParsedLine UnparseableLine -> String
-explainLine (Left gopherLine) = explainType gopherLine
-explainLine (Right malformedGopherLine) = "Malformed, unrecognized, or incorrectly parsed. " ++ show malformedGopherLine
+explainLine :: MenuLine -> String
+explainLine (Parsed parsedLine)        = explainType parsedLine
+explainLine (Unparseable unparsedLine) =
+  "Malformed, unrecognized, or incorrectly parsed. " ++ show unparsedLine
 
 -- | Parse a Gopher-menu-formatted String into a GopherMenu representation.
 makeGopherMenu :: String -> GopherMenu
-makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
+makeGopherMenu rawString = GopherMenu $ map makeMenuLine rowsOfFields
  where
   -- A period on a line by itself denotes the end.
   rmTerminatorPeriod l = if last l == ".\r" then init l else l
@@ -244,27 +263,42 @@ makeGopherMenu rawString = GopherMenu $ map makeGopherLine rowsOfFields
     let linesWithoutTerminator = rmTerminatorPeriod . lines $ rawString
     in  map (splitOn "\t") linesWithoutTerminator
 
+  -- | Create a MenuLine from a series of fields.
+  makeMenuLine :: [String] -> MenuLine
+  makeMenuLine fields =
+    let potentiallyParsedLine = parseMenuLine fields
+    in case potentiallyParsedLine of
+      Nothing           -> Unparseable $ UnparseableLine fields
+      (Just parsedLine) -> Parsed parsedLine
+
   -- NOTE: this pattern match works well because everything after port gets lumped
   -- into a list of Gopher+ fields. Otherwise, it'll just be an empty list!
-  makeGopherLine :: [String] -> Either ParsedLine UnparseableLine
-  makeGopherLine allFields@(typeCharAndDisplayString : selector : host : port : gopherPlus)
-    = do
-      let typeChar      = head $ take 1 typeCharAndDisplayString-- NOTE: Seems a hacky way to string to char...
-      let displayString = drop 1 typeCharAndDisplayString
-      case charToItemType typeChar of
-        Just x -> Left $ ParsedLine { glType          = x
-                                              , glDisplayString = displayString
-                                              , glSelector      = selector
-                                              , glHost          = host
-                                              , glPort          = read port--FIXME: what if this fails to int?
-                                              , glGopherPlus    = gopherPlus
-                                              }
-        Nothing -> Right $ UnparseableLine allFields
-  makeGopherLine malformed =
-    Right $ UnparseableLine malformed
+  -- | Attempt to parse a menu line.
+  parseMenuLine :: [String] -> Maybe ParsedLine
+  -- We have all of the necessary fields to potentially create a ParsedLine
+  parseMenuLine (typeCharAndDisplayString : selector : host : port : gopherPlus)
+    = let typeChar       = head $ take 1 typeCharAndDisplayString-- NOTE: Seems a hacky way to string to char...
+          displayString  = drop 1 typeCharAndDisplayString
+          maybePortAsInt = readMaybe port :: Maybe Int
+      in case maybePortAsInt of
+        Nothing          -> Nothing
+        (Just portAsInt) -> case charToItemType typeChar of
+          -- The item type indicator is recognized...
+          Just x  -> Just $ ParsedLine
+            { glType          = x
+            , glDisplayString = displayString
+            , glSelector      = selector
+            , glHost          = host
+            , glPort          = portAsInt
+            , glGopherPlus    = gopherPlus
+            }
+          --- The item type indicator is not recognized...
+          Nothing -> Nothing
+  -- We do not have all of the necessary fields to create a ParsedLine...
+  parseMenuLine _ = Nothing
 
 -- | Representation of Gopher menus: a list of GopherLines.
-newtype GopherMenu = GopherMenu [Either ParsedLine UnparseableLine]
+newtype GopherMenu = GopherMenu [MenuLine]
 
 -- | Easily represent a GopherMenu as a string, formatted as it might be rendered.
 instance Show GopherMenu where
@@ -272,21 +306,21 @@ instance Show GopherMenu where
    where
     -- Seems a little hacky
     -- is normal line
-    gopherLineShow (Left  x) = show x
+    gopherLineShow (Parsed parsedLine)        = show parsedLine
     -- is malformed line
-    gopherLineShow (Right x) = show x ++ "(MALFORMED LINE)"-- Does this have potential to break?
+    gopherLineShow (Unparseable unparsedLine) = show unparsedLine ++ "(MALFORMED LINE)"-- NOTE: Does this have potential to break?
 
 -- | Detect if a Gopher menu line is of the noncanonical "info message" type.
-isInfoMsg :: Either ParsedLine UnparseableLine -> Bool
+isInfoMsg :: MenuLine -> Bool
 isInfoMsg line = case line of
   -- It's a ParsedLine
-  (Left gl) -> case glType gl of
+  (Parsed gl) -> case glType gl of
     -- Canonical type
     (Left  _  ) -> False
     -- Noncanonical type
     (Right nct) -> nct == InformationalMessage
   -- It's an UnparseableLine
-  (Right _) -> False
+  (Unparseable _) -> False
 
 -- TODO: I don't like that this removes the leading / from some paths, like in the
 -- last REPL example.
@@ -325,5 +359,5 @@ searchSelector resource query =
   if null resource then query else resource ++ "\t" ++ query
 
 -- | Get the nth line from a GopherMenu.
-menuLine :: GopherMenu -> Int -> Either ParsedLine UnparseableLine
+menuLine :: GopherMenu -> Int -> MenuLine
 menuLine (GopherMenu ls) indx = ls !! indx

@@ -30,7 +30,7 @@ import           UI.Progress
 import           UI.Util
 import           UI.Representation
 
-selectedMenuLine :: GopherBrowserState -> Either ParsedLine UnparseableLine
+selectedMenuLine :: GopherBrowserState -> MenuLine
 selectedMenuLine gbs =
   -- given the scope of this function, i believe this error message is not horribly accurate in all cases where it might be used
   let
@@ -97,9 +97,9 @@ newStateFromSelectedMenuItem gbs = case lineType of
  where
   (host, port, resource, lineType) = case selectedMenuLine gbs of
     -- ParsedLine
-    (Left  gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
+    (Parsed  gl)     -> (glHost gl, glPort gl, glSelector gl, glType gl)
     -- Unrecognized line
-    (Right _ ) -> error "Can't do anything with unrecognized line."
+    (Unparseable _ ) -> error "Can't do anything with unrecognized line."
 
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
 menuModeUI gbs = defaultBrowserUI gbs (viewport MenuViewport T.Horizontal) titleWidget mainWidget statusWidget
@@ -147,10 +147,10 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
     else str ""
     where numberPad = (replicate (biggestIndexDigits - curIndexDigits) ' ' ++)
 
-  lineDescriptorWidget :: Either ParsedLine UnparseableLine -> T.Widget n
+  lineDescriptorWidget :: MenuLine -> T.Widget n
   lineDescriptorWidget line = case line of
-    -- it's a gopherline
-    (Left gl) -> case glType gl of
+    -- it's a parsed line
+    (Parsed gl) -> case glType gl of
       -- Cannonical type
       (Left ct) -> case ct of
         Directory -> withAttr directoryAttr $ str "📂 [Directory] "
@@ -164,7 +164,7 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
         HtmlFile -> withAttr directoryAttr $ str "🌐 [HTMLFile] "
         _ -> withAttr genericTypeAttr $ str $ "[" ++ show nct ++ "] "
     -- it's a malformed/unrecognized line
-    (Right _) -> str ""
+    (Unparseable _) -> str ""
 
 -- | Describe the currently selected line in the menu/map.
 lineInfoPopup :: GopherBrowserState -> GopherBrowserState
