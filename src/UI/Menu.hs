@@ -30,7 +30,7 @@ import           UI.Progress
 import           UI.Util
 import           UI.Representation
 
-selectedMenuLine :: GopherBrowserState -> Either RecognizedGopherLine UnrecognizedGopherLine
+selectedMenuLine :: GopherBrowserState -> Either ParsedLine UnparseableLine
 selectedMenuLine gbs =
   -- given the scope of this function, i believe this error message is not horribly accurate in all cases where it might be used
   let
@@ -96,7 +96,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
     _        -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
  where
   (host, port, resource, lineType) = case selectedMenuLine gbs of
-    -- RecognizedGopherLine
+    -- ParsedLine
     (Left  gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
     -- Unrecognized line
     (Right _ ) -> error "Can't do anything with unrecognized line."
@@ -147,7 +147,7 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
     else str ""
     where numberPad = (replicate (biggestIndexDigits - curIndexDigits) ' ' ++)
 
-  lineDescriptorWidget :: Either RecognizedGopherLine UnrecognizedGopherLine -> T.Widget n
+  lineDescriptorWidget :: Either ParsedLine UnparseableLine -> T.Widget n
   lineDescriptorWidget line = case line of
     -- it's a gopherline
     (Left gl) -> case glType gl of
