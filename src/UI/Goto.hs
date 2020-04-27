@@ -1,5 +1,8 @@
 -- | Dialog for opening a Gopher URI dialog/UI.
-module UI.Goto where
+module UI.Goto
+  ( gotoEventHandler
+  , initGotoMode
+  ) where
 
 import           Data.Maybe
 import           Control.Monad.IO.Class
