@@ -2,7 +2,14 @@
 -- this would imply the need to have a fallback state, right?
 -- | Handle indication of download progress for various UI.Util.RenderMode types, like downloading
 -- menus, text files, and binary file downloads.
-module UI.Progress where
+module UI.Progress
+  ( initProgressMode
+  , modeTransition
+  , drawProgressUI
+  , progressEventHandler
+  , goHistory
+  , goParentDirectory
+  ) where
 
 import           Data.Foldable
 import           Data.Maybe
