@@ -1,5 +1,9 @@
 -- | Everything related to the UI for viewing text files.
-module UI.TextFile where
+module UI.TextFile
+  ( textFileModeUI
+  , basicTextFileEventHandler
+  , textFileEventHandler
+  ) where
 
 import           Control.Monad.IO.Class
 
