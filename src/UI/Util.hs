@@ -1,6 +1,19 @@
 -- | Honestly, this is sloppily just a catchall for things many UI modules use. Should be sorted
 -- soon/later.
-module UI.Util where
+module UI.Util
+  ( makePopupWidget
+  , defaultBrowserUI
+  , cacheLookup
+  , isCached
+  , newStateForMenu
+  , clean
+  , myNameScroll
+  , mainViewportScroll
+  , cacheInsert
+  , menuViewportScroll
+  , textViewportScroll
+  , locationAsString
+  ) where
 
 import           Data.Maybe
 import qualified Data.Vector                   as Vector
