@@ -1,5 +1,9 @@
 -- | The help screen, which is also the homepage. It's just a TextFile, basically.
-module UI.Help where
+module UI.Help
+  ( helpModeUI
+  , helpEventHandler
+  , modifyGbsForHelp
+  ) where
 
 -- NOTE: should look to how search is handled as non-location i think
 
@@ -43,6 +47,7 @@ getHelpContents = do
         (\e -> let err = show (e :: IOException)
                in  pure $ "Warning: Couldn't open " ++ pathToHelpFile ++ ": " ++ err)
 
+-- | Initialize help mode.
 modifyGbsForHelp :: GopherBrowserState -> IO GopherBrowserState
 modifyGbsForHelp gbs = do
   helpContents <- getHelpContents
