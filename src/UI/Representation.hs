@@ -1,5 +1,40 @@
 -- | Data types representing different RenderModes.
-module UI.Representation where
+module UI.Representation
+  (
+  -- * UI representations/models/types
+    Progress(..)
+  , SaveBrowser(..)
+  , Search(..)
+  , Help(..)
+  , emptyCache
+  , GopherBrowserState(..)
+  , TextFile(..)
+  , Menu(..)
+  , Buffer(..)
+  , StatusEditor(..)
+  , Popup(..)
+  , MyName(..)
+  , RenderMode(..)
+  , Location
+  , Cache
+  , History
+  -- * Events
+  , CustomEvent(..)
+  -- * Helper utilities for UI representations
+  , closePopup
+  , getHelp
+  , getHelpTextFileContents
+  , hasPopup
+  , updateFileBrowserBuffer
+  , isStatusEditing
+  , getMenu
+  , getSaveBrowser
+  , getTextFile
+  , getSearch
+  , updateSearchBuffer
+  , getProgress
+  , updateProgressBuffer
+  ) where
 
 import           Data.Maybe
 import qualified Data.Map as Map
