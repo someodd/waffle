@@ -1,6 +1,9 @@
 -- TODO: rename stuff to *save* and not file browser etc
 {-# LANGUAGE OverloadedStrings #-}
-module UI.Save where
+module UI.Save
+  ( saveEventHandler
+  , fileBrowserUi
+  ) where
 
 import           Control.Monad.IO.Class
 import qualified Data.Text                     as Text
