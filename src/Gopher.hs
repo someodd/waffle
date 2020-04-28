@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- TODO: more stuff from UI needs to go in here for clearer separation?
 -- TODO: resource is misnamed. it's "selector string."
 -- TODO: menu and directory seem to be synonymous
@@ -39,11 +41,11 @@ module Gopher
   , searchSelector
   , menuLine
   , explainLine
+  , menuLineAsText
   ) where
 
+import qualified Data.Text        as T
 import           Text.Read
-import           Data.List
-import           Data.List.Split
 
 -- | The types of lines in a Gopher menu which are types specified by the original
 -- Gopher protocol specification (RFC 1435).
@@ -118,21 +120,21 @@ data ParsedLine = ParsedLine
   { glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
   -- ^ The first character on each line tells you whether the line/item
   -- describes a document, directory, or search device. AKA "definition."
-  , glDisplayString :: String
+  , glDisplayString :: T.Text
   -- ^ To be shown to the user for use in selecting this document
   -- (or directory) for retrieval.
-  , glSelector :: String
+  , glSelector :: T.Text
   -- ^ A selector string that the client software mus tsend to the server
   -- to retrieve the documen t(or directory listing).  The selector string
   -- should mean nothing to the client software; it should never be modified by
   -- the client. In practice, the selector string is often a pathname or other
   -- file selector used by the server to locate the item desired. Also referred
   -- to as the "magic string."
-  , glHost :: String
+  , glHost :: T.Text
   -- ^ the domain-name of the host that has this document (or directory) and...
   , glPort :: Int
   -- ^ ..continuing from glHost, the port at which to connect.
-  , glGopherPlus :: [String]
+  , glGopherPlus :: [T.Text]
   -- ^ Any extra fields are Gopher+ fields and not a part of the original
   -- Gopher Protocol specification.
   }
@@ -142,25 +144,19 @@ data ParsedLine = ParsedLine
 -- type or is simply not formatted correctly/malformed.
 --
 -- If it's not a ParsedLine then it's this.
-newtype UnparseableLine = UnparseableLine [String]
+newtype UnparseableLine = UnparseableLine [T.Text]
 
 -- | A line in a 'GopherMenu'.
 data MenuLine = Parsed ParsedLine | Unparseable UnparseableLine
 
--- | The way a ParsedLine is displayed (string) after being parsed, namely used by the UI
-instance Show ParsedLine where
-  show x = indent x ++ glDisplayString x
-   where
-    indent l =
-      if glType l == Right InformationalMessage then "          " else ""
-
--- | Displaying a malformed Gopher line (string) after being parsed, namely used by the UI
-instance Show UnparseableLine where
-  show (UnparseableLine x) = "    " ++ show x--FIXME: might this not error? add "ERROR" to end?
-
-instance Show MenuLine where
-  show (Parsed parsedLine)        = show parsedLine
-  show (Unparseable unparsedLine) = show unparsedLine
+-- FIXME: replaces show instance for menu
+menuLineAsText :: MenuLine -> T.Text
+menuLineAsText (Parsed parsedLine)        =
+  let indent = if glType parsedLine == Right InformationalMessage then "          " else ""
+  in  indent <> glDisplayString parsedLine
+menuLineAsText (Unparseable unparsedLine) =
+  let (UnparseableLine fields) = unparsedLine
+  in  "    " <> T.pack (show fields) <> " (UNPARSED LINE)"
 
 -- | Take the character from a menu line delivered from a Gopher server and give
 -- back the type of the item that line describes.
@@ -192,13 +188,13 @@ charToItemType 'i' = Just $ Right InformationalMessage
 charToItemType 's' = Just $ Right SoundFile
 charToItemType _   = Nothing
 
-showAddressPlus :: ParsedLine -> String
+showAddressPlus :: ParsedLine -> T.Text
 showAddressPlus gl =
-  glHost gl ++ ":" ++ show (glPort gl) ++ " " ++ glSelector gl ++ " " ++ show (glGopherPlus gl)
+  glHost gl <> ":" <> T.pack (show $ glPort gl) <> " " <> glSelector gl <> " " <> T.pack (show $ glGopherPlus gl)
 
 -- Fixme: for these three... rename to explain*ItemType?
 -- FIXME: update with the description from one of those docstrings...
-explainCanonicalType :: GopherCanonicalItemType -> String
+explainCanonicalType :: GopherCanonicalItemType -> T.Text
 explainCanonicalType File =
   "Item is a file. Plaintext file. "
 explainCanonicalType Directory = "Item is a directory. Gopher submenu."
@@ -226,7 +222,7 @@ explainCanonicalType GifFile = "Item is a GIF format graphics file. GIF file."
 explainCanonicalType ImageFile =
   "Item is some kind of image file.  Client decides how to display. Image file."
 
-explainNonCanonicalType :: GopherNonCanonicalItemType -> String
+explainNonCanonicalType :: GopherNonCanonicalItemType -> T.Text
 explainNonCanonicalType Doc = "Doc. Seen used alongside PDF's and .DOC's."
 explainNonCanonicalType HtmlFile = "HTML file."
 explainNonCanonicalType InformationalMessage = "Informational message."
@@ -240,32 +236,35 @@ explainNonCanonicalType SoundFile = "Sound file (especially the WAV format)."
 -- TODO: explainanytype?
 -- | Explain a Gopher line/menu item type, either canonical (RFC 1436) or non canonical.
 explainType
-  :: ParsedLine -> String
+  :: ParsedLine -> T.Text
 explainType gopherLine = case glType gopherLine of
-  Left  canonType    -> explainCanonicalType canonType ++ " " ++ showAddressPlus gopherLine
-  Right nonCanonType -> explainNonCanonicalType nonCanonType ++ " " ++ showAddressPlus gopherLine
+  Left  canonType    -> explainCanonicalType canonType <> " " <> showAddressPlus gopherLine
+  Right nonCanonType -> explainNonCanonicalType nonCanonType <> " " <> showAddressPlus gopherLine
 
 -- TODO/FIXME: better haddock string, use REPL example too?
 -- | Describe any line from a Gopher menu.
-explainLine :: MenuLine -> String
-explainLine (Parsed parsedLine)        = explainType parsedLine
+explainLine :: MenuLine -> T.Text
+explainLine (Parsed parsedLine)        =
+  explainType parsedLine
 explainLine (Unparseable unparsedLine) =
-  "Malformed, unrecognized, or incorrectly parsed. " ++ show unparsedLine
+  let (UnparseableLine fields) = unparsedLine
+  in  "Malformed, unrecognized, or incorrectly parsed. " <> T.pack (show fields)
 
--- | Parse a Gopher-menu-formatted String into a 'GopherMenu' representation.
-makeGopherMenu :: String -> GopherMenu
+-- | Parse a Gopher-menu-formatted Text into a 'GopherMenu' representation.
+makeGopherMenu :: T.Text -> GopherMenu
 makeGopherMenu rawString = GopherMenu $ map makeMenuLine rowsOfFields
  where
   -- A period on a line by itself denotes the end.
   rmTerminatorPeriod l = if last l == ".\r" then init l else l
   -- TODO: this could use some explaining... basically prep things for being parsed
   -- into type...
+  rowsOfFields :: [[T.Text]]
   rowsOfFields =
-    let linesWithoutTerminator = rmTerminatorPeriod . lines $ rawString
-    in  map (splitOn "\t") linesWithoutTerminator
+    let linesWithoutTerminator = rmTerminatorPeriod . T.lines $ rawString
+    in  map (T.splitOn "\t") linesWithoutTerminator
 
   -- | Create a MenuLine from a series of fields.
-  makeMenuLine :: [String] -> MenuLine
+  makeMenuLine :: [T.Text] -> MenuLine
   makeMenuLine fields =
     let potentiallyParsedLine = parseMenuLine fields
     in case potentiallyParsedLine of
@@ -275,12 +274,12 @@ makeGopherMenu rawString = GopherMenu $ map makeMenuLine rowsOfFields
   -- NOTE: this pattern match works well because everything after port gets lumped
   -- into a list of Gopher+ fields. Otherwise, it'll just be an empty list!
   -- | Attempt to parse a menu line.
-  parseMenuLine :: [String] -> Maybe ParsedLine
+  parseMenuLine :: [T.Text] -> Maybe ParsedLine
   -- We have all of the necessary fields to potentially create a ParsedLine
   parseMenuLine (typeCharAndDisplayString : selector : host : port : gopherPlus)
-    = let typeChar       = head $ take 1 typeCharAndDisplayString-- NOTE: Seems a hacky way to string to char...
-          displayString  = drop 1 typeCharAndDisplayString
-          maybePortAsInt = readMaybe port :: Maybe Int
+    = let typeChar       = getFirstChar typeCharAndDisplayString-- NOTE: Seems a hacky way to string to char...
+          displayString  = dropFirstChar typeCharAndDisplayString
+          maybePortAsInt = maybeInt port
       in case maybePortAsInt of
         Nothing          -> Nothing
         (Just portAsInt) -> case charToItemType typeChar of
@@ -295,23 +294,22 @@ makeGopherMenu rawString = GopherMenu $ map makeMenuLine rowsOfFields
             }
           --- The item type indicator is not recognized...
           Nothing -> Nothing
+      where
+        maybeInt someText = readMaybe . T.unpack $ someText :: Maybe Int
+        -- These two functions work assuming the display string is preceded by the item type character
+        dropFirstChar     = T.drop 1
+        getFirstChar      = T.head
   -- We do not have all of the necessary fields to create a ParsedLine...
   parseMenuLine _ = Nothing
 
 -- | Representation of Gopher menus: a list of 'MenuLine's.
 newtype GopherMenu = GopherMenu [MenuLine]
 
--- | Easily represent a GopherMenu as a string, formatted as it might be rendered.
-instance Show GopherMenu where
-  show (GopherMenu ls) = unlines $ map gopherLineShow ls
-   where
-    -- Seems a little hacky
-    -- is normal line
-    gopherLineShow (Parsed parsedLine)        = show parsedLine
-    -- is malformed line
-    gopherLineShow (Unparseable unparsedLine) = show unparsedLine ++ "(MALFORMED LINE)"-- NOTE: Does this have potential to break?
+-- FIXME: is this used anywhere? replaces show instance for gophermenu
+-- | Easily represent a GopherMenu as a 'Text', formatted as it might be rendered.
+-- gopherMenuAsText (GopherMenu menuLines) = T.unlines $ map menuLineAsText menuLines
 
--- | Detect if a Gopher menu line is of the noncanonical 'InformationalMessage' type.
+ -- | Detect if a Gopher menu line is of the noncanonical 'InformationalMessage' type.
 isInfoMsg :: MenuLine -> Bool
 isInfoMsg line = case line of
   -- It's a ParsedLine
@@ -337,10 +335,12 @@ isInfoMsg line = case line of
 --
 -- >> parentDirectory "/foo/bar/hello/world"
 -- Just "foo/bar/hello"
-parentDirectory :: String -> Maybe String
+parentDirectory :: T.Text -> Maybe T.Text
 parentDirectory magicString
-  | magicString == "/" || null magicString = Nothing
-  | otherwise = Just $ intercalate "/" (init $ wordsBy (== '/') magicString)
+  | magicString == "/" || T.null magicString = Nothing
+  | otherwise =
+      let splitDirectories = filter (/= "") $ T.splitOn "/" magicString
+      in  Just $ T.intercalate "/" splitDirectories
 
 -- | Given the search "endpoint" (the selector for the search), create a
 -- new selector for querying the supplied endpoint for the supplied query.
@@ -353,11 +353,11 @@ parentDirectory magicString
 
 -- >> searchSelector "" "foo bar"
 -- "foo bar"
-searchSelector :: String -> String -> String
+searchSelector :: T.Text -> T.Text -> T.Text
 searchSelector resource query =
   -- FIXME: I don't think this if null resource then query bit would actually work
   -- as seen in the REPL example, would it?
-  if null resource then query else resource ++ "\t" ++ query
+  if T.null resource then query else resource <> "\t" <> query
 
 -- | Get the nth line from a 'GopherMenu'.
 menuLine :: GopherMenu -> Int -> MenuLine

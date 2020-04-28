@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- FIXME: implement network error dialog boxes here and return state if fail?
 -- this would imply the need to have a fallback state, right?
 -- | Handle indication of download progress for various UI.Util.RenderMode types, like downloading
@@ -11,6 +13,9 @@ module UI.Progress
   , goParentDirectory
   ) where
 
+import           Data.Text.Encoding.Error       (lenientDecode)
+import           Data.Text.Encoding            as E
+import qualified Data.Text                     as T
 import           Data.Foldable
 import           Data.Maybe
 import qualified Data.ByteString               as ByteString
@@ -20,7 +25,7 @@ import           System.Directory               ( renameFile )
 import           System.FilePath                ( takeFileName )
 import           Network.Simple.TCP
 import qualified Brick.Widgets.FileBrowser     as FB
-import           Brick.Widgets.Core             ( str )
+import           Brick.Widgets.Core             ( txt )
 import qualified Brick.Main                    as M
 import qualified Brick.BChan
 import qualified Data.ByteString.Char8         as B8
@@ -64,7 +69,7 @@ initProgressMode gbs history location@(_, _, _, mode) =
                           , pbInitGbs         = gbs
                           , pbConnected       = False
                           , pbIsFromCache     = isCached location (gbsCache gbs)
-                          , pbMessage         = "Downloading a " ++ message
+                          , pbMessage         = "Downloading a " <> message
                           }
       }
   -- Should catch network error in a popup (representational).
@@ -90,10 +95,10 @@ addProgBytes gbs' nbytes =
 -- the history in those cases, so you supply Nothing).
 progressGetBytes :: GopherBrowserState -> Maybe History -> Location -> IO ()
 progressGetBytes initialProgGbs history location@(host, port, resource, _)
-  = connect host (show port) $ \(connectionSocket, _) -> do
+  = connect (T.unpack host) (show port) $ \(connectionSocket, _) -> do
     -- Send the magic/selector string (request a path) to the websocket we're connected to.
     -- This allows us to later receive the bytes located at this "path."
-    send connectionSocket (B8.pack $ resource ++ "\r\n")
+    send connectionSocket (B8.pack $ (T.unpack resource) ++ "\r\n")
     -- Send the first event which is just the GBS we received to begin with... IDK, actually,
     -- why I even bother to do this!
     let chan = gbsChan initialProgGbs
@@ -112,7 +117,7 @@ progressGetBytes initialProgGbs history location@(host, port, resource, _)
     -- FIXME: what if location already exists? like if we're refreshing?
     let newCache = cacheInsert location tempFilePath (gbsCache initialProgGbs)
     -- Finally we setup the final event with a GBS of the specified render mode.
-    doFinalEvent chan initialProgGbs history location (U8.toString contents) newCache
+    doFinalEvent chan initialProgGbs history location (E.decodeUtf8With lenientDecode $ contents) newCache
 
 -- | This is for final events that change the render mode based on the contents.
 doFinalEvent
@@ -120,7 +125,7 @@ doFinalEvent
   -> GopherBrowserState
   -> Maybe History
   -> Location
-  -> String
+  -> T.Text
   -> Cache
   -> IO ()
 doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCache = do
@@ -159,7 +164,7 @@ progressCacheable gbs history location@(_, _, _, _) =
     (Just pathToCachedFile) -> do
       contents <- ByteString.readFile pathToCachedFile
       -- We use "doFinalEvent" because it will switch the mode/state for the content of the cache file!
-      doFinalEvent (gbsChan gbs) gbs history location (U8.toString contents) (gbsCache gbs)
+      doFinalEvent (gbsChan gbs) gbs history location (E.decodeUtf8With lenientDecode contents) (gbsCache gbs)
     -- There is no cache for the requested location, so we must make a request and cache it!
     Nothing -> progressGetBytes gbs history location
 
@@ -172,10 +177,10 @@ progressCacheable gbs history location@(_, _, _, _) =
 -- Emits an Brick.T.AppEvent 
 progressDownloadBytes :: GopherBrowserState -> Maybe History -> Location -> IO ()
 progressDownloadBytes gbs _ (host, port, resource, _) =
-  connect host (show port) $ \(connectionSocket, _) -> do
+  connect (T.unpack host) (show port) $ \(connectionSocket, _) -> do
     let chan              = gbsChan gbs
         formerBufferState = gbsBuffer $ pbInitGbs (getProgress gbs) -- FIXME: not needed
-    send connectionSocket (B8.pack $ resource ++ "\r\n")
+    send connectionSocket (B8.pack $ T.unpack $ resource <> "\r\n")
     -- FIXME: what if this is left over from last time?
     tempFilePath <- emptySystemTempFile "waffle.download.tmp"
     Brick.BChan.writeBChan chan (NewStateEvent gbs)
@@ -197,7 +202,7 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
                               , fbCallBack = (tempFilePath `renameFile`)
                               , fbIsNamingFile      = False
                               , fbFileOutPath       = ""
-                              , fbOriginalFileName  = takeFileName resource
+                              , fbOriginalFileName  = takeFileName $ T.unpack resource
                               , fbFormerBufferState = formerBufferState
                               }
           }
@@ -230,14 +235,17 @@ drawProgressUI :: GopherBrowserState -> [T.Widget MyName]
 drawProgressUI gbs = [a]
  where
   -- FIXME: "downloaded" isn't necessarily correct. You can request more bytes than is left...
-  bytesDownloaded = show (pbBytesDownloaded (getProgress gbs))
-  bytesMessage = "Downloaded bytes: " ++ bytesDownloaded
+  bytesDownloaded = T.pack $ show (pbBytesDownloaded (getProgress gbs))
+  bytesMessage = "Downloaded bytes: " <> bytesDownloaded
   downloadingWhat = pbMessage (getProgress gbs)
+
+  connectMessage :: T.Text
   connectMessage
     | pbIsFromCache (getProgress gbs) = "⏳ Loading from cache..."
     | pbConnected (getProgress gbs)   = bytesMessage
     | otherwise                       = "⏳ Connecting..."
-  a = str $ downloadingWhat ++ "\n" ++ connectMessage
+
+  a = txt $ downloadingWhat <> "\n" <> connectMessage
 
 -- FIXME: maybe this needs to just have generic B.BrickEvent MyName CustomEvent
 -- and match from there

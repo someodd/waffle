@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Stitch together the Brick app from the disparate parts of the UI.
 --
 -- Build initiate the Brick.Main.App. All UI modules/modes, such as UI.Save and
@@ -12,6 +14,7 @@ module UI
 where
 
 
+import qualified Data.Text                     as T
 import           Data.Maybe
 import           Control.Monad.IO.Class
 import           Control.Monad                  ( void )
@@ -100,7 +103,7 @@ theApp = B.App { B.appDraw         = drawUI
 -- link is a menu is a horrible hack...
 --
 -- | Start the Brick app at a specific Gopher menu in Gopherspace.
-uiMain :: Maybe (String, Int, String) -> IO ()
+uiMain :: Maybe (T.Text, Int, T.Text) -> IO ()
 uiMain possibleLocation = do
   eventChan <- B.newBChan 10
   let buildVty = V.mkVty V.defaultConfig
