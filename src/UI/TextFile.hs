@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Everything related to the UI for viewing text files.
 module UI.TextFile
   ( textFileModeUI
@@ -10,7 +12,7 @@ import           Control.Monad.IO.Class
 import qualified Graphics.Vty                  as V
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Core             ( viewport
-                                                , str
+                                                , txt
                                                 )
 import qualified Brick.Main                    as M
 
@@ -22,9 +24,9 @@ textFileModeUI :: GopherBrowserState -> [T.Widget MyName]
 textFileModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
   where
    mainWidget   = let textFileContents = tfContents $ getTextFile gbs
-                  in  str $ clean textFileContents
-   titleWidget  = str $ tfTitle $ getTextFile gbs
-   statusWidget = str "? for help. Text file mode."
+                  in  txt $ clean textFileContents
+   titleWidget  = txt $ tfTitle $ getTextFile gbs
+   statusWidget = txt "? for help. Text file mode."
 
 -- | Basic text file controls, modularized so that the Help screen can use
 -- too, without including the history stuff. See the Help module.

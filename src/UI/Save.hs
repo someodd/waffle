@@ -6,7 +6,7 @@ module UI.Save
   ) where
 
 import           Control.Monad.IO.Class
-import qualified Data.Text                     as Text
+import qualified Data.Text                     as T
 import           Control.Exception              ( displayException )
 
 import qualified Brick.Main                    as M
@@ -52,7 +52,7 @@ handleFileBrowserEvent' gbs e b
   = case e of
     -- Enter key means we're done naming the file.
     V.EvKey V.KEnter [] ->
-      ( finalOutFilePath $ FB.getWorkingDirectory b ++ "/" ++ curOutFilePath
+      ( finalOutFilePath $ FB.getWorkingDirectory b <> "/" <> curOutFilePath
       , pure b
       )
     -- Delete a character.
@@ -75,7 +75,7 @@ handleFileBrowserEvent' gbs e b
                  }
     in  updateFileBrowserBuffer gbs cb
 
-  finalOutFilePath :: String -> GopherBrowserState
+  finalOutFilePath :: FilePath -> GopherBrowserState
   finalOutFilePath p =
     let cb x = x { fbFileOutPath = p, fbIsNamingFile = False }
     in  updateFileBrowserBuffer gbs cb
@@ -104,7 +104,7 @@ fileBrowserUi gbs =
     [ case FB.fileBrowserException b of
       Nothing -> emptyWidget
       Just e ->
-        hCenter $ withDefAttr errorAttr $ txt $ Text.pack $ displayException e
+        hCenter $ withDefAttr errorAttr $ txt $ T.pack $ displayException e
     , hCenter $ txt "/: search, Ctrl-C or Esc: cancel search"
     , hCenter $ txt "Esc: quit/cancel save"
     , hCenter $ txt "n: name the output file and then hit enter"

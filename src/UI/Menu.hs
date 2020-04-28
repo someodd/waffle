@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- FIXME: optimizations! cleanup!
 module UI.Menu
   ( menuEventHandler
@@ -5,6 +7,7 @@ module UI.Menu
   )
 where
 
+import qualified Data.Text                     as T
 import           Data.List                     as List
 import qualified Data.Vector                   as Vector
 import           Control.Monad.IO.Class
@@ -18,7 +21,7 @@ import qualified Brick.Widgets.List            as BrickList
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Edit            as E
 import           Brick.Widgets.Core             ( viewport
-                                                , str
+                                                , txt
                                                 , withAttr
                                                 , (<+>)
                                                 )
@@ -90,7 +93,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
     -- so I need to implement those modes above and then of course this can be the catchall...
     _         -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
   (Right nct) -> case nct of
-    HtmlFile -> openBrowser (drop 4 resource) >> pure gbs
+    HtmlFile -> openBrowser (T.unpack $ T.drop 4 resource) >> pure gbs
     InformationalMessage -> pure gbs
     -- FIXME: same as previous comment...
     _        -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
@@ -107,30 +110,30 @@ menuModeUI gbs = defaultBrowserUI gbs (viewport MenuViewport T.Horizontal) title
    (Menu (_, l, _)) = getMenu gbs
    titleWidget =
      let (host, port, resource, _) = gbsLocation gbs
-     in str $ " " ++ host ++ ":" ++ show port ++ if not $ List.null resource then " (" ++ resource ++ ") " else " "
+     in txt $ " " <> host <> ":" <> (T.pack $ show port) <> if not $ T.null resource then " (" <> resource <> ") " else " "
    statusWidget =
      let cur              = case l ^. BrickList.listSelectedL of
-                              Nothing -> str "-"
-                              Just i  -> str (show (i + 1))
-         total            = str $ show $ Vector.length $ l ^. BrickList.listElementsL
-     in  str "? for help. Menu mode. " <+> str "Item " <+> cur <+> str " of " <+> total
+                              Nothing -> txt "-"
+                              Just i  -> txt (T.pack $ show (i + 1))
+         total            = txt $ T.pack . show $ Vector.length $ l ^. BrickList.listElementsL
+     in  txt "? for help. Menu mode. " <+> txt "Item " <+> cur <+> txt " of " <+> total
    mainWidget = BrickList.renderListWithIndex (listDrawElement gbs) True l
 
 -- FIXME: this is messy! unoptimized!
 listDrawElement
-  :: GopherBrowserState -> Int -> Bool -> String -> T.Widget MyName
+  :: GopherBrowserState -> Int -> Bool -> T.Text -> T.Widget MyName
 listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
   lineColor
   (lineDescriptorWidget (menuLine gmenu indx) <+> selStr a)
  where
   selStr s
-    | sel && isInfoMsg (selectedMenuLine gbs) = withAttr custom2Attr (str s)
-    | sel       = withAttr customAttr $ str s
-    | otherwise = str s
+    | sel && isInfoMsg (selectedMenuLine gbs) = withAttr custom2Attr (txt s)
+    | sel       = withAttr customAttr $ txt s
+    | otherwise = txt s
 
   (Menu (gmenu, mlist, focusLines)) = getMenu gbs
 
-  cursorRegion = if sel then withAttr asteriskAttr $ str " ➤ " else str "   "
+  cursorRegion = if sel then withAttr asteriskAttr $ txt " ➤ " else txt "   "
   isLink                            = indx `elem` focusLines
   lineColor                         = if isLink then linkAttr else textAttr
   biggestIndexDigits =
@@ -140,12 +143,14 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
   possibleNumber = if isLink
     then
       withAttr numberPrefixAttr
-      $  str
+      $  txt
       $  numberPad
-      $  show (fromJust $ indx `elemIndex` focusLines)
-      ++ ". "
-    else str ""
-    where numberPad = (replicate (biggestIndexDigits - curIndexDigits) ' ' ++)
+      $  (T.pack $ show (fromJust $ indx `elemIndex` focusLines))
+      <> ". "
+    else txt ""
+    where
+      numberPad :: T.Text -> T.Text
+      numberPad = (T.replicate (biggestIndexDigits - curIndexDigits) " " <>)
 
   lineDescriptorWidget :: MenuLine -> T.Widget n
   lineDescriptorWidget line = case line of
@@ -153,25 +158,25 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
     (Parsed gl) -> case glType gl of
       -- Cannonical type
       (Left ct) -> case ct of
-        Directory -> withAttr directoryAttr $ str "📂 [Directory] "
-        File      -> withAttr fileAttr $ str "📄 [File] "
+        Directory -> withAttr directoryAttr $ txt "📂 [Directory] "
+        File      -> withAttr fileAttr $ txt "📄 [File] "
         IndexSearchServer ->
-          withAttr indexSearchServerAttr $ str "🔎 [IndexSearchServer] "
-        _ -> withAttr genericTypeAttr $ str $ "[" ++ show ct ++ "] "
+          withAttr indexSearchServerAttr $ txt "🔎 [IndexSearchServer] "
+        _ -> withAttr genericTypeAttr $ txt $ "[" <> (T.pack $ show ct) <> "] "
       -- Noncannonical type
       (Right nct) -> case nct of
-        InformationalMessage -> str $ replicate (biggestIndexDigits + 2) ' '
-        HtmlFile -> withAttr directoryAttr $ str "🌐 [HTMLFile] "
-        _ -> withAttr genericTypeAttr $ str $ "[" ++ show nct ++ "] "
+        InformationalMessage -> txt $ T.replicate (biggestIndexDigits + 2) " "
+        HtmlFile -> withAttr directoryAttr $ txt "🌐 [HTMLFile] "
+        _ -> withAttr genericTypeAttr $ txt $ "[" <> (T.pack $ show nct) <> "] "
     -- it's a malformed/unrecognized line
-    (Unparseable _) -> str ""
+    (Unparseable _) -> txt ""
 
 -- | Describe the currently selected line in the menu/map.
 lineInfoPopup :: GopherBrowserState -> GopherBrowserState
 lineInfoPopup gbs =
   let currentLineInfo = explainLine $ selectedMenuLine gbs
   in gbs { gbsPopup = Just $ Popup { pLabel   = "Line Info"
-                                   , pWidgets = [str currentLineInfo]
+                                   , pWidgets = [txt currentLineInfo]
                                    , pHelp    = "Currently selected line is of this type. ESC to close."
                                    }
          }

@@ -36,6 +36,7 @@ module UI.Representation
   , updateProgressBuffer
   ) where
 
+import qualified Data.Text                     as T
 import           Data.Maybe
 import qualified Data.Map as Map
 
@@ -50,25 +51,25 @@ import           Gopher
 -- This is used to indicate how many bytes have been downloaded
 -- of a menu or a save a text file etc, anything!
 data Progress = Progress { pbBytesDownloaded :: Int
-                         , pbMessage :: String -- BETTER NAME NEEDED
+                         , pbMessage :: T.Text -- BETTER NAME NEEDED
                          , pbInitGbs :: GopherBrowserState
                          , pbConnected :: Bool
                          , pbIsFromCache :: Bool
                          }
 
 data SaveBrowser = SaveBrowser { fbFileBrowser :: FileBrowser MyName
-                               , fbCallBack :: String -> IO ()
+                               , fbCallBack :: FilePath -> IO ()
                                , fbIsNamingFile :: Bool
-                               , fbFileOutPath :: String
+                               , fbFileOutPath :: FilePath
                                , fbFormerBufferState :: Buffer
-                               , fbOriginalFileName :: String
+                               , fbOriginalFileName :: FilePath
                                }
 
-data Search = Search { sbQuery :: String
+data Search = Search { sbQuery :: T.Text
                      , sbFormerBufferState :: Buffer
-                     , sbSelector :: String
+                     , sbSelector :: T.Text
                      , sbPort :: Int
-                     , sbHost :: String
+                     , sbHost :: T.Text
                      , sbEditorState :: EditorState
                      }
 
@@ -79,7 +80,7 @@ data Help = Help { hText :: TextFile
 -- The first string is the locationAsString and the second is filepath to the
 -- tempfile. Maybe I should define "String" type as synonym CacheKey? or...
 -- LocationString?
-type Cache = Map.Map String FilePath
+type Cache = Map.Map T.Text FilePath
 
 emptyCache :: Cache
 emptyCache = Map.empty
@@ -88,13 +89,13 @@ emptyCache = Map.empty
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
 -- The second element is the widget which is used when rendering a GopherMenu.
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
-newtype Menu = Menu (GopherMenu, BrickList.List MyName String, FocusLines)
+newtype Menu = Menu (GopherMenu, BrickList.List MyName T.Text, FocusLines)
 
 -- | This is for the contents of a File to be rendered when in TextFileMode.
 -- this should be a combination of things. it should have the addres of the temporary file
 -- which should then be moved to the picked location
-data TextFile = TextFile { tfContents :: String
-                         , tfTitle :: String
+data TextFile = TextFile { tfContents :: T.Text
+                         , tfTitle :: T.Text
                          }
 
 -- TODO: maybe break down buffer items into separate rep file and make rep subpackage...
@@ -112,7 +113,7 @@ data Buffer
 getHelp :: GopherBrowserState -> Help
 getHelp gbs = let (HelpBuffer help) = gbsBuffer gbs in help
 
-getHelpTextFileContents :: GopherBrowserState -> String
+getHelpTextFileContents :: GopherBrowserState -> T.Text
 getHelpTextFileContents gbs = let (HelpBuffer help) = gbsBuffer gbs in tfContents $ hText help
 
 updateFileBrowserBuffer :: GopherBrowserState -> (SaveBrowser -> SaveBrowser) -> GopherBrowserState
@@ -160,9 +161,10 @@ type HistoryIndex = Int
 -- locations are appended. See also: newChangeHistory.
 type History = ([Location], HistoryIndex)
 
+-- TODO: there's an actual HostName type and FilePath for resource
 -- | Gopher location in the form of domain, port, resource/magic string,
 -- and the BrowserMode used to render it.
-type Location = (String, Int, String, RenderMode)
+type Location = (T.Text, Int, T.Text, RenderMode)
 
 -- FinalNewStateEvent is used for transition handlers and for sending the new state (like the new page; setting it as the new gbs)
 -- | Carries through the entire state I guess!
@@ -172,15 +174,15 @@ data CustomEvent = NewStateEvent GopherBrowserState | FinalNewStateEvent GopherB
 -- FIXME: But what if we don't want a label, widgets, help? maybe there should be different
 -- types of popups!
 data Popup = Popup
-  { pLabel :: String
+  { pLabel :: T.Text
   , pWidgets :: [T.Widget MyName]
-  , pHelp :: String
+  , pHelp :: T.Text
   }
 
 -- Works in conjunction with other modes like GotoMode which handles editing the statusEditor state
 -- and using that to go to a certain URL.
 -- Note that GotoMode isn't necessarily a "rendermode" but an event mode...
-data StatusEditor = StatusEditor { seLabel :: String, seEditorState :: EditorState, seFormerMode :: RenderMode }
+data StatusEditor = StatusEditor { seLabel :: T.Text, seEditorState :: EditorState, seFormerMode :: RenderMode }
 
 isStatusEditing :: GopherBrowserState -> Bool
 isStatusEditing gbs = case gbsStatus gbs of
@@ -215,7 +217,7 @@ data MyName = MyViewport | MainViewport | EditorViewport | MyWidget | TextViewpo
   deriving (Show, Eq, Ord)
 
 data EditName = Edit1 deriving (Ord, Show, Eq)
-type EditorState = E.Editor String MyName
+type EditorState = E.Editor T.Text MyName
 
 -- FIXME: maybe "rendermode" is bad now and should jsut be called "mode"
 -- TODO: maybe rename filebrowsermode to SaveMode or SaveFileMode

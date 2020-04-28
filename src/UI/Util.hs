@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Honestly, this is sloppily just a catchall for things many UI modules use. Should be sorted
 -- soon/later.
 module UI.Util
@@ -15,6 +17,7 @@ module UI.Util
   , locationAsString
   ) where
 
+import qualified Data.Text                     as T
 import           Data.Maybe
 import qualified Data.Vector                   as Vector
 import qualified Data.Map                      as Map
@@ -36,7 +39,7 @@ import           UI.Style
 
 makePopupWidget :: GopherBrowserState -> B.Widget MyName
 makePopupWidget gbs = 
-  B.centerLayer $ head $ popup (pLabel .fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
+  B.centerLayer $ head $ popup (pLabel . fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
 
 -- FIXME: okay so this is nice and all but how will we handle editor input once activated? how do we tell it's activated?
 -- FIXME: poppys and statusWidget both relevant!
@@ -61,8 +64,8 @@ defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePop
   -- Maybe statusWidget should be Maybe so can override?
   status =
     if isStatusEditing gbs then
-      let editWidget      = withAttr inputFieldAttr $ B.renderEditor (str . unlines) True (seEditorState $ fromJust $ gbsStatus gbs)
-          editLabelWidget = str (seLabel $ fromJust $ gbsStatus gbs)
+      let editWidget      = withAttr inputFieldAttr $ B.renderEditor (txt . T.unlines) True (seEditorState $ fromJust $ gbsStatus gbs)
+          editLabelWidget = txt (seLabel $ fromJust $ gbsStatus gbs)
       in editLabelWidget <+> editWidget
     else
       statusWidget
@@ -87,9 +90,9 @@ cacheInsert :: Location -> FilePath -> Cache -> Cache
 cacheInsert location = Map.insert (locationAsString location)
 
 -- TODO: document and give a repl example
-locationAsString :: Location -> String
+locationAsString :: Location -> T.Text
 locationAsString (host, port, resource, mode) =
-  host ++ ":" ++ show port ++ resource ++ " (" ++ show mode ++ ")"
+  host <> ":" <> (T.pack $ show port) <> resource <> " (" <> (T.pack $ show mode) <> ")"
 
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
 -- FIXME: update for cache
@@ -125,7 +128,7 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
     map fst $ filter (not . isInfoMsg . snd) (zip [0 ..] m)
 
   -- | Used for filling up a list with display strings.
-  lineShow :: MenuLine -> String
+  lineShow :: MenuLine -> T.Text
   lineShow line = case line of
     -- It's a GopherLine
     (Parsed gl) -> case glType gl of
@@ -137,15 +140,18 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
           then " "
           else clean $ glDisplayString gl
     -- It's a MalformedGopherLine
-    (Unparseable mgl) -> clean $ show mgl
+    (Unparseable _) -> clean $ menuLineAsText line
 
 -- FIXME: Is this appropriate for here? maybe another module?
 -- | Replaces certain characters to ensure the Brick UI doesn't get "corrupted."
-clean :: String -> String
+clean :: T.Text -> T.Text
 clean = replaceTabs . replaceReturns
  where
-  replaceTabs    = map (\x -> if x == '\t' then ' ' else x)
-  replaceReturns = map (\x -> if x == '\r' then ' ' else x)
+  replaceTabs :: T.Text -> T.Text
+  replaceTabs    = T.map (\x -> if x == '\t' then ' ' else x)
+
+  replaceReturns :: T.Text -> T.Text
+  replaceReturns = T.map (\x -> if x == '\r' then ' ' else x)
 
 myNameScroll :: B.ViewportScroll MyName
 myNameScroll = B.viewportScroll MyViewport

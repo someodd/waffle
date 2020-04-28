@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | The help screen, which is also the homepage. It's just a TextFile, basically.
 module UI.Help
   ( helpModeUI
@@ -7,17 +9,19 @@ module UI.Help
 
 -- NOTE: should look to how search is handled as non-location i think
 
-import Paths_waffle
 
+import qualified Data.Text.IO                  as TIO
+import qualified Data.Text                     as T
 import           Control.Exception
 
 import qualified Graphics.Vty                  as V
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Core             ( viewport
-                                                , str
+                                                , txt
                                                 )
 import qualified Brick.Main                    as M
 
+import           Paths_waffle
 import           UI.Util
 import           UI.TextFile
 import           UI.Representation
@@ -25,9 +29,9 @@ import           UI.Representation
 helpModeUI :: GopherBrowserState -> [T.Widget MyName]
 helpModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
   where
-   mainWidget   = str . clean $ getHelpTextFileContents gbs
-   titleWidget  = str "Waffle Help"
-   statusWidget = str "Help mode. Use arrows or hjkl to scroll."
+   mainWidget   = txt . clean $ getHelpTextFileContents gbs
+   titleWidget  = txt "Waffle Help"
+   statusWidget = txt "Help mode. Use arrows or hjkl to scroll."
 
 -- | Basic text file controls, modularized so that the Help screen can use
 -- too, without including the history stuff. See the Help module.
@@ -40,12 +44,12 @@ helpEventHandler gbs e = case e of
   V.EvKey V.KEsc        [] -> M.continue $ hFormerGbs $ getHelp gbs
   _                        -> basicTextFileEventHandler gbs e
 
-getHelpContents :: IO String
+getHelpContents :: IO T.Text
 getHelpContents = do
   pathToHelpFile <- getDataFileName "data/help.txt"
-  catch (readFile pathToHelpFile)
+  catch (TIO.readFile pathToHelpFile)
         (\e -> let err = show (e :: IOException)
-               in  pure $ "Warning: Couldn't open " ++ pathToHelpFile ++ ": " ++ err)
+               in  pure $ T.pack $ "Warning: Couldn't open " ++ pathToHelpFile ++ ": " ++ err)
 
 -- | Initialize help mode.
 modifyGbsForHelp :: GopherBrowserState -> IO GopherBrowserState
