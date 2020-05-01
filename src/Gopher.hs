@@ -34,6 +34,7 @@ module Gopher
   , UnparseableLine
   , GopherNonCanonicalItemType(..)
   , GopherCanonicalItemType(..)
+  , Selector
   -- ** Utilities for Gopher menu models
   , isInfoMsg
   , makeGopherMenu
@@ -123,7 +124,7 @@ data ParsedLine = ParsedLine
   , glDisplayString :: T.Text
   -- ^ To be shown to the user for use in selecting this document
   -- (or directory) for retrieval.
-  , glSelector :: T.Text
+  , glSelector :: Selector
   -- ^ A selector string that the client software mus tsend to the server
   -- to retrieve the documen t(or directory listing).  The selector string
   -- should mean nothing to the client software; it should never be modified by
@@ -191,6 +192,12 @@ charToItemType _   = Nothing
 showAddressPlus :: ParsedLine -> T.Text
 showAddressPlus gl =
   glHost gl <> ":" <> T.pack (show $ glPort gl) <> " " <> glSelector gl <> " " <> T.pack (show $ glGopherPlus gl)
+
+-- | A "selector" is the magic string used to locate documents in a Gopherhole.
+-- This is is sent to a connected host on Gopherspace with `Network.Simple.TCP.send`,
+-- which is why the datatype is `ByteString`.
+-- datatype.
+type Selector = T.Text
 
 -- Fixme: for these three... rename to explain*ItemType?
 -- FIXME: update with the description from one of those docstrings...
@@ -353,7 +360,7 @@ parentDirectory magicString
 
 -- >> searchSelector "" "foo bar"
 -- "foo bar"
-searchSelector :: T.Text -> T.Text -> T.Text
+searchSelector :: Selector -> T.Text -> Selector
 searchSelector resource query =
   -- FIXME: I don't think this if null resource then query bit would actually work
   -- as seen in the REPL example, would it?
