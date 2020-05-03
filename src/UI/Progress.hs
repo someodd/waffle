@@ -90,7 +90,7 @@ gracefulSock :: GopherBrowserState -> Location -> ((Socket, SockAddr) -> IO ()) 
 gracefulSock gbs location@(host, port, resource, _) handler = do
   result <- try $ connectSock (T.unpack host) (show port) :: IO (Either SomeException (Socket, SockAddr))
   case result of
-    Left ex   -> makePopup gbs $ "Caught an exception: " <> (T.pack $ show ex)--FIXME: revert state!
+    Left ex   -> makePopup gbs $ T.pack (show ex)
     Right val -> handler val
   where
     makePopup gbs exMsg =
@@ -99,7 +99,7 @@ gracefulSock gbs location@(host, port, resource, _) handler = do
                                 GotoMode -> seFormerMode $ fromJust $ gbsStatus formerGbs-- FIXME: fromJust horrible
                                 x        -> x
           newBuffState      = formerGbs { gbsRenderMode = formerMode, gbsStatus = Nothing }
-          errorPopup        = Just $ Popup { pLabel = "Error", pWidgets = [txt $ exMsg ], pHelp = "ESC to return..."}
+          errorPopup        = Just $ Popup { pLabel = "Network/Goto Error", pWidgets = [txt exMsg], pHelp = "Couldn't reach supplied address. ESC to return..."}
           finalState        = newBuffState { gbsPopup = errorPopup, gbsStatus = Nothing }-- TODO, FIXME: deactivate status
           chan              = gbsChan finalState
       in  Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
@@ -115,13 +115,13 @@ gracefulSock gbs location@(host, port, resource, _) handler = do
 -- This is important for refreshing or navigating history (you don't want to update
 -- the history in those cases, so you supply Nothing).
 progressGetBytes :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressGetBytes initialProgGbs history location@(host, port, resource, _) = do
+progressGetBytes initialProgGbs history location@(host, port, resource, _) =
   gracefulSock initialProgGbs location handleResult
   where
     handleResult (connectionSocket, _) = do
       -- Send the magic/selector string (request a path) to the websocket we're connected to.
       -- This allows us to later receive the bytes located at this "path."
-      send connectionSocket (B8.pack $ (T.unpack resource) ++ "\r\n")
+      send connectionSocket (B8.pack $ T.unpack resource ++ "\r\n")
       -- Send the first event which is just the GBS we received to begin with... IDK, actually,
       -- why I even bother to do this!
       let chan = gbsChan initialProgGbs
@@ -140,7 +140,7 @@ progressGetBytes initialProgGbs history location@(host, port, resource, _) = do
       -- FIXME: what if location already exists? like if we're refreshing?
       let newCache = cacheInsert location tempFilePath (gbsCache initialProgGbs)
       -- We setup the final event with a GBS of the specified render mode.
-      doFinalEvent chan initialProgGbs history location (E.decodeUtf8With lenientDecode $ contents) newCache
+      doFinalEvent chan initialProgGbs history location (E.decodeUtf8With lenientDecode contents) newCache
       -- Finally we close the socket! We're done!
       closeSock connectionSocket
 
