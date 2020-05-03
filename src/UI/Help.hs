@@ -9,7 +9,6 @@ module UI.Help
 
 -- NOTE: should look to how search is handled as non-location i think
 
-
 import qualified Data.Text.IO                  as TIO
 import qualified Data.Text                     as T
 import           Control.Exception
@@ -29,7 +28,7 @@ import           UI.Representation
 helpModeUI :: GopherBrowserState -> [T.Widget MyName]
 helpModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
   where
-   mainWidget   = txt . clean $ getHelpTextFileContents gbs
+   mainWidget   = txt $ getHelpTextFileContents gbs
    titleWidget  = txt "Waffle Help"
    statusWidget = txt "Help mode. Use arrows or hjkl to scroll."
 
@@ -47,7 +46,7 @@ helpEventHandler gbs e = case e of
 getHelpContents :: IO T.Text
 getHelpContents = do
   pathToHelpFile <- getDataFileName "data/help.txt"
-  catch (TIO.readFile pathToHelpFile)
+  catch (clean <$> TIO.readFile pathToHelpFile)
         (\e -> let err = show (e :: IOException)
                in  pure $ T.pack $ "Warning: Couldn't open " ++ pathToHelpFile ++ ": " ++ err)
 
