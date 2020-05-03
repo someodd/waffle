@@ -1,5 +1,27 @@
 {-# LANGUAGE OverloadedStrings #-}
-module UI.Style where
+module UI.Style
+  ( customBorder
+  , custom2Attr
+  , theMap
+  , inputFieldAttr
+  , inputDialogBorder
+  , inputDialogBorderAttr
+  , borderMappingsInputDialog
+  , borderMappings
+  , errorAttr
+  , inputDialogAttr
+  , inputDialogLabelAttr
+  , titleAttr
+  , customAttr
+  , asteriskAttr
+  , numberPrefixAttr
+  , fileAttr
+  , indexSearchServerAttr
+  , linkAttr
+  , textAttr
+  , directoryAttr
+  , genericTypeAttr
+  ) where
 
 import qualified Brick.Widgets.List            as L
 import qualified Graphics.Vty                  as V
@@ -132,21 +154,6 @@ inputDialogBorder = BS.BorderStyle { BS.bsCornerTL      = '░'
                                    , BS.bsHorizontal    = '▓'
                                    , BS.bsVertical      = '▒'
                                    }
-
--- emoji test
-emojiBorder :: BS.BorderStyle
-emojiBorder = BS.BorderStyle { BS.bsCornerTL      = '╋'
-                             , BS.bsCornerTR      = '╋'
-                             , BS.bsCornerBR      = '╋'
-                             , BS.bsCornerBL      = '╋'
-                             , BS.bsIntersectFull = ' '
-                             , BS.bsIntersectL    = ' '
-                             , BS.bsIntersectR    = ' '
-                             , BS.bsIntersectT    = ' '
-                             , BS.bsIntersectB    = ' '
-                             , BS.bsHorizontal    = '┅'
-                             , BS.bsVertical      = '┇'
-                             }
 
 inputDialogBorderAttr :: A.AttrName
 inputDialogBorderAttr = "inputDialogBorderAttr"

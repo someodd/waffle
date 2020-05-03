@@ -1,10 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Dialog for opening a Gopher URI dialog/UI.
-module UI.Goto where
+module UI.Goto
+  ( gotoEventHandler
+  , initGotoMode
+  ) where
 
 import           Data.Maybe
 import           Control.Monad.IO.Class
-import           Data.List
 
+import qualified Data.Text                     as T
 import qualified Brick.Main                    as M
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Edit            as E
@@ -29,11 +34,11 @@ initGotoMode gbs = gbs
 mkGotoResponseState :: GopherBrowserState -> IO GopherBrowserState
 mkGotoResponseState gbs =
   -- get the host, port, selector
-  let unparsedURI = filter (/= '\n')
-        $ unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
-      unparsedWithScheme | "gopher://" `isPrefixOf` unparsedURI = unparsedURI
-                         | otherwise = "gopher://" ++ unparsedURI
-      maybeParsedURI = parseURI unparsedWithScheme
+  let unparsedURI = T.filter (/= '\n')
+        $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
+      unparsedWithScheme | "gopher://" `T.isPrefixOf` unparsedURI = unparsedURI
+                         | otherwise = "gopher://" <> unparsedURI
+      maybeParsedURI = parseURI (T.unpack unparsedWithScheme)
       parsedURI      = case maybeParsedURI of
         (Just u) -> u
         Nothing  -> error $ "Invalid URI: " ++ show unparsedWithScheme
@@ -45,13 +50,13 @@ mkGotoResponseState gbs =
         ""  -> 70
         p -> read $ tail p :: Int
       host = case uriRegName authority' of
-        ""  -> error $ "Invalid URI (no host): " ++ show unparsedWithScheme
+        ""  -> error $ "Invalid URI (no host): " <> show unparsedWithScheme
         h -> h
       resource = case uriPath parsedURI of
         ""  -> ""
         r -> r
   -- What if it's not a menu? FIXME
-  in initProgressMode gbs Nothing (host, port, resource, MenuMode)
+  in initProgressMode gbs Nothing (T.pack host, port, T.pack resource, MenuMode)
   -- FIXME: TODO: Must return a better dummy state...
   -- this is already done by init progress
   -- Might have to return progress mode or something idk I'll have to look at

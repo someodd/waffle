@@ -1,10 +1,12 @@
 -- TODO: rename stuff to *save* and not file browser etc
 {-# LANGUAGE OverloadedStrings #-}
-module UI.Save where
+module UI.Save
+  ( saveEventHandler
+  , fileBrowserUi
+  ) where
 
 import           Control.Monad.IO.Class
-import qualified Data.ByteString               as ByteString
-import qualified Data.Text                     as Text
+import qualified Data.Text                     as T
 import           Control.Exception              ( displayException )
 
 import qualified Brick.Main                    as M
@@ -15,7 +17,6 @@ import           Brick.Widgets.Center           ( center
                                                 , hCenter
                                                 )
 import           Brick.Widgets.Border           ( borderWithLabel )
-import           System.FilePath                ( takeFileName )
 import           Brick.Widgets.Core             ( vLimitPercent
                                                 , hLimitPercent
                                                 , (<=>)
@@ -27,33 +28,8 @@ import           Brick.Widgets.Core             ( vLimitPercent
                                                 , withDefAttr
                                                 )
 
-import           GopherClient                   ( downloadGet )
 import           UI.Style
 import           UI.Representation
-
-downloadState
-  :: GopherBrowserState -> String -> Int -> String -> IO GopherBrowserState
-downloadState gbs host port resource = do
-  o <- downloadGet host (show port) resource
-  --BS.writeFile "usefilechoserhere" o >> pure gbs-- XXX FIXME
-  x <- FB.newFileBrowser selectNothing MyViewport Nothing
-  pure $ gbs
-    { gbsRenderMode = FileBrowserMode
-    , gbsBuffer     = FileBrowserBuffer $ SaveBrowser
-                        { fbFileBrowser       = x
-                                                  -- should be move FIXME
-                        , fbCallBack          = (`ByteString.writeFile` o)
-                        , fbIsNamingFile      = False
-                        , fbFileOutPath       = ""
-                        , fbOriginalFileName  = takeFileName resource
-                        , fbFormerBufferState = gbsBuffer gbs
-                        }
-    }
- where
-    -- | This is for FileBrowser, because we don't want to overwrite anything,
-    -- we want to browse through directories and then enter in a file name.
-  selectNothing :: FB.FileInfo -> Bool
-  selectNothing _ = False
 
 -- FIXME, TODO: document the features in handleFileBrowserEvent!
 -- FIXME: only need to return GopherBrowserState actually
@@ -76,7 +52,7 @@ handleFileBrowserEvent' gbs e b
   = case e of
     -- Enter key means we're done naming the file.
     V.EvKey V.KEnter [] ->
-      ( finalOutFilePath $ FB.getWorkingDirectory b ++ "/" ++ curOutFilePath
+      ( finalOutFilePath $ FB.getWorkingDirectory b <> "/" <> curOutFilePath
       , pure b
       )
     -- Delete a character.
@@ -99,7 +75,7 @@ handleFileBrowserEvent' gbs e b
                  }
     in  updateFileBrowserBuffer gbs cb
 
-  finalOutFilePath :: String -> GopherBrowserState
+  finalOutFilePath :: FilePath -> GopherBrowserState
   finalOutFilePath p =
     let cb x = x { fbFileOutPath = p, fbIsNamingFile = False }
     in  updateFileBrowserBuffer gbs cb
@@ -128,7 +104,7 @@ fileBrowserUi gbs =
     [ case FB.fileBrowserException b of
       Nothing -> emptyWidget
       Just e ->
-        hCenter $ withDefAttr errorAttr $ txt $ Text.pack $ displayException e
+        hCenter $ withDefAttr errorAttr $ txt $ T.pack $ displayException e
     , hCenter $ txt "/: search, Ctrl-C or Esc: cancel search"
     , hCenter $ txt "Esc: quit/cancel save"
     , hCenter $ txt "n: name the output file and then hit enter"
