@@ -29,8 +29,6 @@ dependencies:
   - network-uri
 
 data-files: data/help.txt
-ghc-options: -static
-# -threaded -rtsopts -with-rtsopts=-N -static
 
 library:
   source-dirs: src
