@@ -1,7 +1,22 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Honestly, this is sloppily just a catchall for things many UI modules use. Should be sorted
 -- soon/later.
-module UI.Util where
+module UI.Util
+  ( makePopupWidget
+  , defaultBrowserUI
+  , cacheLookup
+  , isCached
+  , newStateForMenu
+  , myNameScroll
+  , mainViewportScroll
+  , cacheInsert
+  , menuViewportScroll
+  , textViewportScroll
+  , locationAsString
+  ) where
 
+import qualified Data.Text                     as T
 import           Data.Maybe
 import qualified Data.Vector                   as Vector
 import qualified Data.Map                      as Map
@@ -16,14 +31,14 @@ import           Brick.Widgets.Border          as B
 import           Brick.AttrMap                 as B
 import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 
-import           GopherClient
+import           Gopher
 import           UI.Representation
 import           UI.Popup
 import           UI.Style
 
 makePopupWidget :: GopherBrowserState -> B.Widget MyName
 makePopupWidget gbs = 
-  B.centerLayer $ head $ popup (pLabel .fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
+  B.centerLayer $ head $ popup (pLabel . fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
 
 -- FIXME: okay so this is nice and all but how will we handle editor input once activated? how do we tell it's activated?
 -- FIXME: poppys and statusWidget both relevant!
@@ -48,8 +63,8 @@ defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePop
   -- Maybe statusWidget should be Maybe so can override?
   status =
     if isStatusEditing gbs then
-      let editWidget      = withAttr inputFieldAttr $ B.renderEditor (str . unlines) True (seEditorState $ fromJust $ gbsStatus gbs)
-          editLabelWidget = str (seLabel $ fromJust $ gbsStatus gbs)
+      let editWidget      = withAttr inputFieldAttr $ B.renderEditor (txt . T.unlines) True (seEditorState $ fromJust $ gbsStatus gbs)
+          editLabelWidget = txt (seLabel $ fromJust $ gbsStatus gbs)
       in editLabelWidget <+> editWidget
     else
       statusWidget
@@ -74,9 +89,9 @@ cacheInsert :: Location -> FilePath -> Cache -> Cache
 cacheInsert location = Map.insert (locationAsString location)
 
 -- TODO: document and give a repl example
-locationAsString :: Location -> String
+locationAsString :: Location -> T.Text
 locationAsString (host, port, resource, mode) =
-  host ++ ":" ++ show port ++ resource ++ " (" ++ show mode ++ ")"
+  host <> ":" <> (T.pack $ show port) <> resource <> " (" <> (T.pack $ show mode) <> ")"
 
 -- FIXME: more like makeState from menu lol. maybe can make do for any state
 -- FIXME: update for cache
@@ -112,27 +127,19 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
     map fst $ filter (not . isInfoMsg . snd) (zip [0 ..] m)
 
   -- | Used for filling up a list with display strings.
-  lineShow :: Either GopherLine MalformedGopherLine -> String
+  lineShow :: MenuLine -> T.Text
   lineShow line = case line of
     -- It's a GopherLine
-    (Left gl) -> case glType gl of
+    (Parsed gl) -> case glType gl of
       -- Canonical type
-      (Left _) -> clean $ glDisplayString gl
+      (Left _) -> glDisplayString gl
       -- Noncanonical type
       (Right nct) ->
-        if nct == InformationalMessage && clean (glDisplayString gl) == ""
+        if nct == InformationalMessage && glDisplayString gl == ""
           then " "
-          else clean $ glDisplayString gl
+          else glDisplayString gl
     -- It's a MalformedGopherLine
-    (Right mgl) -> clean $ show mgl
-
--- FIXME: Is this appropriate for here? maybe another module?
--- | Replaces certain characters to ensure the Brick UI doesn't get "corrupted."
-clean :: String -> String
-clean = replaceTabs . replaceReturns
- where
-  replaceTabs    = map (\x -> if x == '\t' then ' ' else x)
-  replaceReturns = map (\x -> if x == '\r' then ' ' else x)
+    (Unparseable _) -> menuLineAsText line
 
 myNameScroll :: B.ViewportScroll MyName
 myNameScroll = B.viewportScroll MyViewport

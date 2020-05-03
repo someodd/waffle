@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Search mode for the UI. Index search implementation for UI.
 --
 -- Handle drawing the search UI, modifying the application state
@@ -10,13 +12,14 @@ where
 
 import           Control.Monad.IO.Class
 
+import qualified Data.Text                     as T
 import qualified Brick.Main                    as M
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Edit            as E
 import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 
-import           GopherClient                   ( searchSelector )
+import           Gopher                         ( searchSelector )
 import           UI.Popup
 import           UI.Representation
 import           UI.Progress
@@ -28,7 +31,7 @@ searchInputUI gbs = inputPopupUI editorBuffer labelText helpText
  where
   searchBuffer = getSearch gbs
   editorBuffer = sbEditorState (getSearch gbs)
-  labelText    = "Search: " ++ sbHost searchBuffer
+  labelText    = "Search: " <> sbHost searchBuffer
   helpText     = "Press ENTER to search"
 
 -- | Form a new application state based on a Gopher search request.
@@ -37,7 +40,7 @@ mkSearchResponseState gbs = do
   let host     = sbHost $ getSearch gbs
       port     = sbPort $ getSearch gbs
       resource = sbSelector $ getSearch gbs
-      query    = unlines (E.getEditContents $ sbEditorState $ getSearch gbs)
+      query    = T.unlines (E.getEditContents $ sbEditorState $ getSearch gbs)
       selector = searchSelector resource query
   initProgressMode gbs Nothing (host, port, selector, MenuMode)
 

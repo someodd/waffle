@@ -6,6 +6,7 @@ module UI.Popup
   , inputPopupUI
   ) where
 
+import qualified Data.Text                     as T
 import qualified Brick.Widgets.Edit            as E
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Center           ( center
@@ -15,7 +16,7 @@ import           Brick.Widgets.Center           ( center
 import           Brick.Widgets.Border           ( borderWithLabel )
 import           Brick.AttrMap                  ( applyAttrMappings )
 import           Brick.Widgets.Core             ( vBox
-                                                , str
+                                                , txt
                                                 , hLimit
                                                 , vLimit
                                                 , withBorderStyle
@@ -31,14 +32,14 @@ import           UI.Representation
 
 -- | A vertically-centered, full-width popup box to be displayed over other widgets by putting it before
 -- the other widgets in the list of widgets being rendered.
-popup :: String -> [T.Widget MyName] -> String -> [T.Widget MyName]
+popup :: T.Text -> [T.Widget MyName] -> T.Text -> [T.Widget MyName]
 popup label widgets helpString =
   let
     ui =
       updateAttrMap (applyAttrMappings borderMappingsInputDialog)
         $ withBorderStyle inputDialogBorder
         $ borderWithLabel
-            (withAttr inputDialogLabelAttr $ padLeftRight 1 $ str label)
+            (withAttr inputDialogLabelAttr $ padLeftRight 1 $ txt label)
         $ hCenter
         $ padLeftRight 4
         $ padTopBottom 1
@@ -47,12 +48,12 @@ popup label widgets helpString =
         $ vLimit 3
         $ vBox
             [ vBox widgets
-            , padTop (T.Pad 1) $ str helpString
+            , padTop (T.Pad 1) $ txt helpString
             ]
   in  [ui]
 
 -- | A full-screen popup which displays nothing underneath it. Centered vertically and horizontally.
-popOver :: String -> [T.Widget MyName] -> String -> [T.Widget MyName]
+popOver :: T.Text -> [T.Widget MyName] -> T.Text -> [T.Widget MyName]
 popOver label mainWidget helpString =
   let
     ui =
@@ -62,7 +63,7 @@ popOver label mainWidget helpString =
         (head $ popup label mainWidget helpString)
   in  [center ui]
 
-inputPopupUI :: E.Editor String MyName -> String -> String -> [T.Widget MyName]
+inputPopupUI :: E.Editor T.Text MyName -> T.Text -> T.Text -> [T.Widget MyName]
 inputPopupUI editorState label helpString = popOver label [editorWidget] helpString
   where
-   editorWidget = withAttr inputFieldAttr $ E.renderEditor (str . unlines) True editorState
+   editorWidget = withAttr inputFieldAttr $ E.renderEditor (txt . T.unlines) True editorState
