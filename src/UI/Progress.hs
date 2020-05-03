@@ -133,7 +133,7 @@ doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCa
     finalState = case mode of
       TextFileMode -> initialProgGbs
         { gbsLocation   = location
-        , gbsBuffer     = TextFileBuffer $ TextFile { tfContents = clean contents, tfTitle = locationAsString location }
+        , gbsBuffer     = TextFileBuffer $ TextFile { tfContents = cleanAll contents, tfTitle = locationAsString location }
         , gbsRenderMode = TextFileMode
         , gbsHistory    = maybeHistory
         , gbsCache      = newCache

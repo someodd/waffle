@@ -43,6 +43,7 @@ module Gopher
   , menuLine
   , explainLine
   , menuLineAsText
+  , cleanAll
   ) where
 
 import qualified Data.Text        as T
@@ -150,14 +151,13 @@ newtype UnparseableLine = UnparseableLine [T.Text]
 -- | A line in a 'GopherMenu'.
 data MenuLine = Parsed ParsedLine | Unparseable UnparseableLine
 
--- FIXME: replaces show instance for menu
 menuLineAsText :: MenuLine -> T.Text
 menuLineAsText (Parsed parsedLine)        =
   let indent = if glType parsedLine == Right InformationalMessage then "          " else ""
   in  indent <> glDisplayString parsedLine
 menuLineAsText (Unparseable unparsedLine) =
   let (UnparseableLine fields) = unparsedLine
-  in  "    " <> T.pack (show fields) <> " (UNPARSED LINE)"
+  in  "    " <> (cleanAll .T.pack $ show fields) <> " (UNPARSED LINE)"
 
 -- | Take the character from a menu line delivered from a Gopher server and give
 -- back the type of the item that line describes.
@@ -293,7 +293,7 @@ makeGopherMenu rawString = GopherMenu $ map makeMenuLine rowsOfFields
           -- The item type indicator is recognized...
           Just x  -> Just $ ParsedLine
             { glType          = x
-            , glDisplayString = displayString
+            , glDisplayString = displayString-- FIXME: do we need to clean this?
             , glSelector      = selector
             , glHost          = host
             , glPort          = portAsInt
@@ -340,7 +340,7 @@ isInfoMsg line = case line of
 -- >>> parentDirectory ""
 -- Nothing
 --
--- >> parentDirectory "/foo/bar/hello/world"
+-- >>> parentDirectory "/foo/bar/hello/world"
 -- Just "foo/bar/hello"
 parentDirectory :: T.Text -> Maybe T.Text
 parentDirectory magicString
@@ -355,10 +355,10 @@ parentDirectory magicString
 -- This is very similar to the URLs you'd expect from GET requests and
 -- query strings in HTTP.
 --
--- >> searchSelector "/somesearch" "foo bar"
+-- >>> searchSelector "/somesearch" "foo bar"
 -- "/somesearch\tfoo bar"
 
--- >> searchSelector "" "foo bar"
+-- >>> searchSelector "" "foo bar"
 -- "foo bar"
 searchSelector :: Selector -> T.Text -> Selector
 searchSelector resource query =
@@ -369,6 +369,32 @@ searchSelector resource query =
 -- | Get the nth line from a 'GopherMenu'.
 menuLine :: GopherMenu -> Int -> MenuLine
 menuLine (GopherMenu ls) indx = ls !! indx
+
+-- | Replace tabs with spaces. Used mostly for text files, because
+-- `MenuLine`s don't have this issue. Attempting to display tabs to
+-- the terminal will have unintended consequences.
+--
+-- >>> cleanTabs "\tfoo\tbar\t"
+-- " foo bar "
+cleanTabs :: T.Text -> T.Text
+cleanTabs    = T.map (\x -> if x == '\t' then ' ' else x)
+
+-- | Replace carriage returns with spaces. Used for text files and
+-- `MenuLine`s.
+--
+-- >>> cleanReturns "foo\rbar"
+-- "foo bar"
+cleanReturns :: T.Text -> T.Text
+cleanReturns = T.map (\x -> if x == '\r' then ' ' else x)
+
+-- TODO: fix the lines right off the bat with replace returns!
+-- FIXME: should be cleanMenuLine and cleanTextFile because menuLines don't
+-- need tabs replaced due to it being tab-delimited already! I believe...
+-- NOTE: and what about the returns?
+-- FIXME: Is this appropriate for here? maybe another module?
+-- | Replaces certain characters to ensure the Brick UI doesn't get "corrupted."
+cleanAll :: T.Text -> T.Text
+cleanAll = cleanTabs . cleanReturns
 
 {- $gopherMenus
 

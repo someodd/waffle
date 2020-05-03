@@ -24,6 +24,7 @@ import           Paths_waffle
 import           UI.Util
 import           UI.TextFile
 import           UI.Representation
+import           Gopher
 
 helpModeUI :: GopherBrowserState -> [T.Widget MyName]
 helpModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
@@ -46,7 +47,7 @@ helpEventHandler gbs e = case e of
 getHelpContents :: IO T.Text
 getHelpContents = do
   pathToHelpFile <- getDataFileName "data/help.txt"
-  catch (clean <$> TIO.readFile pathToHelpFile)
+  catch (cleanAll <$> TIO.readFile pathToHelpFile)
         (\e -> let err = show (e :: IOException)
                in  pure $ T.pack $ "Warning: Couldn't open " ++ pathToHelpFile ++ ": " ++ err)
 
