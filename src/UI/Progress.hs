@@ -13,6 +13,7 @@ module UI.Progress
   , goParentDirectory
   ) where
 
+import           Control.Exception
 import           Data.Text.Encoding.Error       (lenientDecode)
 import           Data.Text.Encoding            as E
 import qualified Data.Text                     as T
@@ -83,6 +84,26 @@ addProgBytes gbs' nbytes =
         }
   in  updateProgressBuffer gbs' cb
 
+-- FIXME: bad doc, bad name
+-- | Handle a connection, including reporting exceptions...
+gracefulSock :: GopherBrowserState -> Location -> ((Socket, SockAddr) -> IO ()) -> IO ()
+gracefulSock gbs location@(host, port, resource, _) handler = do
+  result <- try $ connectSock (T.unpack host) (show port) :: IO (Either SomeException (Socket, SockAddr))
+  case result of
+    Left ex   -> makePopup gbs $ "Caught an exception: " <> (T.pack $ show ex)--FIXME: revert state!
+    Right val -> handler val
+  where
+    makePopup gbs exMsg =
+      let formerGbs         = pbInitGbs (getProgress gbs)
+          formerMode        = case gbsRenderMode formerGbs of
+                                GotoMode -> seFormerMode $ fromJust $ gbsStatus formerGbs-- FIXME: fromJust horrible
+                                x        -> x
+          newBuffState      = formerGbs { gbsRenderMode = formerMode, gbsStatus = Nothing }
+          errorPopup        = Just $ Popup { pLabel = "Error", pWidgets = [txt $ exMsg ], pHelp = "ESC to return..."}
+          finalState        = newBuffState { gbsPopup = errorPopup, gbsStatus = Nothing }-- TODO, FIXME: deactivate status
+          chan              = gbsChan finalState
+      in  Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
+
 -- | Download bytes via Gopher, using progress events to report status. Eventually
 -- gives back the path to the new temporary file it has created. This is used to
 -- download bytes and create a new temp/cache file based on the download, while
@@ -94,30 +115,34 @@ addProgBytes gbs' nbytes =
 -- This is important for refreshing or navigating history (you don't want to update
 -- the history in those cases, so you supply Nothing).
 progressGetBytes :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressGetBytes initialProgGbs history location@(host, port, resource, _)
-  = connect (T.unpack host) (show port) $ \(connectionSocket, _) -> do
-    -- Send the magic/selector string (request a path) to the websocket we're connected to.
-    -- This allows us to later receive the bytes located at this "path."
-    send connectionSocket (B8.pack $ (T.unpack resource) ++ "\r\n")
-    -- Send the first event which is just the GBS we received to begin with... IDK, actually,
-    -- why I even bother to do this!
-    let chan = gbsChan initialProgGbs
-    Brick.BChan.writeBChan chan (NewStateEvent initialProgGbs)
-    -- Now we fill a temporary file with the contents we receive via TCP, as mentioned earlier,
-    -- since we've selected the remote file with the selector string. We get back the path
-    -- to the temporary file and we also get its contents. The file path is used for the cache.
-    -- The contents is used to update GBS with the appropriate mode (as a UTF8 string).
-    tempFilePath <- emptySystemTempFile "waffle.cache.tmp"-- TODO: needs better template/pattern filename
-    writeAllBytes initialProgGbs connectionSocket tempFilePath
-    -- NOTE: it's a bit silly to write all bytes and then read from the file we wrote, but
-    -- I'll mark this fix as a TODO, because I just did a major refactor and it's not a huge
-    -- deal...
-    contents <- ByteString.readFile tempFilePath
-    -- Prepare the cache with this new temporary file that was created above.
-    -- FIXME: what if location already exists? like if we're refreshing?
-    let newCache = cacheInsert location tempFilePath (gbsCache initialProgGbs)
-    -- Finally we setup the final event with a GBS of the specified render mode.
-    doFinalEvent chan initialProgGbs history location (E.decodeUtf8With lenientDecode $ contents) newCache
+progressGetBytes initialProgGbs history location@(host, port, resource, _) = do
+  gracefulSock initialProgGbs location handleResult
+  where
+    handleResult (connectionSocket, _) = do
+      -- Send the magic/selector string (request a path) to the websocket we're connected to.
+      -- This allows us to later receive the bytes located at this "path."
+      send connectionSocket (B8.pack $ (T.unpack resource) ++ "\r\n")
+      -- Send the first event which is just the GBS we received to begin with... IDK, actually,
+      -- why I even bother to do this!
+      let chan = gbsChan initialProgGbs
+      Brick.BChan.writeBChan chan (NewStateEvent initialProgGbs)
+      -- Now we fill a temporary file with the contents we receive via TCP, as mentioned earlier,
+      -- since we've selected the remote file with the selector string. We get back the path
+      -- to the temporary file and we also get its contents. The file path is used for the cache.
+      -- The contents is used to update GBS with the appropriate mode (as a UTF8 string).
+      tempFilePath <- emptySystemTempFile "waffle.cache.tmp"-- TODO: needs better template/pattern filename
+      writeAllBytes initialProgGbs connectionSocket tempFilePath
+      -- NOTE: it's a bit silly to write all bytes and then read from the file we wrote, but
+      -- I'll mark this fix as a TODO, because I just did a major refactor and it's not a huge
+      -- deal...
+      contents <- ByteString.readFile tempFilePath
+      -- Prepare the cache with this new temporary file that was created above.
+      -- FIXME: what if location already exists? like if we're refreshing?
+      let newCache = cacheInsert location tempFilePath (gbsCache initialProgGbs)
+      -- We setup the final event with a GBS of the specified render mode.
+      doFinalEvent chan initialProgGbs history location (E.decodeUtf8With lenientDecode $ contents) newCache
+      -- Finally we close the socket! We're done!
+      closeSock connectionSocket
 
 -- | This is for final events that change the render mode based on the contents.
 doFinalEvent
