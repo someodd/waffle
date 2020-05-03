@@ -24,7 +24,7 @@ textFileModeUI :: GopherBrowserState -> [T.Widget MyName]
 textFileModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
   where
    mainWidget   = let textFileContents = tfContents $ getTextFile gbs
-                  in  txt $ clean textFileContents
+                  in  txt textFileContents
    titleWidget  = txt $ tfTitle $ getTextFile gbs
    statusWidget = txt "? for help. Text file mode."
 

@@ -8,7 +8,6 @@ module UI.Util
   , cacheLookup
   , isCached
   , newStateForMenu
-  , clean
   , myNameScroll
   , mainViewportScroll
   , cacheInsert
@@ -133,25 +132,14 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
     -- It's a GopherLine
     (Parsed gl) -> case glType gl of
       -- Canonical type
-      (Left _) -> clean $ glDisplayString gl
+      (Left _) -> glDisplayString gl
       -- Noncanonical type
       (Right nct) ->
-        if nct == InformationalMessage && clean (glDisplayString gl) == ""
+        if nct == InformationalMessage && glDisplayString gl == ""
           then " "
-          else clean $ glDisplayString gl
+          else glDisplayString gl
     -- It's a MalformedGopherLine
-    (Unparseable _) -> clean $ menuLineAsText line
-
--- FIXME: Is this appropriate for here? maybe another module?
--- | Replaces certain characters to ensure the Brick UI doesn't get "corrupted."
-clean :: T.Text -> T.Text
-clean = replaceTabs . replaceReturns
- where
-  replaceTabs :: T.Text -> T.Text
-  replaceTabs    = T.map (\x -> if x == '\t' then ' ' else x)
-
-  replaceReturns :: T.Text -> T.Text
-  replaceReturns = T.map (\x -> if x == '\r' then ' ' else x)
+    (Unparseable _) -> menuLineAsText line
 
 myNameScroll :: B.ViewportScroll MyName
 myNameScroll = B.viewportScroll MyViewport
