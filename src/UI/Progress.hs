@@ -38,6 +38,7 @@ import qualified Graphics.Vty                  as V
 import           UI.Util
 import           UI.Representation
 import           Gopher
+import           GopherNet                      ( writeAllBytes' )
 
 -- FIXME: also used by save.hs
 selectNothing :: FB.FileInfo -> Bool
@@ -76,6 +77,26 @@ initProgressMode gbs history location@(_, _, _, mode) =
   -- Should catch network error in a popup (representational).
   in forkIO (downloader initialProgGbs history location) >> pure initialProgGbs
 
+-- THIS IS A CALLBACK FOR GOPHERNET
+counterMutator :: GopherBrowserState -> Maybe ByteString.ByteString -> IO GopherBrowserState
+counterMutator gbs someBytes =
+  let bytesReceived = case someBytes of
+        Nothing  -> 0
+        -- We count the bytes each time because the second-to-last response can have
+        -- under the recvChunkSize. The last response will always be Nothing.
+        (Just n) -> ByteString.length n
+      newGbs        = addProgBytes' gbs bytesReceived
+  in  Brick.BChan.writeBChan (gbsChan gbs) (NewStateEvent newGbs) >> pure newGbs
+  where
+  --addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
+  addProgBytes' gbs' nbytes =
+    let cb x = x
+          { pbBytesDownloaded = pbBytesDownloaded (getProgress gbs') + nbytes
+          , pbConnected       = True
+          }
+    in  updateProgressBuffer gbs' cb
+
+-- MUST DEPRECATE FIXME TODO
 addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
 addProgBytes gbs' nbytes =
   let cb x = x
@@ -131,7 +152,7 @@ progressGetBytes initialProgGbs history location@(host, port, resource, _) =
       -- to the temporary file and we also get its contents. The file path is used for the cache.
       -- The contents is used to update GBS with the appropriate mode (as a UTF8 string).
       tempFilePath <- emptySystemTempFile "waffle.cache.tmp"-- TODO: needs better template/pattern filename
-      writeAllBytes initialProgGbs connectionSocket tempFilePath
+      writeAllBytes' (Just counterMutator) (Just initialProgGbs) connectionSocket tempFilePath
       -- NOTE: it's a bit silly to write all bytes and then read from the file we wrote, but
       -- I'll mark this fix as a TODO, because I just did a major refactor and it's not a huge
       -- deal...
