@@ -124,7 +124,7 @@ listDrawElement
   :: GopherBrowserState -> Int -> Bool -> T.Text -> T.Widget MyName
 listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
   lineColor
-  (lineDescriptorWidget (menuLine gmenu indx) <+> selStr a)
+  (selStr a <+> lineDescriptorWidget (menuLine gmenu indx) )
  where
   selStr s
     | sel && isInfoMsg (selectedMenuLine gbs) = withAttr custom2Attr (txt s)
@@ -147,7 +147,7 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
       $  numberPad
       $  (T.pack $ show (fromJust $ indx `elemIndex` focusLines))
       <> ". "
-    else txt ""
+    else txt $ (T.replicate (biggestIndexDigits + 2) " ")
     where
       numberPad :: T.Text -> T.Text
       numberPad = (T.replicate (biggestIndexDigits - curIndexDigits) " " <>)
@@ -158,16 +158,16 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
     (Parsed gl) -> case glType gl of
       -- Cannonical type
       (Canonical ct) -> case ct of
-        Directory -> withAttr directoryAttr $ txt "📂 [Directory] "
-        File      -> withAttr fileAttr $ txt "📄 [File] "
+        Directory -> withAttr directoryAttr $ txt " 📂 [Directory]"
+        File      -> withAttr fileAttr $ txt " 📄 [File]"
         IndexSearchServer ->
-          withAttr indexSearchServerAttr $ txt "🔎 [IndexSearchServer] "
-        _ -> withAttr genericTypeAttr $ txt $ "[" <> (T.pack $ show ct) <> "] "
+          withAttr indexSearchServerAttr $ txt " 🔎 [IndexSearchServer]"
+        _ -> withAttr genericTypeAttr $ txt $ " [" <> (T.pack $ show ct) <> "]"
       -- Noncannonical type
       (NonCanonical nct) -> case nct of
         InformationalMessage -> txt $ T.replicate (biggestIndexDigits + 2) " "
-        HtmlFile -> withAttr directoryAttr $ txt "🌐 [HTMLFile] "
-        _ -> withAttr genericTypeAttr $ txt $ "[" <> (T.pack $ show nct) <> "] "
+        HtmlFile -> withAttr directoryAttr $ txt " 🌐 [HTMLFile] "
+        _ -> withAttr genericTypeAttr $ txt $ " [" <> (T.pack $ show nct) <> "]"
     -- it's a malformed/unrecognized line
     (Unparseable _) -> txt ""
 
