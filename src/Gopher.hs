@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- TODO/FIXME: implement data ItemType = Canonical CanonicalItemType | NonCanonical NonCanonicalItemType
 -- TODO: more stuff from UI needs to go in here for clearer separation?
 -- TODO: resource is misnamed. it's "selector string."
 -- TODO: menu and directory seem to be synonymous
@@ -24,18 +25,24 @@
 --     https://en.wikipedia.org/wiki/Gopher_(protocol)
 --   * Gopher+ - Wikipedia
 --     https://en.wikipedia.org/wiki/Gopher%2B
+--   * RFC 4266 - The gopher URI Scheme
+--     https://datatracker.ietf.org/doc/rfc4266/?include_text=1
 module Gopher
   (
-  -- * Models for Gopher menus
+  -- * Models for Gopher menus and other representations
   -- $gopherMenus
     GopherMenu(GopherMenu)
   , MenuLine(..)
   , ParsedLine(..)
   , UnparseableLine
+  , Selector
+  -- ** Models for item types
+  , ItemType(..)
   , GopherNonCanonicalItemType(..)
   , GopherCanonicalItemType(..)
-  , Selector
   -- ** Utilities for Gopher menu models
+  , selectorItemType
+  , selectorExtToItemType
   , isInfoMsg
   , makeGopherMenu
   , parentDirectory
@@ -48,6 +55,7 @@ module Gopher
 
 import qualified Data.Text        as T
 import           Text.Read
+import           System.FilePath   (takeExtension)
 
 -- | The types of lines in a Gopher menu which are types specified by the original
 -- Gopher protocol specification (RFC 1435).
@@ -108,6 +116,11 @@ data GopherNonCanonicalItemType =
   -- ^ Sound file (especially the WAV format).
   deriving (Eq, Show)
 
+-- | ItemType of a Gopher document, as described in Gopher URIs (hopefully) or
+-- in Gophermap/`GopherMenu` items.
+data ItemType = Canonical GopherCanonicalItemType | NonCanonical GopherNonCanonicalItemType
+  deriving (Eq, Show)
+
 -- TODO, FIXME: change the gl prefix
 -- | Representation of a recognized (something I can interpret; formatted as expected)
 -- line in a 'GopherMenu'.
@@ -118,8 +131,7 @@ data GopherNonCanonicalItemType =
 --
 -- > 1Display stringFselector stringFhostFportFextrastuff\CRLF
 data ParsedLine = ParsedLine
-  -- TODO: I want to just make a MenuItemType = CanonicalItemType | NonCanonicalItemType
-  { glType :: Either GopherCanonicalItemType GopherNonCanonicalItemType
+  { glType :: ItemType
   -- ^ The first character on each line tells you whether the line/item
   -- describes a document, directory, or search device. AKA "definition."
   , glDisplayString :: T.Text
@@ -141,6 +153,64 @@ data ParsedLine = ParsedLine
   -- Gopher Protocol specification.
   }
 
+-- | Determine a selector's `ItemType` based off file extension.
+--
+-- To determine a selector's item type based on RFC 4266 (like /1/somemap, or
+-- /s/file.ogg) see `selectorItemType`.
+--
+-- >>> selectorExtToItemType "/foo/bar.ogg"
+-- Just (NonCanonical SoundFile)
+--
+-- >>> selectorExtToItemType "/some/gophermap"
+-- Nothing
+selectorExtToItemType :: Selector -> Maybe ItemType
+selectorExtToItemType selector =
+  let extension = takeExtension (T.unpack selector)
+  in  case extension of
+        -- Canonical types
+        ".txt"  -> Just $ Canonical File
+        ".gif"  -> Just $ Canonical GifFile
+        ".jpg"  -> Just $ Canonical ImageFile
+        ".jpeg" -> Just $ Canonical ImageFile
+        ".png"  -> Just $ Canonical ImageFile
+        -- Noncanonical types
+        ".wav"  -> Just $ NonCanonical SoundFile
+        ".mp3"  -> Just $ NonCanonical SoundFile
+        ".ogg"  -> Just $ NonCanonical SoundFile
+        ".flac" -> Just $ NonCanonical SoundFile
+        ".doc"  -> Just $ NonCanonical Doc
+        ".pdf"  -> Just $ NonCanonical Doc
+        _       -> Nothing
+
+-- | According to RFC 4266 we should be able to determine the resource's type
+-- from the selector portion (the path), although this is often not the case
+-- in reality, so when that's not the case we return Nothing.
+--
+-- To determine a file's `ItemType` based on file extension, please use
+-- `selectorExtToItemType`.
+--
+-- >>> selectorItemType "/1/some/gopher/map"
+-- Canonical Directory
+--
+-- >>> selectorItemType "/s/some/file.ogg"
+-- NonCanonical SoundFile
+--
+-- >>> selectorItemType "/some/path"
+-- Nothing
+selectorItemType :: Selector -> Maybe ItemType
+selectorItemType selector =
+  let potentialItemChar = selectorToItemChar selector
+  in  case potentialItemChar of
+        (Just itemChar) -> charToItemType itemChar
+        Nothing         -> Nothing
+  where
+    selectorToItemChar :: Selector -> Maybe Char
+    selectorToItemChar selector =
+      let splitDirectories = filter (/= "") $ T.splitOn "/" selector
+      in  if not (null splitDirectories) && T.length (head splitDirectories) == 1
+            then Just $ T.head . head $ splitDirectories
+            else Nothing
+
 -- NOTE: is "Unrecognized" better than "Unparseable."
 -- | Representation of a line in a GopherMenu which is either of an unrecognized
 -- type or is simply not formatted correctly/malformed.
@@ -153,7 +223,7 @@ data MenuLine = Parsed ParsedLine | Unparseable UnparseableLine
 
 menuLineAsText :: MenuLine -> T.Text
 menuLineAsText (Parsed parsedLine)        =
-  let indent = if glType parsedLine == Right InformationalMessage then "          " else ""
+  let indent = if glType parsedLine == NonCanonical InformationalMessage then "          " else ""
   in  indent <> glDisplayString parsedLine
 menuLineAsText (Unparseable unparsedLine) =
   let (UnparseableLine fields) = unparsedLine
@@ -166,27 +236,27 @@ menuLineAsText (Unparseable unparsedLine) =
 -- This code may be either a digit or a letter of the alphabet; letters are
 -- case-sensitive."
 charToItemType
-  :: Char -> Maybe (Either GopherCanonicalItemType GopherNonCanonicalItemType)
+  :: Char -> Maybe ItemType
 -- Left (canonical)
-charToItemType '0' = Just $ Left File
-charToItemType '1' = Just $ Left Directory
-charToItemType '2' = Just $ Left CsoPhoneBookServer
-charToItemType '3' = Just $ Left Error
-charToItemType '4' = Just $ Left BinHexedMacintoshFile
-charToItemType '5' = Just $ Left DosBinaryArchive
-charToItemType '6' = Just $ Left UnixUuencodedFile
-charToItemType '7' = Just $ Left IndexSearchServer
-charToItemType '8' = Just $ Left TextBasedTelnetSession
-charToItemType '9' = Just $ Left BinaryFile
-charToItemType '+' = Just $ Left RedundantServer
-charToItemType 'T' = Just $ Left Tn3270Session
-charToItemType 'g' = Just $ Left GifFile
-charToItemType 'I' = Just $ Left ImageFile
+charToItemType '0' = Just $ Canonical File
+charToItemType '1' = Just $ Canonical Directory
+charToItemType '2' = Just $ Canonical CsoPhoneBookServer
+charToItemType '3' = Just $ Canonical Error
+charToItemType '4' = Just $ Canonical BinHexedMacintoshFile
+charToItemType '5' = Just $ Canonical DosBinaryArchive
+charToItemType '6' = Just $ Canonical UnixUuencodedFile
+charToItemType '7' = Just $ Canonical IndexSearchServer
+charToItemType '8' = Just $ Canonical TextBasedTelnetSession
+charToItemType '9' = Just $ Canonical BinaryFile
+charToItemType '+' = Just $ Canonical RedundantServer
+charToItemType 'T' = Just $ Canonical Tn3270Session
+charToItemType 'g' = Just $ Canonical GifFile
+charToItemType 'I' = Just $ Canonical ImageFile
 -- Right (noncanonical)
-charToItemType 'd' = Just $ Right Doc
-charToItemType 'h' = Just $ Right HtmlFile
-charToItemType 'i' = Just $ Right InformationalMessage
-charToItemType 's' = Just $ Right SoundFile
+charToItemType 'd' = Just $ NonCanonical Doc
+charToItemType 'h' = Just $ NonCanonical HtmlFile
+charToItemType 'i' = Just $ NonCanonical InformationalMessage
+charToItemType 's' = Just $ NonCanonical SoundFile
 charToItemType _   = Nothing
 
 showAddressPlus :: ParsedLine -> T.Text
@@ -245,8 +315,8 @@ explainNonCanonicalType SoundFile = "Sound file (especially the WAV format)."
 explainType
   :: ParsedLine -> T.Text
 explainType gopherLine = case glType gopherLine of
-  Left  canonType    -> explainCanonicalType canonType <> " " <> showAddressPlus gopherLine
-  Right nonCanonType -> explainNonCanonicalType nonCanonType <> " " <> showAddressPlus gopherLine
+  Canonical  canonType      -> explainCanonicalType canonType <> " " <> showAddressPlus gopherLine
+  NonCanonical nonCanonType -> explainNonCanonicalType nonCanonType <> " " <> showAddressPlus gopherLine
 
 -- TODO/FIXME: better haddock string, use REPL example too?
 -- | Describe any line from a Gopher menu.
@@ -322,9 +392,9 @@ isInfoMsg line = case line of
   -- It's a ParsedLine
   (Parsed gl) -> case glType gl of
     -- Canonical type
-    (Left  _  ) -> False
+    (Canonical  _  ) -> False
     -- Noncanonical type
-    (Right nct) -> nct == InformationalMessage
+    (NonCanonical nct) -> nct == InformationalMessage
   -- It's an UnparseableLine
   (Unparseable _) -> False
 
