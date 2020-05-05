@@ -74,7 +74,7 @@ jumpPrevLink gbs = updateMenuList (BrickList.listMoveTo next l)
 -- the application state (GopherBrowserState) to reflect the change.
 newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
 newStateFromSelectedMenuItem gbs = case lineType of
-  (Left ct) -> case ct of
+  (Canonical ct) -> case ct of
     Directory -> initProgressMode gbs Nothing (host, port, resource, MenuMode)
     File -> initProgressMode gbs Nothing (host, port, resource, TextFileMode)
     IndexSearchServer -> pure gbs
@@ -92,7 +92,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
     -- FIXME: it's possible this could be an incorrect exception if everything isn't covered, like telnet
     -- so I need to implement those modes above and then of course this can be the catchall...
     _         -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
-  (Right nct) -> case nct of
+  (NonCanonical nct) -> case nct of
     HtmlFile -> openBrowser (T.unpack $ T.drop 4 resource) >> pure gbs
     InformationalMessage -> pure gbs
     -- FIXME: same as previous comment...
@@ -157,14 +157,14 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
     -- it's a parsed line
     (Parsed gl) -> case glType gl of
       -- Cannonical type
-      (Left ct) -> case ct of
+      (Canonical ct) -> case ct of
         Directory -> withAttr directoryAttr $ txt "📂 [Directory] "
         File      -> withAttr fileAttr $ txt "📄 [File] "
         IndexSearchServer ->
           withAttr indexSearchServerAttr $ txt "🔎 [IndexSearchServer] "
         _ -> withAttr genericTypeAttr $ txt $ "[" <> (T.pack $ show ct) <> "] "
       -- Noncannonical type
-      (Right nct) -> case nct of
+      (NonCanonical nct) -> case nct of
         InformationalMessage -> txt $ T.replicate (biggestIndexDigits + 2) " "
         HtmlFile -> withAttr directoryAttr $ txt "🌐 [HTMLFile] "
         _ -> withAttr genericTypeAttr $ txt $ "[" <> (T.pack $ show nct) <> "] "
