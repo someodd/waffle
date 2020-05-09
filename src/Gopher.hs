@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- TODO: use FileSig for file detection taking in a file path or bytes?
 -- TODO/FIXME: implement data ItemType = Canonical CanonicalItemType | NonCanonical NonCanonicalItemType
 -- TODO: more stuff from UI needs to go in here for clearer separation?
 -- TODO: resource is misnamed. it's "selector string."
@@ -156,29 +157,44 @@ data ParsedLine = ParsedLine
 -- | Determine a selector's `ItemType` based off file extension.
 --
 -- To determine a selector's item type based on RFC 4266 (like /1/somemap, or
--- /s/file.ogg) see `selectorItemType`.
+-- /s/file.ogg) see `selectorPrefixItemType`.
 --
 -- >>> selectorExtToItemType "/foo/bar.ogg"
 -- Just (NonCanonical SoundFile)
 --
 -- >>> selectorExtToItemType "/some/gophermap"
--- Nothing
+-- Just (Canonical Directory)
 selectorExtToItemType :: Selector -> Maybe ItemType
 selectorExtToItemType selector =
   let extension = takeExtension (T.unpack selector)
   in  case extension of
         -- Canonical types
-        ".txt"  -> Just $ Canonical File
+        ""      -> Just $ Canonical Directory  -- TODO: should we rename Directory to GopherMap or *Menu* or something?
         ".gif"  -> Just $ Canonical GifFile
+        -- Canonical types: (text) File
+        ".txt"  -> Just $ Canonical File
+        ".md"  -> Just $ Canonical File
+        -- Canonical types: ImageFile
         ".jpg"  -> Just $ Canonical ImageFile
+        ".ico"  -> Just $ Canonical ImageFile
+        ".svg"  -> Just $ Canonical ImageFile
+        ".tif"  -> Just $ Canonical ImageFile
+        ".tiff" -> Just $ Canonical ImageFile
         ".jpeg" -> Just $ Canonical ImageFile
         ".png"  -> Just $ Canonical ImageFile
-        -- Noncanonical types
+        -- Noncanonical types: SoundFile
         ".wav"  -> Just $ NonCanonical SoundFile
+        ".mid"  -> Just $ NonCanonical SoundFile
+        ".midi" -> Just $ NonCanonical SoundFile
         ".mp3"  -> Just $ NonCanonical SoundFile
         ".ogg"  -> Just $ NonCanonical SoundFile
         ".flac" -> Just $ NonCanonical SoundFile
+        -- Noncanonical types: Documents
         ".doc"  -> Just $ NonCanonical Doc
+        ".docx" -> Just $ NonCanonical Doc
+        ".rtf"  -> Just $ NonCanonical Doc
+        ".tex"  -> Just $ NonCanonical Doc
+        ".odt"  -> Just $ NonCanonical Doc
         ".pdf"  -> Just $ NonCanonical Doc
         _       -> Nothing
 
@@ -189,27 +205,42 @@ selectorExtToItemType selector =
 -- To determine a file's `ItemType` based on file extension, please use
 -- `selectorExtToItemType`.
 --
--- >>> selectorItemType "/1/some/gopher/map"
+-- >>> selectorPrefixItemType "/1/some/gopher/map"
 -- Canonical Directory
 --
--- >>> selectorItemType "/s/some/file.ogg"
+-- >>> selectorPrefixItemType "/s/some/file.ogg"
 -- NonCanonical SoundFile
 --
--- >>> selectorItemType "/some/path"
+-- >>> selectorPrefixItemType "/some/path"
 -- Nothing
-selectorItemType :: Selector -> Maybe ItemType
-selectorItemType selector =
+selectorPrefixItemType :: Selector -> Maybe ItemType
+selectorPrefixItemType selector =
   let potentialItemChar = selectorToItemChar selector
   in  case potentialItemChar of
         (Just itemChar) -> charToItemType itemChar
         Nothing         -> Nothing
   where
     selectorToItemChar :: Selector -> Maybe Char
-    selectorToItemChar selector =
-      let splitDirectories = filter (/= "") $ T.splitOn "/" selector
+    selectorToItemChar selector' =
+      let splitDirectories = filter (/= "") $ T.splitOn "/" selector'
       in  if not (null splitDirectories) && T.length (head splitDirectories) == 1
             then Just $ T.head . head $ splitDirectories
             else Nothing
+
+-- TODO: clean up... lots of casses unneeded?
+-- | Efficiently determine the `ItemType` from selector alone.
+selectorItemType :: Selector -> Maybe ItemType
+selectorItemType selector = do
+  -- First we see if the selector already informs us of the file type.
+  let maybeSomeType = selectorPrefixItemType selector
+  case maybeSomeType of
+    (Just someType) -> Just someType
+    -- If we cannot determine the `ItemType` from the selector prefix we use the file extension.
+    Nothing         ->
+      let maybeTypeFromExt = selectorExtToItemType selector
+      in  case maybeTypeFromExt of
+            (Just typeFromExt) -> Just typeFromExt
+            Nothing            -> Nothing
 
 -- NOTE: is "Unrecognized" better than "Unparseable."
 -- | Representation of a line in a GopherMenu which is either of an unrecognized
