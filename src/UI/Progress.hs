@@ -32,7 +32,6 @@ import qualified Brick.BChan
 import qualified Data.ByteString.Char8         as B8
 import qualified Brick.Types                   as T
 import           System.IO.Temp                 ( emptySystemTempFile )
-import qualified Data.ByteString.UTF8          as U8
 import qualified Graphics.Vty                  as V
 
 import           UI.Util
@@ -96,26 +95,17 @@ counterMutator gbs someBytes =
           }
     in  updateProgressBuffer gbs' cb
 
--- MUST DEPRECATE FIXME TODO
-addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
-addProgBytes gbs' nbytes =
-  let cb x = x
-        { pbBytesDownloaded = pbBytesDownloaded (getProgress gbs') + nbytes
-        , pbConnected       = True
-        }
-  in  updateProgressBuffer gbs' cb
-
 -- FIXME: bad doc, bad name
 -- | Handle a connection, including reporting exceptions...
 gracefulSock :: GopherBrowserState -> Location -> ((Socket, SockAddr) -> IO ()) -> IO ()
-gracefulSock gbs location@(host, port, resource, _) handler = do
+gracefulSock gbs (host, port, _, _) handler = do
   result <- try $ connectSock (T.unpack host) (show port) :: IO (Either SomeException (Socket, SockAddr))
   case result of
     Left ex   -> makePopup gbs $ T.pack (show ex)
     Right val -> handler val
   where
-    makePopup gbs exMsg =
-      let formerGbs         = pbInitGbs (getProgress gbs)
+    makePopup gbs' exMsg =
+      let formerGbs         = pbInitGbs (getProgress gbs')
           formerMode        = case gbsRenderMode formerGbs of
                                 GotoMode -> seFormerMode $ fromJust $ gbsStatus formerGbs-- FIXME: fromJust horrible
                                 x        -> x
@@ -136,7 +126,7 @@ gracefulSock gbs location@(host, port, resource, _) handler = do
 -- This is important for refreshing or navigating history (you don't want to update
 -- the history in those cases, so you supply Nothing).
 progressGetBytes :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressGetBytes initialProgGbs history location@(host, port, resource, _) =
+progressGetBytes initialProgGbs history location@(_, _, resource, _) =
   gracefulSock initialProgGbs location handleResult
   where
     handleResult (connectionSocket, _) = do

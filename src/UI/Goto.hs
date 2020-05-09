@@ -19,7 +19,6 @@ import           Network.URI
 
 import           UI.Representation
 import           UI.Progress
-import           Gopher                         ( selectorItemType, ItemType (..), GopherCanonicalItemType(..) )
 
 initGotoMode :: GopherBrowserState -> GopherBrowserState
 initGotoMode gbs = gbs
