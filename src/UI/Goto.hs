@@ -55,12 +55,8 @@ mkGotoResponseState gbs =
       resource = case uriPath parsedURI of
         ""  -> ""
         r -> r
-  -- What if it's not a menu? FIXME
-  in initProgressMode gbs Nothing (T.pack host, port, T.pack resource, MenuMode)
-  -- FIXME: TODO: Must return a better dummy state...
-  -- this is already done by init progress
-  -- Might have to return progress mode or something idk I'll have to look at
-  -- other source... I woryr if I don't then there will be a memory leak...
+      gbsNoStatus = gbs { gbsStatus = Nothing }
+  in initProgressMode gbsNoStatus Nothing (T.pack host, port, T.pack resource, guessMode $ T.pack resource)
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
