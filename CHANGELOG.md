@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2020-05-09
+
+This release is dedicated to Adrian Cochrane's
+[Rhapsode](https://rhapsode.adrian.geek.nz/), as these features were requested,
+which also happened to benefit this project as well.
+
 Interpret Gopher URI item types based on their selector/path.
 
 Bonus: make everything align nicely by simply putting item type descriptors in
