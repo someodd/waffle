@@ -132,9 +132,9 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
     -- It's a GopherLine
     (Parsed gl) -> case glType gl of
       -- Canonical type
-      (Left _) -> glDisplayString gl
+      (Canonical _) -> glDisplayString gl
       -- Noncanonical type
-      (Right nct) ->
+      (NonCanonical nct) ->
         if nct == InformationalMessage && glDisplayString gl == ""
           then " "
           else glDisplayString gl

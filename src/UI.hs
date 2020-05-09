@@ -130,7 +130,7 @@ uiMain possibleLocation = do
     else
       -- ...otherwise let's open the page supplied!
       let (host, port, magicString) = fromJust possibleLocation
-          trueLocationType = (host, port, magicString, MenuMode)
+          trueLocationType = (host, port, magicString, guessMode magicString)
           -- FIXME: what a horrible hack to produce a beginning state in order
           -- to use initProgressMode! Especially the buffer part...
           history = ([trueLocationType], 0)
@@ -140,7 +140,7 @@ uiMain possibleLocation = do
                             , tfTitle = ""
                             }
             , gbsLocation = trueLocationType
-            , gbsRenderMode = MenuMode
+            , gbsRenderMode = guessMode magicString
             , gbsHistory = history
             }
       in initProgressMode initialGbs (Just history) trueLocationType

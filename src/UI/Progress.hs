@@ -32,12 +32,12 @@ import qualified Brick.BChan
 import qualified Data.ByteString.Char8         as B8
 import qualified Brick.Types                   as T
 import           System.IO.Temp                 ( emptySystemTempFile )
-import qualified Data.ByteString.UTF8          as U8
 import qualified Graphics.Vty                  as V
 
 import           UI.Util
 import           UI.Representation
 import           Gopher
+import           GopherNet                      ( writeAllBytes )
 
 -- FIXME: also used by save.hs
 selectNothing :: FB.FileInfo -> Bool
@@ -76,25 +76,36 @@ initProgressMode gbs history location@(_, _, _, mode) =
   -- Should catch network error in a popup (representational).
   in forkIO (downloader initialProgGbs history location) >> pure initialProgGbs
 
-addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
-addProgBytes gbs' nbytes =
-  let cb x = x
-        { pbBytesDownloaded = pbBytesDownloaded (getProgress gbs') + nbytes
-        , pbConnected       = True
-        }
-  in  updateProgressBuffer gbs' cb
+-- THIS IS A CALLBACK FOR GOPHERNET
+counterMutator :: GopherBrowserState -> Maybe ByteString.ByteString -> IO GopherBrowserState
+counterMutator gbs someBytes =
+  let bytesReceived = case someBytes of
+        Nothing  -> 0
+        -- We count the bytes each time because the second-to-last response can have
+        -- under the recvChunkSize. The last response will always be Nothing.
+        (Just n) -> ByteString.length n
+      newGbs        = addProgBytes' gbs bytesReceived
+  in  Brick.BChan.writeBChan (gbsChan gbs) (NewStateEvent newGbs) >> pure newGbs
+  where
+  --addProgBytes :: GopherBrowserState -> Int -> GopherBrowserState
+  addProgBytes' gbs' nbytes =
+    let cb x = x
+          { pbBytesDownloaded = pbBytesDownloaded (getProgress gbs') + nbytes
+          , pbConnected       = True
+          }
+    in  updateProgressBuffer gbs' cb
 
 -- FIXME: bad doc, bad name
 -- | Handle a connection, including reporting exceptions...
 gracefulSock :: GopherBrowserState -> Location -> ((Socket, SockAddr) -> IO ()) -> IO ()
-gracefulSock gbs location@(host, port, resource, _) handler = do
+gracefulSock gbs (host, port, _, _) handler = do
   result <- try $ connectSock (T.unpack host) (show port) :: IO (Either SomeException (Socket, SockAddr))
   case result of
     Left ex   -> makePopup gbs $ T.pack (show ex)
     Right val -> handler val
   where
-    makePopup gbs exMsg =
-      let formerGbs         = pbInitGbs (getProgress gbs)
+    makePopup gbs' exMsg =
+      let formerGbs         = pbInitGbs (getProgress gbs')
           formerMode        = case gbsRenderMode formerGbs of
                                 GotoMode -> seFormerMode $ fromJust $ gbsStatus formerGbs-- FIXME: fromJust horrible
                                 x        -> x
@@ -115,7 +126,7 @@ gracefulSock gbs location@(host, port, resource, _) handler = do
 -- This is important for refreshing or navigating history (you don't want to update
 -- the history in those cases, so you supply Nothing).
 progressGetBytes :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressGetBytes initialProgGbs history location@(host, port, resource, _) =
+progressGetBytes initialProgGbs history location@(_, _, resource, _) =
   gracefulSock initialProgGbs location handleResult
   where
     handleResult (connectionSocket, _) = do
@@ -131,7 +142,7 @@ progressGetBytes initialProgGbs history location@(host, port, resource, _) =
       -- to the temporary file and we also get its contents. The file path is used for the cache.
       -- The contents is used to update GBS with the appropriate mode (as a UTF8 string).
       tempFilePath <- emptySystemTempFile "waffle.cache.tmp"-- TODO: needs better template/pattern filename
-      writeAllBytes initialProgGbs connectionSocket tempFilePath
+      writeAllBytes (Just counterMutator) (Just initialProgGbs) connectionSocket tempFilePath
       -- NOTE: it's a bit silly to write all bytes and then read from the file we wrote, but
       -- I'll mark this fix as a TODO, because I just did a major refactor and it's not a huge
       -- deal...
@@ -211,7 +222,7 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
     Brick.BChan.writeBChan chan (NewStateEvent gbs)
     -- need to only fetch as many bytes as it takes to get period on a line by itself to
     -- close the connection.
-    writeAllBytes gbs connectionSocket tempFilePath
+    writeAllBytes (Just counterMutator) (Just gbs) connectionSocket tempFilePath
     -- when exist should just emit a final event which has contents?
     -- will you need transactional buffer? how else can  you put into next state?
     -- you COULD overwrite next state with new content as pwer writebytes o in callback
@@ -234,26 +245,6 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
     -- We don't use doFinalEvent, because the file saver (which this is for) works a bit differently!
     Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
     pure ()
-
--- | This is for... FIXME
-writeAllBytes :: GopherBrowserState -> Socket -> String -> IO ()
-writeAllBytes gbs' connectionSocket tempFilePath = do
-  gosh <- recv connectionSocket recvChunkSize
-  let bytesReceived = case gosh of
-        Nothing  -> 0
-        -- We count the bytes each time because the second-to-last response can have
-        -- under the recvChunkSize. The last response will always be Nothing.
-        (Just n) -> ByteString.length n
-      newGbs        = addProgBytes gbs' bytesReceived
-  Brick.BChan.writeBChan (gbsChan gbs') (NewStateEvent newGbs)
-  case gosh of
-    Nothing -> pure ()
-    -- Doesn't set to started in status TODO FIXME
-    Just chnk ->
-      ByteString.appendFile tempFilePath chnk
-        >> writeAllBytes newGbs connectionSocket tempFilePath
-  where
-   recvChunkSize = 1024
 
 -- TODO: progressUI...
 drawProgressUI :: GopherBrowserState -> [T.Widget MyName]
