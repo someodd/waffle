@@ -43,7 +43,6 @@ module Gopher
   , GopherCanonicalItemType(..)
   -- ** Utilities for Gopher menu models
   , selectorItemType
-  , selectorExtToItemType
   , isInfoMsg
   , makeGopherMenu
   , parentDirectory
