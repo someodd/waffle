@@ -34,6 +34,7 @@ module UI.Representation
   , updateSearchBuffer
   , getProgress
   , updateProgressBuffer
+  , guessMode
   ) where
 
 import qualified Data.Text                     as T
@@ -230,3 +231,14 @@ data RenderMode = MenuMode
                 | HelpMode
                 | GotoMode
                 deriving (Eq, Show)
+
+itemTypeToRenderMode :: ItemType -> RenderMode
+itemTypeToRenderMode itemType = case itemType of
+  Canonical Directory -> MenuMode
+  Canonical File      -> TextFileMode
+  _                   -> FileBrowserMode
+
+
+guessMode :: Selector -> RenderMode
+guessMode resource =
+  itemTypeToRenderMode $ fromMaybe (Canonical Directory) (selectorItemType resource)
