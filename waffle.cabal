@@ -139,3 +139,4 @@ test-suite waffle-test
   -- The entrypoint to the test suite.
   main-is:             MyLibTest.hs
 
+  build-depends:       waffle-library, doctest >= 0.16.3 && < 0.17,

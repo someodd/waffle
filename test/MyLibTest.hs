@@ -1,4 +1,4 @@
 module Main (main) where
 
-main :: IO ()
-main = putStrLn "Test suite not yet implemented."
+import Test.DocTest
+main = doctest ["-isrc", "src/Gopher.hs"]

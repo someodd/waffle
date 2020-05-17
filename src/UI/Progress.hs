@@ -317,8 +317,9 @@ newChangeHistory gbs newLoc =
 
 -- | Go up a directory; go to the parent menu of whatever the current selector is.
 goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
-goParentDirectory gbs =
+goParentDirectory gbs = do
   let (host, port, magicString, _) = gbsLocation gbs
-      parentMagicString            = fromMaybe "/" (parentDirectory magicString)
-      newLocation = (host, port, parentMagicString, MenuMode)
-  in  initProgressMode gbs Nothing newLocation
+      parentMagicString            = parentDirectory magicString
+  case parentMagicString of
+    Nothing            -> pure gbs
+    Just newLocation   -> initProgressMode gbs Nothing (host, port, newLocation, MenuMode)
