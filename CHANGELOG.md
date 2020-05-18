@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0.0-rc.1] - 2020-05-17
 
 This release is preparing for uploading to Hackage. On the non-code
-side we switch from Stack to Cabal and start using Travis.
+side we switch from Stack to Cabal and start using GitHub actions.
 
 ### Add
 
