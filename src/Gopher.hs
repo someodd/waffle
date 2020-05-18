@@ -55,7 +55,7 @@ module Gopher
 
 import qualified Data.Text        as T
 import           Text.Read
-import           System.FilePath   (takeExtension)
+import           System.FilePath   (takeExtension, splitPath, joinPath)
 
 -- | The types of lines in a Gopher menu which are types specified by the original
 -- Gopher protocol specification (RFC 1435).
@@ -158,10 +158,10 @@ data ParsedLine = ParsedLine
 -- To determine a selector's item type based on RFC 4266 (like /1/somemap, or
 -- /s/file.ogg) see `selectorPrefixItemType`.
 --
--- >>> selectorExtToItemType "/foo/bar.ogg"
+-- >>> selectorExtToItemType $ T.pack "/foo/bar.ogg"
 -- Just (NonCanonical SoundFile)
 --
--- >>> selectorExtToItemType "/some/gophermap"
+-- >>> selectorExtToItemType $ T.pack "/some/gophermap"
 -- Just (Canonical Directory)
 selectorExtToItemType :: Selector -> Maybe ItemType
 selectorExtToItemType selector =
@@ -204,13 +204,13 @@ selectorExtToItemType selector =
 -- To determine a file's `ItemType` based on file extension, please use
 -- `selectorExtToItemType`.
 --
--- >>> selectorPrefixItemType "/1/some/gopher/map"
--- Canonical Directory
+-- >>> selectorPrefixItemType $ T.pack "/1/some/gopher/map"
+-- Just (Canonical Directory)
 --
--- >>> selectorPrefixItemType "/s/some/file.ogg"
--- NonCanonical SoundFile
+-- >>> selectorPrefixItemType $ T.pack "/s/some/file.ogg"
+-- Just (NonCanonical SoundFile)
 --
--- >>> selectorPrefixItemType "/some/path"
+-- >>> selectorPrefixItemType $ T.pack "/some/path"
 -- Nothing
 selectorPrefixItemType :: Selector -> Maybe ItemType
 selectorPrefixItemType selector =
@@ -416,7 +416,7 @@ newtype GopherMenu = GopherMenu [MenuLine]
 -- | Easily represent a GopherMenu as a 'Text', formatted as it might be rendered.
 -- gopherMenuAsText (GopherMenu menuLines) = T.unlines $ map menuLineAsText menuLines
 
- -- | Detect if a Gopher menu line is of the noncanonical 'InformationalMessage' type.
+-- | Detect if a Gopher menu line is of the noncanonical 'InformationalMessage' type.
 isInfoMsg :: MenuLine -> Bool
 isInfoMsg line = case line of
   -- It's a ParsedLine
@@ -428,26 +428,24 @@ isInfoMsg line = case line of
   -- It's an UnparseableLine
   (Unparseable _) -> False
 
--- TODO: I don't like that this removes the leading / from some paths, like in the
--- last REPL example.
+-- TODO: maybe should take/return FilePath...
 -- | Get the selector (also referred to as the "path" or "magic string"
 -- for the parent directory/menu of the supplied selector, if possible
 -- (may already be at root).
 --
--- >>> parentDirectory "/"
+-- >>> parentDirectory $ T.pack "/"
 -- Nothing
 --
--- >>> parentDirectory ""
+-- >>> parentDirectory $ T.pack ""
 -- Nothing
 --
--- >>> parentDirectory "/foo/bar/hello/world"
--- Just "foo/bar/hello"
+-- >>> parentDirectory $ T.pack "/foo/bar/hello/world"
+-- Just "/foo/bar/hello/"
 parentDirectory :: T.Text -> Maybe T.Text
-parentDirectory magicString
-  | magicString == "/" || T.null magicString = Nothing
-  | otherwise =
-      let splitDirectories = filter (/= "") $ T.splitOn "/" magicString
-      in  Just $ T.intercalate "/" splitDirectories
+parentDirectory ""       = Nothing
+parentDirectory "/"      = Nothing
+parentDirectory selector =
+  Just (T.pack $ joinPath . init . splitPath . T.unpack $ selector)
 
 -- | Given the search "endpoint" (the selector for the search), create a
 -- new selector for querying the supplied endpoint for the supplied query.
@@ -455,10 +453,10 @@ parentDirectory magicString
 -- This is very similar to the URLs you'd expect from GET requests and
 -- query strings in HTTP.
 --
--- >>> searchSelector "/somesearch" "foo bar"
+-- >>> searchSelector (T.pack "/somesearch") (T.pack "foo bar")
 -- "/somesearch\tfoo bar"
 
--- >>> searchSelector "" "foo bar"
+-- >>> searchSelector (T.pack "") (T.pack "foo bar")
 -- "foo bar"
 searchSelector :: Selector -> T.Text -> Selector
 searchSelector resource query =
@@ -474,7 +472,7 @@ menuLine (GopherMenu ls) indx = ls !! indx
 -- `MenuLine`s don't have this issue. Attempting to display tabs to
 -- the terminal will have unintended consequences.
 --
--- >>> cleanTabs "\tfoo\tbar\t"
+-- >>> cleanTabs $ T.pack "\tfoo\tbar\t"
 -- " foo bar "
 cleanTabs :: T.Text -> T.Text
 cleanTabs    = T.map (\x -> if x == '\t' then ' ' else x)
@@ -482,7 +480,7 @@ cleanTabs    = T.map (\x -> if x == '\t' then ' ' else x)
 -- | Replace carriage returns with spaces. Used for text files and
 -- `MenuLine`s.
 --
--- >>> cleanReturns "foo\rbar"
+-- >>> cleanReturns $ T.pack "foo\rbar"
 -- "foo bar"
 cleanReturns :: T.Text -> T.Text
 cleanReturns = T.map (\x -> if x == '\r' then ' ' else x)
