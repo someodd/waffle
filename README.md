@@ -37,4 +37,6 @@ Press `?` while using the browser for full details on using it!
 
 ## Tests
 
-Tests are currently just `doctest`, but you can run with `cabal test`.
+Tests are currently just
+[doctest](https://hackage.haskell.org/package/doctest), but you can run with
+`cabal test`.
