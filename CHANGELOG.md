@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0.0-rc.1] - 2020-05-17
+
+This release is preparing for uploading to Hackage. On the non-code
+side we switch from Stack to Cabal and start using Travis.
+
+### Add
+
+  * Tests, namely doctests
+
+### Fix
+
+  * Fix going up a directory, which in some cases could result
+    in new history with the same page.
+
+  * Fix get parent directory which in some edge cases would
+    return the same path as it was given. Also fix the leading/root
+    slash being omitted in all cases. Simply start using System.FilePath
+    to get the parent directory in a path.
+
 ## [0.2.0] - 2020-05-09
 
 This release is dedicated to Adrian Cochrane's
