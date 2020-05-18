@@ -8,12 +8,10 @@ Both _gopher_ and _waffle_ in French is "gaufre:"
 
 —"Gopher," Wikipedia.
 
-Waffle is a
-[Gopher protocol](https://en.wikipedia.org/wiki/Gopher_%28protocol%29) client written
-in Haskell, implemented according to
-[RFC 1436](https://tools.ietf.org/html/rfc1436) and
-[Gopher+](https://gopher.floodgap.com/gopher/gw?a=gopher%3A%2F%2Fgopher.floodgap.com%2F0%2Fgopher%2Ftech%2Fgopherplus.txt)
-technical/protocoal specifications.
+Waffle is a [Gopher
+protocol](https://en.wikipedia.org/wiki/Gopher_%28protocol%29) client with a
+text interface written in Haskell, implemented according to [RFC
+1436](https://tools.ietf.org/html/rfc1436) technical specification.
 
 ## Alpha
 
@@ -27,9 +25,16 @@ Special thanks to @Garmelon for mentoring me through all of this.
 
 ## Try it out!
 
-Compile it with `stack build` and then try it out with
-`stack exec hopher -- sdf.org 70 phlogs`.
-
-### Controls
+Compile it with `cabal build` and then try it out with
+`cabal run waffle sdf.org 70 phlogs`.
 
 Press `?` while using the browser for full details on using it!
+
+## Built with
+
+  * Cabal 3
+  * Brick
+
+## Tests
+
+Tests are currently just `doctest`, but you can run with `cabal test`.
