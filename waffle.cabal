@@ -18,7 +18,11 @@ version:             0.3.0.0
 synopsis:            Gopher protocol client
 
 -- A longer description of the package.
--- description:
+description:
+  Waffle is a [Gopher
+  protocol](https://en.wikipedia.org/wiki/Gopher_%28protocol%29) text interface
+  client written in Haskell, implemented according to [RFC
+  1436](https://tools.ietf.org/html/rfc1436).
 
 -- URL for the project homepage or repository.
 homepage:            https://github.com/hyperreal-gopher/waffle
