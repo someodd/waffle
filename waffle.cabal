@@ -61,6 +61,9 @@ common shared-properties
   other-modules:
       Paths_waffle
 
+  autogen-modules:
+      Paths_waffle
+
   build-depends:
     base                 >=4.7 && <5,
     brick                >= 0.53 && < 0.54,
