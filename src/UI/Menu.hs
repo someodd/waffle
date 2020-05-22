@@ -45,30 +45,26 @@ selectedMenuLine gbs =
   in  menuLine menu lineNumber
   where (Menu (menu, l, _)) = getMenu gbs
 
+updateMenuList gbs ls =
+  let (Menu (gm, _, fl)) = getMenu gbs
+  in  gbs { gbsBuffer = MenuBuffer $ Menu (gm, ls, fl) }
+
 -- Inefficient
 jumpNextLink :: GopherBrowserState -> GopherBrowserState
-jumpNextLink gbs = updateMenuList (BrickList.listMoveTo next l)
+jumpNextLink gbs = updateMenuList gbs (BrickList.listMoveTo next l)
  where
   (Menu (_, l, focusLines)) = getMenu gbs
   currentIndex = fromJust $ BrickList.listSelected l
   next = fromMaybe (head focusLines) (find (> currentIndex) focusLines)
-  -- FIXME: repeated code
-  updateMenuList ls =
-    let (Menu (gm, _, fl)) = getMenu gbs
-    in  gbs { gbsBuffer = MenuBuffer $ Menu (gm, ls, fl) }
 
 -- Inefficient
 jumpPrevLink :: GopherBrowserState -> GopherBrowserState
-jumpPrevLink gbs = updateMenuList (BrickList.listMoveTo next l)
+jumpPrevLink gbs = updateMenuList gbs (BrickList.listMoveTo next l)
  where
   (Menu (_, l, focusLines)) = getMenu gbs
   currentIndex = fromJust $ BrickList.listSelected l
   next = fromMaybe (last focusLines)
                    (find (< currentIndex) $ reverse focusLines)
-  -- FIXME: repeated code
-  updateMenuList ls =
-    let (Menu (gm, _, fl)) = getMenu gbs
-    in  gbs { gbsBuffer = MenuBuffer $ Menu (gm, ls, fl) }
 
 -- | Make a request based on the currently selected Gopher menu item and change
 -- the application state (GopherBrowserState) to reflect the change.
