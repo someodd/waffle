@@ -45,15 +45,26 @@ selectedMenuLine gbs =
   in  menuLine menu lineNumber
   where (Menu (menu, l, _)) = getMenu gbs
 
-updateMenuList gbs ls =
-  let (Menu (gm, _, fl)) = getMenu gbs
-  in  gbs { gbsBuffer = MenuBuffer $ Menu (gm, ls, fl) }
+-- | Used by `jumpNextLink` and `jumpPrevLink` for creating a new
+-- menu that uses the updated list position.
+updateMenuList :: Menu -> BrickList.List MyName T.Text -> Menu
+updateMenuList menu ls =
+  let (Menu (gm, _, fl)) = menu
+  in  Menu (gm, ls, fl)
 
+-- | Used by `jumpNextLink` and `jumpPrevLink` for creating a new
+-- menu that uses the updated list position.
+updateMenuPosition :: Menu -> Int -> Menu
+updateMenuPosition menu next =
+  let (Menu (gm, l, fl)) = menu
+  in  Menu (gm, BrickList.listMoveTo next l, fl)
+
+-- FIXME: move away form getMenu gbs and using gbs
 -- | Jump to the next link (wraps around). Basically, skips info items.
-jumpNextLink :: GopherBrowserState -> GopherBrowserState
-jumpNextLink gbs = updateMenuList gbs (BrickList.listMoveTo next l)
+jumpNextLink :: Menu -> Menu
+jumpNextLink menu = updateMenuPosition menu next
  where
-  (Menu (_, l, focusLines)) = getMenu gbs
+  (Menu (_, l, focusLines)) = menu
 
   headOr a []     = a
   headOr a (x:xs) = x
@@ -74,10 +85,10 @@ jumpNextLink gbs = updateMenuList gbs (BrickList.listMoveTo next l)
 
 -- | Jump to previous link (wraps around). Basically, skips info items.
 -- Be sure to see `jumpNextLink` (most of my code comments are in there).
-jumpPrevLink :: GopherBrowserState -> GopherBrowserState
-jumpPrevLink gbs = updateMenuList gbs (BrickList.listMoveTo next l)
+jumpPrevLink :: Menu -> Menu
+jumpPrevLink menu = updateMenuPosition menu next
  where
-  (Menu (_, l, focusLines)) = getMenu gbs
+  (Menu (_, l, focusLines)) = menu
 
   lastOr a []     = a
   lastOr a xs     = last xs
@@ -214,8 +225,8 @@ menuEventHandler gbs e
         liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
       V.EvKey (V.KChar 'l') [] -> M.hScrollBy menuViewportScroll 1 >> M.continue gbs
       V.EvKey (V.KChar 'h') [] -> M.hScrollBy menuViewportScroll (-1) >> M.continue gbs
-      V.EvKey (V.KChar 'n') [] -> M.continue $ jumpNextLink gbs
-      V.EvKey (V.KChar 'p') [] -> M.continue $ jumpPrevLink gbs
+      V.EvKey (V.KChar 'n') [] -> M.continue $ newMenuBuffer gbs $ jumpNextLink (getMenu gbs)
+      V.EvKey (V.KChar 'p') [] -> M.continue $ newMenuBuffer gbs $ jumpPrevLink (getMenu gbs)
       V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
       V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
       V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue

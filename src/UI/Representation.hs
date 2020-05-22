@@ -21,6 +21,7 @@ module UI.Representation
   -- * Events
   , CustomEvent(..)
   -- * Helper utilities for UI representations
+  , newMenuBuffer
   , closePopup
   , getHelp
   , getHelpTextFileContents
@@ -92,6 +93,14 @@ emptyCache = Map.empty
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
 newtype Menu = Menu (GopherMenu, BrickList.List MyName T.Text, FocusLines)
 
+-- | Construct a new `MenuBuffer` in the `GopherBrowserState` using
+-- the supplied `Menu`.
+newMenuBuffer gbs menu = gbs { gbsBuffer = MenuBuffer $ menu }
+
+-- | Get `Menu` out of the buffer in `GopherBrowserState`.
+getMenu :: GopherBrowserState -> Menu
+getMenu gbs = let (MenuBuffer m) = gbsBuffer gbs in m
+
 -- | This is for the contents of a File to be rendered when in TextFileMode.
 -- this should be a combination of things. it should have the addres of the temporary file
 -- which should then be moved to the picked location
@@ -121,9 +130,6 @@ updateFileBrowserBuffer :: GopherBrowserState -> (SaveBrowser -> SaveBrowser) ->
 updateFileBrowserBuffer gbs f =
   let (FileBrowserBuffer sb) = gbsBuffer gbs
   in  gbs { gbsBuffer = FileBrowserBuffer (f sb) }
-
-getMenu :: GopherBrowserState -> Menu
-getMenu gbs = let (MenuBuffer m) = gbsBuffer gbs in m
 
 getProgress :: GopherBrowserState -> Progress
 getProgress gbs = let (ProgressBuffer p) = gbsBuffer gbs in p
