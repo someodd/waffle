@@ -49,22 +49,43 @@ updateMenuList gbs ls =
   let (Menu (gm, _, fl)) = getMenu gbs
   in  gbs { gbsBuffer = MenuBuffer $ Menu (gm, ls, fl) }
 
--- Inefficient
+-- | Jump to the next link (wraps around). Basically, skips info items.
 jumpNextLink :: GopherBrowserState -> GopherBrowserState
 jumpNextLink gbs = updateMenuList gbs (BrickList.listMoveTo next l)
  where
   (Menu (_, l, focusLines)) = getMenu gbs
-  currentIndex = fromJust $ BrickList.listSelected l
-  next = fromMaybe (head focusLines) (find (> currentIndex) focusLines)
 
--- Inefficient
+  headOr a []     = a
+  headOr a (x:xs) = x
+
+  next = case (BrickList.listSelected l) of
+    -- NOTE: using "find" for this feels inefficient... oh well!
+    Just currentIndex ->
+      -- Try to find a line # bigger than the currently selected line in
+      -- the focusLines to give us the new/next line to jump to.
+      --
+      -- If we cannot find a line # bigger than the currently selected line
+      -- we wrap to the first link. However, if there is no "first link,"
+      -- something that would happen if there's no elements in focusLines,
+      -- we just return the active line.
+      fromMaybe (headOr currentIndex focusLines) (find (> currentIndex) focusLines)
+    -- If there's no currently selected line let's select line 0!
+    Nothing           -> headOr 0 focusLines
+
+-- | Jump to previous link (wraps around). Basically, skips info items.
+-- Be sure to see `jumpNextLink` (most of my code comments are in there).
 jumpPrevLink :: GopherBrowserState -> GopherBrowserState
 jumpPrevLink gbs = updateMenuList gbs (BrickList.listMoveTo next l)
  where
   (Menu (_, l, focusLines)) = getMenu gbs
-  currentIndex = fromJust $ BrickList.listSelected l
-  next = fromMaybe (last focusLines)
-                   (find (< currentIndex) $ reverse focusLines)
+
+  lastOr a []     = a
+  lastOr a xs     = last xs
+
+  next = case (BrickList.listSelected l) of
+    Just currentIndex ->
+      fromMaybe (lastOr currentIndex focusLines) (find (< currentIndex) $ reverse focusLines)
+    Nothing           -> lastOr 0 focusLines
 
 -- | Make a request based on the currently selected Gopher menu item and change
 -- the application state (GopherBrowserState) to reflect the change.
