@@ -47,13 +47,6 @@ selectedMenuLine gbs =
 
 -- | Used by `jumpNextLink` and `jumpPrevLink` for creating a new
 -- menu that uses the updated list position.
-updateMenuList :: Menu -> BrickList.List MyName T.Text -> Menu
-updateMenuList menu ls =
-  let (Menu (gm, _, fl)) = menu
-  in  Menu (gm, ls, fl)
-
--- | Used by `jumpNextLink` and `jumpPrevLink` for creating a new
--- menu that uses the updated list position.
 updateMenuPosition :: Menu -> Int -> Menu
 updateMenuPosition menu next =
   let (Menu (gm, l, fl)) = menu
@@ -66,8 +59,8 @@ jumpNextLink menu = updateMenuPosition menu next
  where
   (Menu (_, l, focusLines)) = menu
 
-  headOr a []     = a
-  headOr a (x:xs) = x
+  headOr a []    = a
+  headOr _ (x:_) = x
 
   next = case (BrickList.listSelected l) of
     -- NOTE: using "find" for this feels inefficient... oh well!
@@ -91,7 +84,7 @@ jumpPrevLink menu = updateMenuPosition menu next
   (Menu (_, l, focusLines)) = menu
 
   lastOr a []     = a
-  lastOr a xs     = last xs
+  lastOr _ xs     = last xs
 
   next = case (BrickList.listSelected l) of
     Just currentIndex ->
