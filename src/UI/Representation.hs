@@ -95,6 +95,7 @@ newtype Menu = Menu (GopherMenu, BrickList.List MyName T.Text, FocusLines)
 
 -- | Construct a new `MenuBuffer` in the `GopherBrowserState` using
 -- the supplied `Menu`.
+newMenuBuffer :: GopherBrowserState -> Menu -> GopherBrowserState
 newMenuBuffer gbs menu = gbs { gbsBuffer = MenuBuffer $ menu }
 
 -- | Get `Menu` out of the buffer in `GopherBrowserState`.

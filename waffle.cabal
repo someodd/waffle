@@ -58,6 +58,8 @@ extra-source-files:
 
 common shared-properties
 
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
+
   other-modules:
       Paths_waffle
 
@@ -122,8 +124,6 @@ executable waffle
 
   -- .hs or .lhs file containing the Main module.
   main-is:             Main.hs
-
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
 
   -- Modules included in this executable, other than Main.
   other-modules:
