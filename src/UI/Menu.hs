@@ -33,17 +33,14 @@ import           UI.Progress
 import           UI.Util
 import           UI.Representation
 
-selectedMenuLine :: GopherBrowserState -> MenuLine
-selectedMenuLine gbs =
-  -- given the scope of this function, i believe this error message is not horribly accurate in all cases where it might be used
-  let
-    lineNumber = fromMaybe
-      (error
-        "Hit enter, but nothing was selected to follow! I'm not sure how that's possible!"
-      )
-      (l ^. BrickList.listSelectedL)
-  in  menuLine menu lineNumber
-  where (Menu (menu, l, _)) = getMenu gbs
+-- | Get the `MenuLine` which is currently selected, or Nothing.
+selectedMenuLine :: Menu -> Maybe MenuLine
+selectedMenuLine menu =
+  case l ^. BrickList.listSelectedL of
+    Just lineNumber -> Just $ menuLine gopherMenu lineNumber
+    Nothing         -> Nothing
+  where
+    (Menu (gopherMenu, l, _)) = menu
 
 -- | Used by `jumpNextLink` and `jumpPrevLink` for creating a new
 -- menu that uses the updated list position.
@@ -119,11 +116,14 @@ newStateFromSelectedMenuItem gbs = case lineType of
     -- FIXME: same as previous comment...
     _        -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
  where
-  (host, port, resource, lineType) = case selectedMenuLine gbs of
+  menu = getMenu gbs
+  (host, port, resource, lineType) = case selectedMenuLine menu of
     -- ParsedLine
-    (Parsed  gl)     -> (glHost gl, glPort gl, glSelector gl, glType gl)
-    -- Unrecognized line
-    (Unparseable _ ) -> error "Can't do anything with unrecognized line."
+    Just (Parsed  gl)     -> (glHost gl, glPort gl, glSelector gl, glType gl)
+    -- FIXME: why even error here?
+    -- Unrecognized/unparseable line
+    Just (Unparseable _ ) -> error "Can't do anything with unrecognized line."
+    Nothing               -> error "Nothing is selected!"
 
 menuModeUI :: GopherBrowserState -> [T.Widget MyName]
 menuModeUI gbs = defaultBrowserUI gbs (viewport MenuViewport T.Horizontal) titleWidget mainWidget statusWidget
@@ -147,12 +147,16 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
   lineColor
   (selStr a <+> lineDescriptorWidget (menuLine gmenu indx) )
  where
+  menu = getMenu gbs
+  (Menu (gmenu, mlist, focusLines)) = menu
+  maybeSelectedLine = selectedMenuLine menu
+
+  -- FIXME: I should document what this does...
   selStr s
-    | sel && isInfoMsg (selectedMenuLine gbs) = withAttr custom2Attr (txt s)
+    | sel && isJust maybeSelectedLine && isInfoMsg (fromJust $ selectedMenuLine menu) =
+      withAttr custom2Attr (txt s)
     | sel       = withAttr customAttr $ txt s
     | otherwise = txt s
-
-  (Menu (gmenu, mlist, focusLines)) = getMenu gbs
 
   cursorRegion = if sel then withAttr asteriskAttr $ txt " ➤ " else txt "   "
   isLink                            = indx `elem` focusLines
@@ -195,12 +199,15 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
 -- | Describe the currently selected line in the menu/map.
 lineInfoPopup :: GopherBrowserState -> GopherBrowserState
 lineInfoPopup gbs =
-  let currentLineInfo = explainLine $ selectedMenuLine gbs
-  in gbs { gbsPopup = Just $ Popup { pLabel   = "Line Info"
-                                   , pWidgets = [txt currentLineInfo]
-                                   , pHelp    = "Currently selected line is of this type. ESC to close."
-                                   }
-         }
+  let menu = getMenu gbs
+      currentLineInfo = case (selectedMenuLine menu) of
+        Just gopherLine -> explainLine gopherLine
+        Nothing         -> "Nothing is selected!"
+  in  gbs { gbsPopup = Just $ Popup { pLabel   = "Line Info"
+                                    , pWidgets = [txt currentLineInfo]
+                                    , pHelp    = "Currently selected line is of this type. ESC to close."
+                                    }
+          }
 
 menuEventHandler
   :: GopherBrowserState
