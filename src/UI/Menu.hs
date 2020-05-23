@@ -152,16 +152,15 @@ menuModeUI gbs = defaultBrowserUI gbs
           <+> cur
           <+> txt " of "
           <+> total
-  mainWidget = BrickList.renderListWithIndex (listDrawElement gbs) True l
+  mainWidget = BrickList.renderListWithIndex (listDrawElement $ getMenu gbs) True l
 
 -- FIXME: this is messy! unoptimized!
 listDrawElement
-  :: GopherBrowserState -> Int -> Bool -> T.Text -> T.Widget MyName
-listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
+  :: Menu -> Int -> Bool -> T.Text -> T.Widget MyName
+listDrawElement menu indx sel a = cursorRegion <+> possibleNumber <+> withAttr
   lineColor
   (selStr a <+> lineDescriptorWidget (menuLine gmenu indx))
  where
-  menu                              = getMenu gbs
   (Menu (gmenu, mlist, focusLines)) = menu
   maybeSelectedLine                 = selectedMenuLine menu
 
