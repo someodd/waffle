@@ -59,7 +59,7 @@ jumpNextLink menu = updateMenuPosition menu next
   headOr a []    = a
   headOr _ (x:_) = x
 
-  next = case (BrickList.listSelected l) of
+  next = case BrickList.listSelected l of
     -- NOTE: using "find" for this feels inefficient... oh well!
     Just currentIndex ->
       -- Try to find a line # bigger than the currently selected line in
@@ -83,7 +83,7 @@ jumpPrevLink menu = updateMenuPosition menu next
   lastOr a []     = a
   lastOr _ xs     = last xs
 
-  next = case (BrickList.listSelected l) of
+  next = case BrickList.listSelected l of
     Just currentIndex ->
       fromMaybe (lastOr currentIndex focusLines) (find (< currentIndex) $ reverse focusLines)
     Nothing           -> lastOr 0 focusLines
@@ -131,7 +131,7 @@ menuModeUI gbs = defaultBrowserUI gbs (viewport MenuViewport T.Horizontal) title
    (Menu (_, l, _)) = getMenu gbs
    titleWidget =
      let (host, port, resource, _) = gbsLocation gbs
-     in txt $ " " <> host <> ":" <> (T.pack $ show port) <> if not $ T.null resource then " (" <> resource <> ") " else " "
+     in txt $ " " <> host <> ":" <> T.pack (show port) <> if not $ T.null resource then " (" <> resource <> ") " else " "
    statusWidget =
      let cur              = case l ^. BrickList.listSelectedL of
                               Nothing -> txt "-"
@@ -170,9 +170,9 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
       withAttr numberPrefixAttr
       $  txt
       $  numberPad
-      $  (T.pack $ show (fromJust $ indx `elemIndex` focusLines))
+      $  T.pack (show (fromJust $ indx `elemIndex` focusLines))
       <> ". "
-    else txt $ (T.replicate (biggestIndexDigits + 2) " ")
+    else txt $ T.replicate (biggestIndexDigits + 2) " "
     where
       numberPad :: T.Text -> T.Text
       numberPad = (T.replicate (biggestIndexDigits - curIndexDigits) " " <>)
@@ -187,12 +187,12 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
         File      -> withAttr fileAttr $ txt " 📄 [File]"
         IndexSearchServer ->
           withAttr indexSearchServerAttr $ txt " 🔎 [IndexSearchServer]"
-        _ -> withAttr genericTypeAttr $ txt $ " [" <> (T.pack $ show ct) <> "]"
+        _ -> withAttr genericTypeAttr $ txt $ " [" <> T.pack (show ct) <> "]"
       -- Noncannonical type
       (NonCanonical nct) -> case nct of
         InformationalMessage -> txt $ T.replicate (biggestIndexDigits + 2) " "
         HtmlFile -> withAttr directoryAttr $ txt " 🌐 [HTMLFile] "
-        _ -> withAttr genericTypeAttr $ txt $ " [" <> (T.pack $ show nct) <> "]"
+        _ -> withAttr genericTypeAttr $ txt $ " [" <> T.pack (show nct) <> "]"
     -- it's a malformed/unrecognized line
     (Unparseable _) -> txt ""
 
@@ -200,7 +200,7 @@ listDrawElement gbs indx sel a = cursorRegion <+> possibleNumber <+> withAttr
 lineInfoPopup :: GopherBrowserState -> GopherBrowserState
 lineInfoPopup gbs =
   let menu = getMenu gbs
-      currentLineInfo = case (selectedMenuLine menu) of
+      currentLineInfo = case selectedMenuLine menu of
         Just gopherLine -> explainLine gopherLine
         Nothing         -> "Nothing is selected!"
   in  gbs { gbsPopup = Just $ Popup { pLabel   = "Line Info"
