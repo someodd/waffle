@@ -46,6 +46,32 @@ updateMenuPosition :: Menu -> Int -> Menu
 updateMenuPosition menu next =
   let (Menu (gm, l, fl)) = menu in Menu (gm, BrickList.listMoveTo next l, fl)
 
+-- | Jump to the next line (wraps around).
+nextLine :: Menu -> Menu
+nextLine menu = updateMenuPosition menu next
+ where
+  (Menu (_, l, _)) = menu
+
+  next = case BrickList.listSelected l of
+    Just currentIndex ->
+      if currentIndex == length l - 1
+        then 0
+        else currentIndex + 1
+    Nothing           -> 0
+
+-- | Jump to the previous line (wraps around).
+previousLine :: Menu -> Menu
+previousLine menu = updateMenuPosition menu next
+ where
+  (Menu (_, l, _)) = menu
+
+  next = case BrickList.listSelected l of
+    Just currentIndex ->
+      if currentIndex == 0
+        then length l - 1
+        else currentIndex - 1
+    Nothing           -> 0
+
 -- FIXME: move away form getMenu gbs and using gbs
 -- | Jump to the next link (wraps around). Basically, skips info items.
 jumpNextLink :: Menu -> Menu
@@ -248,6 +274,14 @@ menuEventHandler gbs e
       M.hScrollBy menuViewportScroll 1 >> M.continue gbs
     V.EvKey (V.KChar 'h') [] ->
       M.hScrollBy menuViewportScroll (-1) >> M.continue gbs
+    V.EvKey (V.KChar 'j') [] ->
+      M.continue $ newMenuBuffer gbs $ nextLine (getMenu gbs)
+    V.EvKey (V.KChar 'k') [] ->
+      M.continue $ newMenuBuffer gbs $ previousLine (getMenu gbs)
+    V.EvKey V.KDown []       ->
+      M.continue $ newMenuBuffer gbs $ nextLine (getMenu gbs)
+    V.EvKey V.KUp []         ->
+      M.continue $ newMenuBuffer gbs $ previousLine (getMenu gbs)
     V.EvKey (V.KChar 'n') [] ->
       M.continue $ newMenuBuffer gbs $ jumpNextLink (getMenu gbs)
     V.EvKey (V.KChar 'p') [] ->
