@@ -6,6 +6,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2020-05-31
+
+This release is just a little bit of cleanup and fixes.
+
+### Add
+
+  * `newMenuBuffer` and `getMenu` to assist in handling `Menu` directly
+    instead of passing around `GopherBrowserState`.
+  * Pedantic-style warnings (`-Wall` and `-Werror`) to ghc build options
+    in cabal config
+  * Make it so moving a line down/up will wrap to the be beggining or end
+    of the list
+
+### Change
+
+  * Reduce redundancy by making `updateMenuList` a top level function
+  * Loosely couple `jumpNextLink`, `jumpPrevLink`, `listDrawElement`,
+    and `selectedMenuLine` so they both only need `Menu` instead of
+    `GopherBrowserState`.
+
+### Fix
+
+  * Refactor `jumpNextLink` and `jumpPrevLink` to be safe. Otherwise, moving
+    to next or previous link would crash Waffle on menus (waffle: Prelude.head: empty list)
+    where there were no links, such as gopher://sdf.org:70/users/raoeupb/. This also covers a
+    situation where a line, for whatever reason, might not be selected, and
+    thus would cause an error.
+
 ## [0.3.0] - 2020-05-17
 
 This release is preparing for uploading to Hackage. On the non-code
