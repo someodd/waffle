@@ -4,6 +4,7 @@ module UI.Representation
   -- * UI representations/models/types
     Progress(..)
   , SaveBrowser(..)
+  , OpenConfigState(..)
   , Search(..)
   , Help(..)
   , emptyCache
@@ -13,17 +14,22 @@ module UI.Representation
   , Buffer(..)
   , StatusEditor(..)
   , Popup(..)
-  , MyName(..)
   , RenderMode(..)
   , Location
   , Cache
   , History
+  -- * Names
+  , MyName(..)
+  , FieldName(..)
+  , AnyName(..)
   -- * Events
   , CustomEvent(..)
   -- * Helper utilities for UI representations
+  , getFocusRing
   , newMenuBuffer
   , closePopup
   , getHelp
+  , getOpenConfig
   , getHelpTextFileContents
   , hasPopup
   , updateFileBrowserBuffer
@@ -42,6 +48,7 @@ import qualified Data.Text                     as T
 import           Data.Maybe
 import qualified Data.Map as Map
 
+import qualified Brick.Focus as F
 import qualified Brick.Types                   as T
 import qualified Brick.BChan
 import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
@@ -49,6 +56,60 @@ import           Brick.Widgets.FileBrowser      ( FileBrowser )
 import           Brick.Widgets.Edit            as E
 
 import           Gopher
+
+-- FIXME: this is not specific! Should be OpenConfigFieldNames!
+data FieldName = FileField
+              | DirectoryField
+              | CsoPhoneBookServerField
+              | ErrorField
+              | BinHexedMacintoshFileField
+              | DosBinaryArchiveField
+              | UnixUuencodedFileField
+              | IndexSearchServerField
+              | TextBasedTelnetSessionField
+              | BinaryFileField
+              | RedundantServerField
+              | GifFileField
+              | ImageFileField
+              | Tn3270SessionField
+              | DocField
+              | HtmlFileField
+              | InformationalMessageField
+              | SoundFileField
+              deriving (Bounded, Enum, Show, Ord, Eq)
+
+data AnyName = FieldName FieldName | MyName MyName
+  deriving (Show, Eq, Ord)
+
+data OpenConfigState =
+  OpenConfigState { formerState :: GopherBrowserState
+                  , focusRing :: F.FocusRing AnyName
+                  , editFile :: E.Editor String AnyName
+                  , editDirectory :: E.Editor String AnyName
+                  , editCsoPhoneBookServer :: E.Editor String AnyName
+                  , editError :: E.Editor String AnyName
+                  , editBinHexedMacintoshFile :: E.Editor String AnyName
+                  , editDosBinaryArchive :: E.Editor String AnyName
+                  , editUnixUuencodedFile :: E.Editor String AnyName
+                  , editIndexSearchServer :: E.Editor String AnyName
+                  , editTextBasedTelnetSession :: E.Editor String AnyName
+                  , editBinaryFile :: E.Editor String AnyName
+                  , editRedundantServer :: E.Editor String AnyName
+                  , editGifFile :: E.Editor String AnyName
+                  , editImageFile :: E.Editor String AnyName
+                  , editTn3270Session :: E.Editor String AnyName
+                  , editDoc :: E.Editor String AnyName
+                  , editHtmlFile :: E.Editor String AnyName
+                  , editInformationalMessage :: E.Editor String AnyName
+                  , editSoundFile :: E.Editor String AnyName
+                  }
+
+-- | Return the `focusRing` from the `GopherBrowserState`'s
+-- `OpenConfigState`.
+getFocusRing :: GopherBrowserState -> F.FocusRing AnyName
+getFocusRing gbs =
+  let (OpenConfigBuffer openConfigState) = gbsBuffer gbs
+  in  focusRing openConfigState
 
 -- This is used to indicate how many bytes have been downloaded
 -- of a menu or a save a text file etc, anything!
@@ -59,7 +120,7 @@ data Progress = Progress { pbBytesDownloaded :: Int
                          , pbIsFromCache :: Bool
                          }
 
-data SaveBrowser = SaveBrowser { fbFileBrowser :: FileBrowser MyName
+data SaveBrowser = SaveBrowser { fbFileBrowser :: FileBrowser AnyName
                                , fbCallBack :: FilePath -> IO ()
                                , fbIsNamingFile :: Bool
                                , fbFileOutPath :: FilePath
@@ -91,7 +152,7 @@ emptyCache = Map.empty
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
 -- The second element is the widget which is used when rendering a GopherMenu.
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
-newtype Menu = Menu (GopherMenu, BrickList.List MyName T.Text, FocusLines)
+newtype Menu = Menu (GopherMenu, BrickList.List AnyName T.Text, FocusLines)
 
 -- | Construct a new `MenuBuffer` in the `GopherBrowserState` using
 -- the supplied `Menu`.
@@ -118,6 +179,10 @@ data Buffer
   | SearchBuffer Search
   | ProgressBuffer Progress
   | HelpBuffer Help
+  | OpenConfigBuffer OpenConfigState
+
+getOpenConfig :: GopherBrowserState -> OpenConfigState
+getOpenConfig gbs = let (OpenConfigBuffer openConfig) = gbsBuffer gbs in openConfig
 
 -- help file should have title "Help" FIXME
 -- Could use with below TODO NOTE
@@ -183,7 +248,7 @@ data CustomEvent = NewStateEvent GopherBrowserState | FinalNewStateEvent GopherB
 -- types of popups!
 data Popup = Popup
   { pLabel :: T.Text
-  , pWidgets :: [T.Widget MyName]
+  , pWidgets :: [T.Widget AnyName]
   , pHelp :: T.Text
   }
 
@@ -224,8 +289,9 @@ closePopup gbs = gbs { gbsPopup = Nothing }
 data MyName = MyViewport | MainViewport | EditorViewport | MyWidget | TextViewport | MenuViewport
   deriving (Show, Eq, Ord)
 
+-- FIXME: This name is very bad!
 data EditName = Edit1 deriving (Ord, Show, Eq)
-type EditorState = E.Editor T.Text MyName
+type EditorState = E.Editor T.Text AnyName
 
 -- FIXME: maybe "rendermode" is bad now and should jsut be called "mode"
 -- TODO: maybe rename filebrowsermode to SaveMode or SaveFileMode
@@ -237,6 +303,7 @@ data RenderMode = MenuMode
                 | ProgressMode
                 | HelpMode
                 | GotoMode
+                | OpenConfigMode
                 deriving (Eq, Show)
 
 itemTypeToRenderMode :: ItemType -> RenderMode

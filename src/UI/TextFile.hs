@@ -20,8 +20,8 @@ import           UI.Util
 import           UI.Progress
 import           UI.Representation
 
-textFileModeUI :: GopherBrowserState -> [T.Widget MyName]
-textFileModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
+textFileModeUI :: GopherBrowserState -> [T.Widget AnyName]
+textFileModeUI gbs = defaultBrowserUI gbs (viewport (MyName TextViewport) T.Both) titleWidget mainWidget statusWidget
   where
    mainWidget   = let textFileContents = tfContents $ getTextFile gbs
                   in  txt textFileContents
@@ -33,7 +33,7 @@ textFileModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWi
 basicTextFileEventHandler
   :: GopherBrowserState
   -> V.Event
-  -> T.EventM MyName (T.Next GopherBrowserState)
+  -> T.EventM AnyName (T.Next GopherBrowserState)
 basicTextFileEventHandler gbs e = case e of
   -- What about left and right?!
   V.EvKey (V.KChar 'j') [] -> M.vScrollBy textViewportScroll 1 >> M.continue gbs
@@ -46,7 +46,7 @@ basicTextFileEventHandler gbs e = case e of
 textFileEventHandler
   :: GopherBrowserState
   -> V.Event
-  -> T.EventM MyName (T.Next GopherBrowserState)
+  -> T.EventM AnyName (T.Next GopherBrowserState)
 textFileEventHandler gbs e = case e of
   V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
   V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue

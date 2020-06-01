@@ -32,7 +32,7 @@ import           UI.Representation
 
 -- | A vertically-centered, full-width popup box to be displayed over other widgets by putting it before
 -- the other widgets in the list of widgets being rendered.
-popup :: T.Text -> [T.Widget MyName] -> T.Text -> [T.Widget MyName]
+popup :: T.Text -> [T.Widget AnyName] -> T.Text -> [T.Widget AnyName]
 popup label widgets helpString =
   let
     ui =
@@ -53,7 +53,7 @@ popup label widgets helpString =
   in  [ui]
 
 -- | A full-screen popup which displays nothing underneath it. Centered vertically and horizontally.
-popOver :: T.Text -> [T.Widget MyName] -> T.Text -> [T.Widget MyName]
+popOver :: T.Text -> [T.Widget AnyName] -> T.Text -> [T.Widget AnyName]
 popOver label mainWidget helpString =
   let
     ui =
@@ -63,7 +63,7 @@ popOver label mainWidget helpString =
         (head $ popup label mainWidget helpString)
   in  [center ui]
 
-inputPopupUI :: E.Editor T.Text MyName -> T.Text -> T.Text -> [T.Widget MyName]
+inputPopupUI :: E.Editor T.Text AnyName -> T.Text -> T.Text -> [T.Widget AnyName]
 inputPopupUI editorState label helpString = popOver label [editorWidget] helpString
   where
    editorWidget = withAttr inputFieldAttr $ E.renderEditor (txt . T.unlines) True editorState
