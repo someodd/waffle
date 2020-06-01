@@ -20,6 +20,11 @@ MOVING THE CURSOR & SCROLLING: `j` (down), `k` (up), `h` (left), `l` (right).
 beginning.  `G` and `end` goes to end. To jump between menu links in menu mode
 use `p` (previous link) and `n` (next link).
 
+OPEN MENU ITEM: press 'o' to open the currently selected menu item with
+an associated external program. You can edit the assocations with
+ctrl + c for a UI or edit the config/INI directly at
+`~/.config/waffle/open.ini`.
+
 GET INFO ON CURRENTLY SELECTED LINE: in menu/map mode, with `i`.
 
 QUIT WAFFLE: ctrl+q.

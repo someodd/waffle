@@ -11,6 +11,7 @@ module UI.Progress
   , progressEventHandler
   , goHistory
   , goParentDirectory
+  , initOpenMode
   ) where
 
 import           Control.Exception
@@ -38,6 +39,9 @@ import           UI.Util
 import           UI.Representation
 import           Gopher
 import           GopherNet                      ( writeAllBytes )
+import           Open                           ( openItem )
+
+-- TODO: implement OPEN
 
 -- FIXME: also used by save.hs
 selectNothing :: FB.FileInfo -> Bool
@@ -46,7 +50,7 @@ selectNothing _ = False
 -- FIXME: need to combine vScroll and hScroll into a single event! because otherwise
 -- it's only giving back the event for hScroll!
 -- Things to do when switching modes! Namely reset viewports...
-modeTransition :: T.EventM MyName ()
+modeTransition :: T.EventM AnyName ()
 modeTransition = do
   --M.vScrollToBeginning myNameScroll
   traverse_ M.vScrollToBeginning [myNameScroll, mainViewportScroll, menuViewportScroll, textViewportScroll]
@@ -75,6 +79,43 @@ initProgressMode gbs history location@(_, _, _, mode) =
       }
   -- Should catch network error in a popup (representational).
   in forkIO (downloader initialProgGbs history location) >> pure initialProgGbs
+
+-- FIXME: merge with initProgressMode
+initOpenMode :: GopherBrowserState -> Location -> ItemType -> IO GopherBrowserState
+initOpenMode gbs location itemType =
+  let
+    initialProgGbs = gbs
+      { gbsRenderMode = ProgressMode
+      , gbsBuffer     = ProgressBuffer $ Progress
+                          { pbBytesDownloaded = 0
+                          , pbInitGbs         = gbs
+                          , pbConnected       = False
+                          , pbIsFromCache     = isCached location (gbsCache gbs)
+                          , pbMessage         = "Downloading a " <> T.pack (show itemType)
+                          }
+      }
+  -- Should catch network error in a popup (representational).
+  in forkIO (progressOpen initialProgGbs itemType location) >> pure initialProgGbs
+
+-- FIXME: This could basically be turned into a higher level function with progressDownloadBytes or whatever which combo
+progressOpen :: GopherBrowserState -> ItemType -> Location -> IO ()
+progressOpen gbs itemType (host, port, resource, _) =
+  connect (T.unpack host) (show port) $ \(connectionSocket, _) -> do
+    let chan              = gbsChan gbs
+        initialGBS = pbInitGbs (getProgress gbs) -- FIXME: not needed
+    send connectionSocket (B8.pack $ T.unpack $ resource <> "\r\n")
+    -- FIXME: what if this is left over from last time?
+    tempFilePath <- emptySystemTempFile "waffle.download.tmp"
+    Brick.BChan.writeBChan chan (NewStateEvent gbs)
+    -- need to only fetch as many bytes as it takes to get period on a line by itself to
+    -- close the connection.
+    writeAllBytes (Just counterMutator) (Just gbs) connectionSocket tempFilePath
+    -- open with the propper association
+    _ <- openItem itemType tempFilePath
+    -- Final event is reverting to former event!
+    -- should we be using doFinalEvent instead?
+    Brick.BChan.writeBChan chan (FinalNewStateEvent initialGBS)
+    pure ()
 
 -- THIS IS A CALLBACK FOR GOPHERNET
 counterMutator :: GopherBrowserState -> Maybe ByteString.ByteString -> IO GopherBrowserState
@@ -229,7 +270,7 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
     -- of save :) easy peasy
     --pure $ wow
     -- THE FINAL EVENT...
-    x <- FB.newFileBrowser selectNothing MyViewport Nothing
+    x <- FB.newFileBrowser selectNothing (MyName MyViewport) Nothing
     let finalState = gbs
           { gbsRenderMode = FileBrowserMode
           , gbsBuffer     = FileBrowserBuffer $ SaveBrowser
@@ -247,7 +288,7 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
     pure ()
 
 -- TODO: progressUI...
-drawProgressUI :: GopherBrowserState -> [T.Widget MyName]
+drawProgressUI :: GopherBrowserState -> [T.Widget AnyName]
 drawProgressUI gbs = [a]
  where
   -- FIXME: "downloaded" isn't necessarily correct. You can request more bytes than is left...
@@ -271,8 +312,8 @@ drawProgressUI gbs = [a]
 -- should do this soon...
 progressEventHandler
   :: GopherBrowserState
-  -> Either (T.BrickEvent MyName CustomEvent) V.Event
-  -> T.EventM MyName (T.Next GopherBrowserState)
+  -> Either (T.BrickEvent AnyName CustomEvent) V.Event
+  -> T.EventM AnyName (T.Next GopherBrowserState)
 progressEventHandler gbs (Left e)  = case e of
   -- This is extremely hacky!
   T.AppEvent (NewStateEvent gbs')       -> M.continue gbs'

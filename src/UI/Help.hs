@@ -26,8 +26,8 @@ import           UI.TextFile
 import           UI.Representation
 import           Gopher
 
-helpModeUI :: GopherBrowserState -> [T.Widget MyName]
-helpModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget mainWidget statusWidget
+helpModeUI :: GopherBrowserState -> [T.Widget AnyName]
+helpModeUI gbs = defaultBrowserUI gbs (viewport (MyName TextViewport) T.Both) titleWidget mainWidget statusWidget
   where
    mainWidget   = txt $ getHelpTextFileContents gbs
    titleWidget  = txt "Waffle Help"
@@ -38,7 +38,7 @@ helpModeUI gbs = defaultBrowserUI gbs (viewport TextViewport T.Both) titleWidget
 helpEventHandler
   :: GopherBrowserState
   -> V.Event
-  -> T.EventM MyName (T.Next GopherBrowserState)
+  -> T.EventM AnyName (T.Next GopherBrowserState)
 helpEventHandler gbs e = case e of
   -- What about left and right?!
   V.EvKey V.KEsc        [] -> M.continue $ hFormerGbs $ getHelp gbs
