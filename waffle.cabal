@@ -95,7 +95,7 @@ common shared-properties
   default-language:    Haskell2010
 
 
-library waffle-library
+library
   -- Modules exported by the library.
   import: shared-properties
 
@@ -139,7 +139,7 @@ executable waffle
   -- Directories containing source files.
   hs-source-dirs:      app
 
-  build-depends:       waffle-library
+  build-depends:       waffle
 
 
 test-suite waffle-test
@@ -154,4 +154,4 @@ test-suite waffle-test
   -- The entrypoint to the test suite.
   main-is:             MyLibTest.hs
 
-  build-depends:       waffle-library, doctest >= 0.16.3 && < 0.17,
+  build-depends:       doctest >= 0.16.3 && < 0.17,
