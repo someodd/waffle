@@ -3,7 +3,6 @@ module Config where
 import           System.Directory
 import           System.FilePath
 
---import           Data.FileEmbed
 import           Data.ConfigFile
 
 -- | Basically `emptyCP`, but doesn't toLower the options.
