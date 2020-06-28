@@ -6,6 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Introduce the ability to open Gopher menu items with an external application
+by associating commands with specific item types.
+
+### Add
+
+  * General configuration infrastructure for managing Waffle's current
+    `open.ini` configuration, as well as future configurations, all residing
+    in `~/.config/waffle/`
+  * Default `open.ini` in `data/`
+  * UI for editing which command opens an item type (ctrl+c to bring up UI,
+    ctrl+s to save changes), which manipulates the corresponding config stored
+    at `~/.config/waffle/open.ini`
+  * Instructions in the help screen for the new open feature
+  * Introduce `AnyName` which is a Brick name that encompasses *all* names as
+    a "sum type"
+  * A progress handler (`initOpenMode`, `progressOpen`) for downloading and
+    then opening the download with the associated command
+  * Open certain menu items with a command using ctrl+o
+  * Representations for open config stuff, including helper functions
+
+### Change
+
+  * Pretty much all instances of `MyName` to use the new `AnyName` (which `MyName`
+    is now a constructor of)
+
 ## [0.4.0] - 2020-05-31
 
 This release is just a little bit of cleanup and fixes.

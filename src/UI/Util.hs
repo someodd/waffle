@@ -36,7 +36,7 @@ import           UI.Representation
 import           UI.Popup
 import           UI.Style
 
-makePopupWidget :: GopherBrowserState -> B.Widget MyName
+makePopupWidget :: GopherBrowserState -> B.Widget AnyName
 makePopupWidget gbs = 
   B.centerLayer $ head $ popup (pLabel . fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
 
@@ -45,22 +45,28 @@ makePopupWidget gbs =
 -- I need a better name for this, but basically it's the default view you see
 -- for everything! There are only a few exceptions.
 --defaultBrowserUI :: GopherBrowserState -> B.Viewport -> B.Widget MyName -> B.Widget MyName -> B.Widget MyName -> [B.Widget MyName]
+-- FIXME: can make this all name-agnostic if you fix status issue?
 defaultBrowserUI ::
   GopherBrowserState
-  -> (B.Widget n -> B.Widget MyName)
-  -> B.Widget MyName
-  -> B.Widget n
-  -> B.Widget MyName
-  -> [B.Widget MyName]
+  -> (B.Widget AnyName -> B.Widget AnyName)
+  -> B.Widget AnyName
+  -> B.Widget AnyName
+  -> B.Widget AnyName
+  -> [B.Widget AnyName]
 defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePopupWidget gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
  where
+  box :: B.Widget AnyName
   box =
     updateAttrMap (B.applyAttrMappings borderMappings)
       $ withBorderStyle customBorder
       $ B.borderWithLabel (withAttr titleAttr titleWidget)
       $ mainViewport
       $ hLimitPercent 100 mainWidget
+
   -- Maybe statusWidget should be Maybe so can override?
+  -- FIXME: this is source of enforcing MyName because seEditorState is always MyName type... what if constructed it here instead based
+  -- on type of name given
+  status :: B.Widget AnyName
   status =
     if isStatusEditing gbs then
       let editWidget      = withAttr inputFieldAttr $ B.renderEditor (txt . T.unlines) True (seEditorState $ fromJust $ gbsStatus gbs)
@@ -68,6 +74,9 @@ defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePop
       in editLabelWidget <+> editWidget
     else
       statusWidget
+
+  -- FIXME: could I just use <+> or something here? Try to combinge name N with named other type? impossible?
+  view :: B.Widget AnyName
   view = vBox
     [ box
     -- This needs to be better... it needs to detect the status mode and then construct the widget for either...?
@@ -112,7 +121,7 @@ newStateForMenu
 newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserState
   { gbsBuffer     =
     MenuBuffer
-      $ Menu (gm, BrickList.list MyWidget glsVector 1, mkFocusLinesIndex gm)
+      $ Menu (gm, BrickList.list (MyName MyWidget) glsVector 1, mkFocusLinesIndex gm)
   , gbsLocation   = location
   , gbsHistory    = history
   , gbsRenderMode = MenuMode
@@ -141,14 +150,14 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
     -- It's a MalformedGopherLine
     (Unparseable _) -> menuLineAsText line
 
-myNameScroll :: B.ViewportScroll MyName
-myNameScroll = B.viewportScroll MyViewport
+myNameScroll :: B.ViewportScroll AnyName
+myNameScroll = B.viewportScroll $ MyName MyViewport
 
-mainViewportScroll :: B.ViewportScroll MyName
-mainViewportScroll = B.viewportScroll MainViewport
+mainViewportScroll :: B.ViewportScroll AnyName
+mainViewportScroll = B.viewportScroll $ MyName MainViewport
 
-menuViewportScroll :: B.ViewportScroll MyName
-menuViewportScroll = B.viewportScroll MenuViewport
+menuViewportScroll :: B.ViewportScroll AnyName
+menuViewportScroll = B.viewportScroll $ MyName MenuViewport
 
-textViewportScroll :: B.ViewportScroll MyName
-textViewportScroll = B.viewportScroll TextViewport
+textViewportScroll :: B.ViewportScroll AnyName
+textViewportScroll = B.viewportScroll $ MyName TextViewport

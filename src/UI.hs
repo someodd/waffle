@@ -33,12 +33,13 @@ import           UI.TextFile
 import           UI.Help
 import           UI.Representation
 import           UI.Goto
+import qualified UI.Config.Open                as Config
 
 -- | The draw handler which will choose a UI based on the browser's mode.
 -- | Picks a UI/draw function based on the current gbsRenderMode.
 --
 -- Used as Brick.Main.appDraw when constructing the Brick app.
-drawUI :: GopherBrowserState -> [B.Widget MyName]
+drawUI :: GopherBrowserState -> [B.Widget AnyName]
 drawUI gbs = modeUI $ gbsRenderMode gbs
   where
    modeUI mode = case mode of
@@ -49,6 +50,7 @@ drawUI gbs = modeUI $ gbsRenderMode gbs
      SearchMode      -> searchInputUI gbs
      ProgressMode    -> drawProgressUI gbs
      GotoMode        -> modeUI (seFormerMode $ fromJust $ gbsStatus gbs)
+     OpenConfigMode  -> Config.openConfigModeUI gbs
 
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
 -- some cases where we don't want history available
@@ -59,9 +61,14 @@ drawUI gbs = modeUI $ gbsRenderMode gbs
 -- Used for Brick.Main.appHandleEvent.
 appEvent
   :: GopherBrowserState
-  -> B.BrickEvent MyName CustomEvent
-  -> B.EventM MyName (B.Next GopherBrowserState)
+  -> B.BrickEvent AnyName CustomEvent
+  -> B.EventM AnyName (B.Next GopherBrowserState)
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt gbs
+-- FIXME
+-- This is the config mode, which currently just goes right into the menu item
+-- command association editor.
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'c') [V.MCtrl])) =
+  Config.initConfigOpenMode gbs
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'g') [V.MCtrl])) =
   B.continue $ initGotoMode gbs
 -- TODO: needs to reset viewport
@@ -79,6 +86,7 @@ appEvent gbs (B.VtyEvent e)
   | gbsRenderMode gbs == FileBrowserMode = saveEventHandler gbs e
   | gbsRenderMode gbs == SearchMode      = searchEventHandler gbs e
   | gbsRenderMode gbs == GotoMode        = gotoEventHandler gbs e
+  | gbsRenderMode gbs == OpenConfigMode  = Config.openConfigEventHandler gbs e
   -- FIXME: two separate ones because of the way we pass events and pattern match
   -- i.e., one for vtyhandler and one for the custom app events, which we should
   -- soon conflate by not matching specifically for VtyEvent (thus passing all events
@@ -91,7 +99,7 @@ appEvent gbs e
   | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs (Left e)
   | otherwise                         = B.continue gbs
 
-theApp :: B.App GopherBrowserState CustomEvent MyName
+theApp :: B.App GopherBrowserState CustomEvent AnyName
 theApp = B.App { B.appDraw         = drawUI
                , B.appChooseCursor = B.showFirstCursor
                , B.appHandleEvent  = appEvent
