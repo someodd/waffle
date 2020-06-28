@@ -24,7 +24,7 @@ initGotoMode :: GopherBrowserState -> GopherBrowserState
 initGotoMode gbs = gbs
   { gbsRenderMode = GotoMode
   , gbsStatus     = Just $ StatusEditor { seLabel = "Goto: "
-                                        , seEditorState = E.editor EditorViewport Nothing ""
+                                        , seEditorState = E.editor (MyName EditorViewport) Nothing ""
                                         , seFormerMode = gbsRenderMode gbs
                                         }
   }
@@ -61,7 +61,7 @@ mkGotoResponseState gbs =
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
 gotoEventHandler
-  :: GopherBrowserState -> Event -> T.EventM MyName (T.Next GopherBrowserState)
+  :: GopherBrowserState -> Event -> T.EventM AnyName (T.Next GopherBrowserState)
 gotoEventHandler gbs e = case e of
     -- FIXME: esc quits! Change key...
   V.EvKey V.KEsc   [] -> M.continue $ formerMode gbs
@@ -74,7 +74,7 @@ gotoEventHandler gbs e = case e of
   -- | A modification of the default Brick.Widgets.Edit event handler; changed to
   -- return a GopherBrowserState instead of just an editor state.
   editorEventHandler
-    :: GopherBrowserState -> Event -> T.EventM MyName GopherBrowserState
+    :: GopherBrowserState -> Event -> T.EventM AnyName GopherBrowserState
   -- TODO: e' is unused!
   editorEventHandler _ e' =
     -- Maybe this should be a general function in Representation.

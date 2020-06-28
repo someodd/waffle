@@ -116,7 +116,7 @@ jumpPrevLink menu = updateMenuPosition menu next
 -- | Make a request based on the currently selected Gopher menu item and change
 -- the application state (GopherBrowserState) to reflect the change.
 newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
-newStateFromSelectedMenuItem gbs = case lineType of
+newStateFromSelectedMenuItem gbs = case lineType of -- FIXME: it's itemType
   (Canonical ct) -> case ct of
     Directory -> initProgressMode gbs Nothing (host, port, resource, MenuMode)
     File -> initProgressMode gbs Nothing (host, port, resource, TextFileMode)
@@ -128,7 +128,7 @@ newStateFromSelectedMenuItem gbs = case lineType of
                           , sbSelector          = resource
                           , sbPort              = port
                           , sbHost              = host
-                          , sbEditorState       = E.editor MyViewport Nothing ""
+                          , sbEditorState       = E.editor (MyName MyViewport) Nothing ""
                           }
       }
     ImageFile ->
@@ -151,9 +151,24 @@ newStateFromSelectedMenuItem gbs = case lineType of
     Just (Unparseable _ ) -> error "Can't do anything with unrecognized line."
     Nothing               -> error "Nothing is selected!"
 
-menuModeUI :: GopherBrowserState -> [T.Widget MyName]
+-- | Make a request based on the currently selected Gopher menu item and open
+-- the file!
+newStateFromOpenItem :: GopherBrowserState -> IO GopherBrowserState
+newStateFromOpenItem gbs =
+  initOpenMode gbs (host, port, resource, FileBrowserMode) lineType -- render mode not needed
+ where
+  menu                             = getMenu gbs
+  (host, port, resource, lineType) = case selectedMenuLine menu of
+    -- ParsedLine
+    Just (Parsed      gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
+    -- FIXME: why even error here?
+    -- Unrecognized/unparseable line
+    Just (Unparseable _ ) -> error "Can't do anything with unrecognized line."
+    Nothing               -> error "Nothing is selected!"
+
+menuModeUI :: GopherBrowserState -> [T.Widget AnyName]
 menuModeUI gbs = defaultBrowserUI gbs
-                                  (viewport MenuViewport T.Horizontal)
+                                  (viewport (MyName MenuViewport) T.Horizontal)
                                   titleWidget
                                   mainWidget
                                   statusWidget
@@ -178,11 +193,13 @@ menuModeUI gbs = defaultBrowserUI gbs
           <+> cur
           <+> txt " of "
           <+> total
+
+  mainWidget :: T.Widget AnyName
   mainWidget = BrickList.renderListWithIndex (listDrawElement $ getMenu gbs) True l
 
 -- FIXME: this is messy! unoptimized!
 listDrawElement
-  :: Menu -> Int -> Bool -> T.Text -> T.Widget MyName
+  :: Menu -> Int -> Bool -> T.Text -> T.Widget AnyName
 listDrawElement menu indx sel a = cursorRegion <+> possibleNumber <+> withAttr
   lineColor
   (selStr a <+> lineDescriptorWidget (menuLine gmenu indx))
@@ -257,7 +274,7 @@ lineInfoPopup gbs =
 menuEventHandler
   :: GopherBrowserState
   -> V.Event
-  -> T.EventM MyName (T.Next GopherBrowserState)
+  -> T.EventM AnyName (T.Next GopherBrowserState)
 menuEventHandler gbs e
   |
   -- Handle a popup (esc key to dismiss) while there is a popup present...
@@ -270,6 +287,8 @@ menuEventHandler gbs e
     V.EvKey (V.KChar 'i') [] -> M.continue $ lineInfoPopup gbs
     V.EvKey V.KEnter [] ->
       liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
+    V.EvKey (V.KChar 'o') [] ->
+      liftIO (newStateFromOpenItem gbs) >>= M.continue
     V.EvKey (V.KChar 'l') [] ->
       M.hScrollBy menuViewportScroll 1 >> M.continue gbs
     V.EvKey (V.KChar 'h') [] ->

@@ -91,7 +91,7 @@ handleFileBrowserEvent' gbs e b
   curOutFilePath = fbFileOutPath (getSaveBrowser gbs)
 
 -- FIXME
-fileBrowserUi :: GopherBrowserState -> [T.Widget MyName]
+fileBrowserUi :: GopherBrowserState -> [T.Widget AnyName]
 fileBrowserUi gbs =
   [center $ vLimitPercent 100 $ hLimitPercent 100 $ ui <=> help]
  where
@@ -114,7 +114,7 @@ fileBrowserUi gbs =
 saveEventHandler
   :: GopherBrowserState
   -> V.Event
-  -> T.EventM MyName (T.Next GopherBrowserState)
+  -> T.EventM AnyName (T.Next GopherBrowserState)
 saveEventHandler gbs e = case e of
   -- instances of 'b' need to tap into gbsbuffer
   -- TODO: document why this does so many checks to allow ESC to former state

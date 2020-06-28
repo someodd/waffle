@@ -26,7 +26,7 @@ import           UI.Progress
 
 -- | Draw the search prompt. Used by UI.drawUI if the gbsRenderMode
 -- is SearchMode.
-searchInputUI :: GopherBrowserState -> [T.Widget MyName]
+searchInputUI :: GopherBrowserState -> [T.Widget AnyName]
 searchInputUI gbs = inputPopupUI editorBuffer labelText helpText
  where
   searchBuffer = getSearch gbs
@@ -47,7 +47,7 @@ mkSearchResponseState gbs = do
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
 searchEventHandler
-  :: GopherBrowserState -> Event -> T.EventM MyName (T.Next GopherBrowserState)
+  :: GopherBrowserState -> Event -> T.EventM AnyName (T.Next GopherBrowserState)
 searchEventHandler gbs e = case e of
     -- FIXME: esc quits! Change key...
   V.EvKey V.KEsc   [] -> M.continue $ returnSearchFormerState gbs
@@ -61,7 +61,7 @@ searchEventHandler gbs e = case e of
   -- | A modification of the default Brick.Widgets.Edit event handler; changed to
   -- return a GopherBrowserState instead of just an editor state.
   editorEventHandler
-    :: GopherBrowserState -> Event -> T.EventM MyName GopherBrowserState
+    :: GopherBrowserState -> Event -> T.EventM AnyName GopherBrowserState
   editorEventHandler gbs' e' =
     let updateEditorInBuffer x =
             updateSearchBuffer gbs' (\s -> s { sbEditorState = x })
