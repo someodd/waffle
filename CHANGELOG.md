@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2020-07-03
+
+Changes for static builds.
+
+### Change
+
+  * Replace uses of `Paths_` library to use `file-embed`, so static builds can be
+    packaged/archived with just the binary and no other files
+  * Cabal project config for static building
+
 ## [0.5.0] - 2020-06-28
 
 Introduce the ability to open Gopher menu items with an external application
