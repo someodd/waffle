@@ -52,6 +52,31 @@ drawUI gbs = modeUI $ gbsRenderMode gbs
      GotoMode        -> modeUI (seFormerMode $ fromJust $ gbsStatus gbs)
      OpenConfigMode  -> Config.openConfigModeUI gbs
 
+appropriateHandler :: GopherBrowserState -> V.Event -> B.EventM AnyName (B.Next GopherBrowserState)
+appropriateHandler gbs e = case gbsRenderMode gbs of
+  MenuMode -> menuEventHandler gbs e
+  TextFileMode -> textFileEventHandler gbs e
+  HelpMode -> helpEventHandler gbs e
+  FileBrowserMode -> saveEventHandler gbs e
+  SearchMode -> searchEventHandler gbs e
+  GotoMode -> gotoEventHandler gbs e
+  OpenConfigMode -> Config.openConfigEventHandler gbs e
+  -- FIXME: two separate ones because of the way we pass events and pattern match
+  -- i.e., one for vtyhandler and one for the custom app events, which we should
+  -- soon conflate by not matching specifically for VtyEvent (thus passing all events
+  -- to the appropriate mode's handler)
+  ProgressMode -> progressEventHandler gbs (Right e)
+
+eventDependingMode
+  :: GopherBrowserState
+  -> RenderMode
+  -> B.EventM AnyName (B.Next GopherBrowserState)
+  -> B.EventM AnyName (B.Next GopherBrowserState)
+  -> B.EventM AnyName (B.Next GopherBrowserState)
+eventDependingMode gbs someRenderMode doThisIfMode doThisIfNotMode
+  | gbsRenderMode gbs /= someRenderMode = doThisIfNotMode
+  | otherwise          = doThisIfMode
+
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
 -- some cases where we don't want history available
 --
@@ -64,36 +89,26 @@ appEvent
   -> B.BrickEvent AnyName CustomEvent
   -> B.EventM AnyName (B.Next GopherBrowserState)
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt gbs
+-- Close a popup if there is one, otherwise forward to appropriate handler!
+appEvent gbs (B.VtyEvent e@(V.EvKey V.KEsc []))
+  | hasPopup gbs = B.continue $ closePopup gbs
+  | otherwise   = appropriateHandler gbs e
 -- FIXME
 -- This is the config mode, which currently just goes right into the menu item
 -- command association editor.
-appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'c') [V.MCtrl])) =
-  Config.initConfigOpenMode gbs
-appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'g') [V.MCtrl])) =
-  B.continue $ initGotoMode gbs
+appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'c') [V.MCtrl])) =
+  eventDependingMode gbs OpenConfigMode (Config.openConfigEventHandler gbs e) (Config.initConfigOpenMode gbs)
+appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'g') [V.MCtrl])) =
+  eventDependingMode gbs GotoMode (appropriateHandler gbs e) (B.continue $ initGotoMode gbs)
 -- TODO: needs to reset viewport
-appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '?') [])) =
-  liftIO (modifyGbsForHelp gbs) >>= B.continue
+appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar '?') [])) =
+  eventDependingMode gbs HelpMode (appropriateHandler gbs e) (liftIO (modifyGbsForHelp gbs) >>= B.continue)
 -- FIXME: this could be easily fixed just by doing appEvent gbs e instead of vtyevent
 -- and leaving it up to eventhandlers
 -- What about above FIXME... event types should be deicphered by event handler?
 -- FIXME: just do vague event type discerning and don't say B.VtyEvent so it leaves it
 -- to the event handlers in case they want custom events
-appEvent gbs (B.VtyEvent e)
-  | gbsRenderMode gbs == MenuMode        = menuEventHandler gbs e
-  | gbsRenderMode gbs == TextFileMode    = textFileEventHandler gbs e
-  | gbsRenderMode gbs == HelpMode        = helpEventHandler gbs e
-  | gbsRenderMode gbs == FileBrowserMode = saveEventHandler gbs e
-  | gbsRenderMode gbs == SearchMode      = searchEventHandler gbs e
-  | gbsRenderMode gbs == GotoMode        = gotoEventHandler gbs e
-  | gbsRenderMode gbs == OpenConfigMode  = Config.openConfigEventHandler gbs e
-  -- FIXME: two separate ones because of the way we pass events and pattern match
-  -- i.e., one for vtyhandler and one for the custom app events, which we should
-  -- soon conflate by not matching specifically for VtyEvent (thus passing all events
-  -- to the appropriate mode's handler)
-  | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs (Right e)
-  |
-    otherwise                            = error $ "Unrecognized mode in event: " ++ show (gbsRenderMode gbs)
+appEvent gbs (B.VtyEvent e) = appropriateHandler gbs e
 -- Seems hacky FIXME (for customevent)
 appEvent gbs e
   | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs (Left e)

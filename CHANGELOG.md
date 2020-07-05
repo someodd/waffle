@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Bug fixes regarding re-entering modes, popup notification for saving config.
+
+### Add
+
+  * Popup notifying of saved configuration changes for open config mode
+
+### Fix
+
+  * Prevent open config mode being relaunched while already in open config
+    mode
+  * Prevent goto mode being relaunched while already in goto mode
+  * Prevent help mode from being relaunched while already in help mode
+
+### Change
+
+  * A bit under-the-hood, but now `esc` is the universal popup
+    closer key
+
 ## [0.6.0] - 2020-07-03
 
 Changes for static builds.
