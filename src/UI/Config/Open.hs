@@ -344,6 +344,15 @@ handleFieldTypingEvent e gbs ring =
               updateFileEditor x      = gbs { gbsBuffer = OpenConfigBuffer $ updater (getOpenConfig gbs) x  }
           in  updateFileEditor <$> E.handleEditorEvent e relevantEditor
 
+addSavedPopup :: GopherBrowserState -> GopherBrowserState
+addSavedPopup gbs =
+  let pop = Popup
+              { pLabel = "Saved!"
+              , pWidgets = [txt "Your changes were saved successfully!"]
+              , pHelp = "Saved to ~/.config/waffle/open.ini"
+              }
+  in gbs { gbsPopup = Just pop }
+
 -- | The Brick application event handler for open config mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
 openConfigEventHandler
@@ -351,7 +360,7 @@ openConfigEventHandler
 openConfigEventHandler gbs e = case e of
   V.EvKey V.KBackTab [] -> scrollFocusPrev (getFocusRing gbs) >> M.continue (updateGbs gbs focusPrev)
   V.EvKey (V.KChar '\t') [] -> scrollFocusNext (getFocusRing gbs) >> M.continue (updateGbs gbs focusNext)
-  V.EvKey (V.KChar 's') [V.MCtrl] -> liftIO (saveConfig (getOpenConfig gbs)) >> M.continue gbs
-    -- FIXME: esc quits! Change key...
-  V.EvKey V.KEsc   [] -> M.continue $ returnFormerGbs gbs
+  V.EvKey (V.KChar 's') [V.MCtrl] -> liftIO (saveConfig (getOpenConfig gbs)) >> M.continue (addSavedPopup gbs)
+    -- FIXME: ctrl+c quits!
+  V.EvKey V.KEsc [] -> M.continue $ returnFormerGbs gbs
   _ -> handleFieldTypingEvent e gbs (getFocusRing gbs)
