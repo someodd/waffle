@@ -19,7 +19,6 @@ import           Data.Text.Encoding.Error       (lenientDecode)
 import           Data.Text.Encoding            as E
 import qualified Data.Text                     as T
 import           Data.Foldable
-import           Data.Maybe
 import qualified Data.ByteString               as ByteString
 import           Control.Concurrent             ( forkIO )
 import           System.Directory               ( renameFile )
@@ -136,25 +135,56 @@ counterMutator gbs someBytes =
           }
     in  updateProgressBuffer gbs' cb
 
--- FIXME: bad doc, bad name
--- | Handle a connection, including reporting exceptions...
+-- FIXME: redocument
+-- TODO: better name?
+-- | Handle a connection, including reporting exceptions by creating a new
+-- `GopherBrowserState` that has a popup containing the exception message,
+-- which is sent by a `FinalNewStateEvent`.
+--
+-- "handler" is a function which does some `IO ()` action with the
+-- `(Socket, SockAddr)` in the event that nothing went wrong when
+-- establishing the socket connection.
 gracefulSock :: GopherBrowserState -> Location -> ((Socket, SockAddr) -> IO ()) -> IO ()
 gracefulSock gbs (host, port, _, _) handler = do
   result <- try $ connectSock (T.unpack host) (show port) :: IO (Either SomeException (Socket, SockAddr))
   case result of
-    Left ex   -> makePopup gbs $ T.pack (show ex)
+    -- Left means exception: we want to make a popup to display that error.
+    Left ex   -> makeErrorPopup gbs $ T.pack (show ex)
+    -- Right means we connected to the sock; let's give back the handler.
     Right val -> handler val
-  where
-    makePopup gbs' exMsg =
-      let formerGbs         = pbInitGbs (getProgress gbs')
-          formerMode        = case gbsRenderMode formerGbs of
-                                GotoMode -> seFormerMode $ fromJust $ gbsStatus formerGbs-- FIXME: fromJust horrible
-                                x        -> x
-          newBuffState      = formerGbs { gbsRenderMode = formerMode, gbsStatus = Nothing }
-          errorPopup        = Just $ Popup { pLabel = "Network/Goto Error", pWidgets = [txt exMsg], pHelp = "Couldn't reach supplied address. ESC to return..."}
-          finalState        = newBuffState { gbsPopup = errorPopup, gbsStatus = Nothing }-- TODO, FIXME: deactivate status
-          chan              = gbsChan finalState
-      in  Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
+
+-- FIXME: redocument
+-- | This is pretty much only for `gracefulSock`.
+--
+-- Handle making a new state which has a popup for a socket connection exception.
+-- This new state is based on the former state, that is the state which came
+-- before `ProgressMode` we're currently in. This allows us to gracefully exit
+-- `ProgressMode` in the event of being unable to establish a socket connection.
+makeErrorPopup :: GopherBrowserState -> T.Text -> IO ()
+makeErrorPopup gbs' exMsg =
+  let formerGbs         = pbInitGbs (getProgress gbs')
+      -- TODO: why are we getting the gbsStatus formerGbs here? FIXME
+      -- Get the `RenderMode` of the `GopherBrowserState` which proceeded the
+      -- `ProgressMode` we're currently in. If the mode which activated
+      -- `ProgressMode` was `GotoMode` we get the associated `gbsStatus` if
+      -- it exists, so we can get the mode preceeding `GotoMode`! However,
+      -- if no such `gbsStatus` is set (if it is `Nothing`) we know that...
+      formerMode        = case gbsRenderMode formerGbs of
+                            GotoMode -> case gbsStatus formerGbs of
+                                          -- I DON'T UNDERSTAND THE MEANING OF THIS FIXME
+                                          Just n  -> seFormerMode n
+                                          -- ... SAME HERE... plus I think no status will inevitably result in error? it needs to be able
+                                          -- to return to former state! I think this happens because in Goto.hs' `mkGotoResponseState`
+                                          -- will set the status to `Nothing` if it passes all the checks, however this final check
+                                          -- results in a problem with that: you cannot return to the mode preceeding Goto if there's an
+                                          -- error here, because that mode has been cleared!
+                                          Nothing -> gbsRenderMode formerGbs
+                            x        -> x
+      newBuffState      = formerGbs { gbsRenderMode = formerMode, gbsStatus = Nothing }
+      errorPopup        = Just $ Popup { pLabel = "Network/Goto Error", pWidgets = [txt exMsg], pHelp = "Couldn't reach supplied address. ESC to return..."}
+      finalState        = newBuffState { gbsPopup = errorPopup, gbsStatus = Nothing }-- TODO, FIXME: deactivate status
+      chan              = gbsChan finalState
+  in  Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
 
 -- | Download bytes via Gopher, using progress events to report status. Eventually
 -- gives back the path to the new temporary file it has created. This is used to

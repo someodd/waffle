@@ -9,6 +9,7 @@ module UI.Goto
 import           Data.Maybe
 import           Control.Monad.IO.Class
 
+import           Brick.Widgets.Core             ( txt )
 import qualified Data.Text                     as T
 import qualified Brick.Main                    as M
 import qualified Brick.Types                   as T
@@ -31,32 +32,44 @@ initGotoMode gbs = gbs
 
 -- FIXME: what if bad input?! what if can't resolve? errors in network need better handling
 -- FIXME: what if NOT a menu!
+-- should this be a part of progress? or ge called by progress instead?
 mkGotoResponseState :: GopherBrowserState -> IO GopherBrowserState
 mkGotoResponseState gbs =
   -- get the host, port, selector
   let unparsedURI = T.filter (/= '\n')
         $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
-      unparsedWithScheme | "gopher://" `T.isPrefixOf` unparsedURI = unparsedURI
-                         | otherwise = "gopher://" <> unparsedURI
-      maybeParsedURI = parseURI (T.unpack unparsedWithScheme)
-      parsedURI      = case maybeParsedURI of
-        (Just u) -> u
-        Nothing  -> error $ "Invalid URI: " ++ show unparsedWithScheme
-      authority' = case uriAuthority parsedURI of
-        (Just a) -> a
-        Nothing ->
-          error $ "Invalid URI (no authority): " ++ show unparsedWithScheme
-      port = case uriPort authority' of
-        ""  -> 70
-        p -> read $ tail p :: Int
-      host = case uriRegName authority' of
-        ""  -> error $ "Invalid URI (no host): " <> show unparsedWithScheme
-        h -> h
-      resource = case uriPath parsedURI of
-        ""  -> ""
-        r -> r
-      gbsNoStatus = gbs { gbsStatus = Nothing }
-  in initProgressMode gbsNoStatus Nothing (T.pack host, port, T.pack resource, guessMode $ T.pack resource)
+  in  renameMePlease gbs unparsedURI
+ where
+  prefixSchemeIfMissing :: T.Text -> T.Text
+  prefixSchemeIfMissing potentialURI
+    | "gopher://" `T.isPrefixOf` potentialURI = potentialURI
+    | otherwise                               = "gopher://" <> potentialURI
+
+  errorPopup :: GopherBrowserState -> T.Text -> IO GopherBrowserState
+  errorPopup gbs' message =
+    let pop = Popup
+                { pLabel   = "Goto input error!"
+                , pWidgets = [txt message]
+                , pHelp    = "Invalid URI inputted."
+                }
+    in  pure $ gbs' { gbsPopup = Just pop }
+
+  -- TODO/FIXME: oh my god this is frankencode
+  -- Get the host, port, and resource from some `Text` or if fail at any part, give an error popup instead.
+  -- Left VS Right
+  renameMePlease :: GopherBrowserState -> T.Text -> IO GopherBrowserState
+  renameMePlease gbs' potentialURI =
+    case (parseURI . T.unpack $ prefixSchemeIfMissing potentialURI) of
+      (Just parsedURI) -> case (uriAuthority parsedURI) of
+        (Just authority') -> case uriRegName authority' of
+          ""      -> errorPopup gbs' $ "Invalid URI (no host): " <> potentialURI
+          regName -> let port     = case (uriPort authority') of
+                                      ""   -> 70
+                                      p -> read p :: Int
+                         resource = uriPath parsedURI
+                     in  initProgressMode gbs' Nothing (T.pack regName, port, T.pack resource, guessMode $ T.pack resource)
+        Nothing           -> errorPopup gbs' $ "Invalid URI (no authority): " <> potentialURI
+      Nothing          -> errorPopup gbs' $  "Invalid URI: " <> potentialURI
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
