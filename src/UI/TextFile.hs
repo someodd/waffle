@@ -11,20 +11,18 @@ import           Control.Monad.IO.Class
 
 import qualified Graphics.Vty                  as V
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Core             ( viewport
-                                                , txt
-                                                )
+import           Brick.Widgets.Core             ( txt )
 import qualified Brick.Main                    as M
 
 import           UI.Util
 import           UI.Progress
 import           UI.Representation
 
+-- Maybe should use list thingy since that was a million times faster
 textFileModeUI :: GopherBrowserState -> [T.Widget AnyName]
-textFileModeUI gbs = defaultBrowserUI gbs (viewport (MyName TextViewport) T.Both) titleWidget mainWidget statusWidget
+textFileModeUI gbs = defaultOptimizedUI gbs titleWidget mainWidget statusWidget
   where
-   mainWidget   = let textFileContents = tfContents $ getTextFile gbs
-                  in  txt textFileContents
+   mainWidget   = tfContents $ getTextFile gbs
    titleWidget  = txt $ tfTitle $ getTextFile gbs
    statusWidget = txt "? for help. Text file mode."
 

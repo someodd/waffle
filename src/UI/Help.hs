@@ -28,7 +28,7 @@ import           UI.Representation
 helpModeUI :: GopherBrowserState -> [T.Widget AnyName]
 helpModeUI gbs = defaultBrowserUI gbs (viewport (MyName TextViewport) T.Both) titleWidget mainWidget statusWidget
   where
-   mainWidget   = txt $ getHelpTextFileContents gbs
+   mainWidget   = getHelpTextFileContents gbs
    titleWidget  = txt "Waffle Help"
    statusWidget = txt "Help mode. Use arrows or hjkl to scroll."
 
@@ -49,4 +49,4 @@ helpText = TE.decodeUtf8 $(embedFile "data/help.txt")
 -- | Initialize help mode.
 modifyGbsForHelp :: GopherBrowserState -> IO GopherBrowserState
 modifyGbsForHelp gbs = do
-  pure gbs { gbsBuffer = HelpBuffer $ Help { hText = TextFile { tfContents = helpText, tfTitle = "Help: Using Waffle" }, hFormerGbs = gbs }, gbsRenderMode = HelpMode }
+  pure gbs { gbsBuffer = HelpBuffer $ Help { hText = TextFile { tfContents = txt helpText, tfTitle = "Help: Using Waffle" }, hFormerGbs = gbs }, gbsRenderMode = HelpMode }

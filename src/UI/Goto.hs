@@ -30,6 +30,9 @@ initGotoMode gbs = gbs
                                         }
   }
 
+-- FIXME: huge pages are sooo slow in text mode
+-- FIXME: if I go to sdf.org it's fine and the goto status bar disappears. if i go to
+-- tilde.black:70/users/brool/stoned.txt it stays put (i hav eto also remov eport because that crashes because of read)
 -- FIXME: what if bad input?! what if can't resolve? errors in network need better handling
 -- FIXME: what if NOT a menu!
 -- should this be a part of progress? or ge called by progress instead?
@@ -38,7 +41,7 @@ mkGotoResponseState gbs =
   -- get the host, port, selector
   let unparsedURI = T.filter (/= '\n')
         $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
-  in  renameMePlease gbs unparsedURI
+  in  either (errorPopup gbs) (initProgressMode gbs Nothing) (renameMePlease unparsedURI)
  where
   prefixSchemeIfMissing :: T.Text -> T.Text
   prefixSchemeIfMissing potentialURI
@@ -56,20 +59,20 @@ mkGotoResponseState gbs =
 
   -- TODO/FIXME: oh my god this is frankencode
   -- Get the host, port, and resource from some `Text` or if fail at any part, give an error popup instead.
-  -- Left VS Right
-  renameMePlease :: GopherBrowserState -> T.Text -> IO GopherBrowserState
-  renameMePlease gbs' potentialURI =
+  -- Left VS Right. Left is error.
+  renameMePlease :: T.Text -> Either T.Text (T.Text, Int, T.Text, RenderMode)
+  renameMePlease potentialURI =
     case (parseURI . T.unpack $ prefixSchemeIfMissing potentialURI) of
       (Just parsedURI) -> case (uriAuthority parsedURI) of
         (Just authority') -> case uriRegName authority' of
-          ""      -> errorPopup gbs' $ "Invalid URI (no host): " <> potentialURI
-          regName -> let port     = case (uriPort authority') of
+          ""      -> Left $ "Invalid URI (no host): " <> potentialURI
+          regName -> let port     = case (uriPort authority') of -- SEEMS TO ALWAYS ERROR IF I USE PORT?
                                       ""   -> 70
-                                      p -> read p :: Int
+                                      p -> read p :: Int  -- Apparently results in "prelude read error: no parse"
                          resource = uriPath parsedURI
-                     in  initProgressMode gbs' Nothing (T.pack regName, port, T.pack resource, guessMode $ T.pack resource)
-        Nothing           -> errorPopup gbs' $ "Invalid URI (no authority): " <> potentialURI
-      Nothing          -> errorPopup gbs' $  "Invalid URI: " <> potentialURI
+                     in  Right (T.pack regName, port, T.pack resource, guessMode $ T.pack resource)
+        Nothing           -> Left $ "Invalid URI (no authority): " <> potentialURI
+      Nothing          -> Left $  "Invalid URI: " <> potentialURI
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
