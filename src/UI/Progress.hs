@@ -26,7 +26,7 @@ import           System.Directory               ( renameFile )
 import           System.FilePath                ( takeFileName )
 import           Network.Simple.TCP
 import qualified Brick.Widgets.FileBrowser     as FB
-import           Brick.Widgets.Core             ( txt )
+import           Brick.Widgets.Core             ( txt, cached, viewport, hLimitPercent )
 import qualified Brick.Main                    as M
 import qualified Brick.BChan
 import qualified Data.ByteString.Char8         as B8
@@ -240,7 +240,8 @@ doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCa
     finalState = case mode of
       TextFileMode -> initialProgGbs
         { gbsLocation   = location
-        , gbsBuffer     = TextFileBuffer $ TextFile { tfContents = cleanAll contents, tfTitle = locationAsString location }
+        -- FIXME: what the heck?!?! this needs to go in textfile or util or something. need to change tfcontents to tfviewport thing idk
+        , gbsBuffer     = TextFileBuffer $ TextFile { tfContents = viewport (MyName TextViewport) T.Both $ hLimitPercent 100 $ cached (MyName TextViewport) $ txt $ cleanAll contents, tfTitle = locationAsString location }
         , gbsRenderMode = TextFileMode
         , gbsHistory    = maybeHistory
         , gbsCache      = newCache
@@ -252,6 +253,9 @@ doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCa
         maybeHistory
         newCache
       m -> error $ "Cannot create a final progress state for: " ++ show m
+  -- TEST FIXME
+  Brick.BChan.writeBChan chan $ ClearCacheEvent M.invalidateCache
+  Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
   -- The final progress event, which changes the state to the render mode specified, using
   -- the GBS created above.
   Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
