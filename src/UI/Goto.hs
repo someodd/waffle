@@ -41,7 +41,7 @@ mkGotoResponseState gbs =
   -- get the host, port, selector
   let unparsedURI = T.filter (/= '\n')
         $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
-  in  either (errorPopup gbs unparsedURI) (initProgressMode gbs Nothing) (renameMePlease unparsedURI)
+  in  either (errorPopup gbs unparsedURI) (initProgressMode gbs Nothing) (tryLocationOrFail unparsedURI)
  where
   prefixSchemeIfMissing :: T.Text -> T.Text
   prefixSchemeIfMissing potentialURI
@@ -57,11 +57,10 @@ mkGotoResponseState gbs =
                 }
     in  pure $ gbs' { gbsPopup = Just pop }
 
-  -- TODO/FIXME: oh my god this is frankencode
-  -- Get the host, port, and resource from some `Text` or if fail at any part, give an error popup instead.
-  -- Left VS Right. Left is error.
-  renameMePlease :: T.Text -> Either T.Text (T.Text, Int, T.Text, RenderMode)
-  renameMePlease potentialURI = do
+  -- | Try to parse a `Location` from `Text` (which is hopefully
+  -- some kind of valid URI), or give back an error message.
+  tryLocationOrFail :: T.Text -> Either T.Text (T.Text, Int, T.Text, RenderMode)
+  tryLocationOrFail potentialURI = do
     parsedURI <- case (parseURI . T.unpack $ prefixSchemeIfMissing potentialURI) of
       Just uri -> Right uri
       Nothing  -> Left "Cannot even begin to parse supplied URI!"
