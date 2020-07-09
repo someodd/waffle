@@ -41,7 +41,8 @@ mkGotoResponseState gbs =
   -- get the host, port, selector
   let unparsedURI = T.filter (/= '\n')
         $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
-  in  either (errorPopup gbs unparsedURI) (initProgressMode gbs Nothing) (tryLocationOrFail unparsedURI)
+      gbsNoStatus = gbs { gbsStatus = Nothing }
+  in  either (errorPopup gbs unparsedURI) (initProgressMode gbsNoStatus Nothing) (tryLocationOrFail unparsedURI)
  where
   prefixSchemeIfMissing :: T.Text -> T.Text
   prefixSchemeIfMissing potentialURI
