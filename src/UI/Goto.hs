@@ -70,10 +70,11 @@ mkGotoResponseState gbs =
     regName    <- case uriRegName authority' of
       ""      -> Left "Invalid URI (no regname/host)."
       rn      -> Right rn
-    let port = case uriPort authority' of
-                 "" -> 70
-                 p  -> read p :: Int
-        resource = uriPath parsedURI
+    port <- case uriPort authority' of
+      ""     -> Right 70
+      ':':p  -> Right (read p :: Int)
+      _      -> Left $ "Invalid URI (bad port)." -- I don' think this ever can occur with Network.URI...
+    let resource = uriPath parsedURI
     Right (T.pack regName, port, T.pack resource, guessMode $ T.pack resource)
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
