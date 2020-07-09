@@ -41,19 +41,19 @@ mkGotoResponseState gbs =
   -- get the host, port, selector
   let unparsedURI = T.filter (/= '\n')
         $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
-  in  either (errorPopup gbs) (initProgressMode gbs Nothing) (renameMePlease unparsedURI)
+  in  either (errorPopup gbs unparsedURI) (initProgressMode gbs Nothing) (renameMePlease unparsedURI)
  where
   prefixSchemeIfMissing :: T.Text -> T.Text
   prefixSchemeIfMissing potentialURI
     | "gopher://" `T.isPrefixOf` potentialURI = potentialURI
     | otherwise                               = "gopher://" <> potentialURI
 
-  errorPopup :: GopherBrowserState -> T.Text -> IO GopherBrowserState
-  errorPopup gbs' message =
+  errorPopup :: GopherBrowserState -> T.Text -> T.Text -> IO GopherBrowserState
+  errorPopup gbs' someBadURI message =
     let pop = Popup
                 { pLabel   = "Goto input error!"
                 , pWidgets = [txt message]
-                , pHelp    = "Invalid URI inputted."
+                , pHelp    = "Invalid:" <> someBadURI
                 }
     in  pure $ gbs' { gbsPopup = Just pop }
 
@@ -61,18 +61,21 @@ mkGotoResponseState gbs =
   -- Get the host, port, and resource from some `Text` or if fail at any part, give an error popup instead.
   -- Left VS Right. Left is error.
   renameMePlease :: T.Text -> Either T.Text (T.Text, Int, T.Text, RenderMode)
-  renameMePlease potentialURI =
-    case (parseURI . T.unpack $ prefixSchemeIfMissing potentialURI) of
-      (Just parsedURI) -> case (uriAuthority parsedURI) of
-        (Just authority') -> case uriRegName authority' of
-          ""      -> Left $ "Invalid URI (no host): " <> potentialURI
-          regName -> let port     = case (uriPort authority') of -- SEEMS TO ALWAYS ERROR IF I USE PORT?
-                                      ""   -> 70
-                                      p -> read p :: Int  -- Apparently results in "prelude read error: no parse"
-                         resource = uriPath parsedURI
-                     in  Right (T.pack regName, port, T.pack resource, guessMode $ T.pack resource)
-        Nothing           -> Left $ "Invalid URI (no authority): " <> potentialURI
-      Nothing          -> Left $  "Invalid URI: " <> potentialURI
+  renameMePlease potentialURI = do
+    parsedURI <- case (parseURI . T.unpack $ prefixSchemeIfMissing potentialURI) of
+      Just uri -> Right uri
+      Nothing  -> Left "Cannot even begin to parse supplied URI!"
+    authority' <- case uriAuthority parsedURI of
+      Just auth -> Right auth
+      Nothing   -> Left $ "Invalid URI (no authority)."
+    regName    <- case uriRegName authority' of
+      ""      -> Left "Invalid URI (no regname/host)."
+      rn      -> Right rn
+    let port = case uriPort authority' of
+                 "" -> 70
+                 p  -> read p :: Int
+        resource = uriPath parsedURI
+    Right (T.pack regName, port, T.pack resource, guessMode $ T.pack resource)
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
