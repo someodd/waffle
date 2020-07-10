@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2020-07-10
+
 Fixes, error handling, code cleanup/refactoring, and a performance enhancement.
 Some under-the-hood refactoring for cleanups.
 
