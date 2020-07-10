@@ -5,6 +5,7 @@
 module UI.Util
   ( makePopupWidget
   , defaultBrowserUI
+  , defaultOptimizedUI
   , cacheLookup
   , isCached
   , newStateForMenu
@@ -53,15 +54,26 @@ defaultBrowserUI ::
   -> B.Widget AnyName
   -> B.Widget AnyName
   -> [B.Widget AnyName]
-defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePopupWidget gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
+defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = defaultOptimizedUI gbs titleWidget mainWidget' statusWidget
+ where
+  mainWidget' = mainViewport $ hLimitPercent 100 mainWidget
+
+-- TODO: replace `defaultBrowserUI` with this!
+-- mainWidget should be like: (mainViewport $ hLimitPercent 100 mainWidget)
+defaultOptimizedUI ::
+  GopherBrowserState
+  -> B.Widget AnyName
+  -> B.Widget AnyName
+  -> B.Widget AnyName
+  -> [B.Widget AnyName]
+defaultOptimizedUI gbs titleWidget mainWidget statusWidget = [makePopupWidget gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
  where
   box :: B.Widget AnyName
   box =
     updateAttrMap (B.applyAttrMappings borderMappings)
       $ withBorderStyle customBorder
       $ B.borderWithLabel (withAttr titleAttr titleWidget)
-      $ mainViewport
-      $ hLimitPercent 100 mainWidget
+      $ mainWidget
 
   -- Maybe statusWidget should be Maybe so can override?
   -- FIXME: this is source of enforcing MyName because seEditorState is always MyName type... what if constructed it here instead based
@@ -84,6 +96,7 @@ defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePop
     -- TODO: status should work like popup. including edit Maybe and put this in represent
     -- Maybe have an Either status widget where it's either display status or edit field
     ]
+
 
 -- WRONG TYPE, MAYBE IS NECESSARY
 cacheLookup :: Location -> Cache -> Maybe FilePath

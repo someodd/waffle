@@ -166,7 +166,7 @@ getMenu gbs = let (MenuBuffer m) = gbsBuffer gbs in m
 -- | This is for the contents of a File to be rendered when in TextFileMode.
 -- this should be a combination of things. it should have the addres of the temporary file
 -- which should then be moved to the picked location
-data TextFile = TextFile { tfContents :: T.Text
+data TextFile = TextFile { tfContents :: T.Widget AnyName-- Should actually be txt
                          , tfTitle :: T.Text
                          }
 
@@ -189,7 +189,7 @@ getOpenConfig gbs = let (OpenConfigBuffer openConfig) = gbsBuffer gbs in openCon
 getHelp :: GopherBrowserState -> Help
 getHelp gbs = let (HelpBuffer help) = gbsBuffer gbs in help
 
-getHelpTextFileContents :: GopherBrowserState -> T.Text
+getHelpTextFileContents :: GopherBrowserState -> T.Widget AnyName -- txt
 getHelpTextFileContents gbs = let (HelpBuffer help) = gbsBuffer gbs in tfContents $ hText help
 
 updateFileBrowserBuffer :: GopherBrowserState -> (SaveBrowser -> SaveBrowser) -> GopherBrowserState
@@ -242,7 +242,7 @@ type Location = (T.Text, Int, T.Text, RenderMode)
 -- FinalNewStateEvent is used for transition handlers and for sending the new state (like the new page; setting it as the new gbs)
 -- | Carries through the entire state I guess!
 -- think of this right now as a progress event
-data CustomEvent = NewStateEvent GopherBrowserState | FinalNewStateEvent GopherBrowserState
+data CustomEvent = NewStateEvent GopherBrowserState | FinalNewStateEvent GopherBrowserState | ClearCacheEvent (T.EventM AnyName ())
 
 -- FIXME: But what if we don't want a label, widgets, help? maybe there should be different
 -- types of popups!
