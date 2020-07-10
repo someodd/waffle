@@ -11,12 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Fixes, error handling, code cleanup/refactoring, and a performance enhancement.
 Some under-the-hood refactoring for cleanups.
 
-## Add
+### Add
 
   * Popups for errors related to `GotoMode` (bad URIs, cannot connect error)
 
 ### Fix
 
+  * No longer doing static releases due to the standalone crashing a lot for some
+    reason I'm too lazy ot figure out yet.
   * Errors related to `GotoMode` which would crash Waffle, like malformed URIs,
     nonresponsive servers, etc.
   * Inability to goto URIs that include a port specification due to `read` error
