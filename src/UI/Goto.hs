@@ -9,6 +9,7 @@ module UI.Goto
 import           Data.Maybe
 import           Control.Monad.IO.Class
 
+import           Brick.Widgets.Core             ( txt )
 import qualified Data.Text                     as T
 import qualified Brick.Main                    as M
 import qualified Brick.Types                   as T
@@ -29,34 +30,53 @@ initGotoMode gbs = gbs
                                         }
   }
 
+-- FIXME: huge pages are sooo slow in text mode
+-- FIXME: if I go to sdf.org it's fine and the goto status bar disappears. if i go to
+-- tilde.black:70/users/brool/stoned.txt it stays put (i hav eto also remov eport because that crashes because of read)
 -- FIXME: what if bad input?! what if can't resolve? errors in network need better handling
 -- FIXME: what if NOT a menu!
+-- should this be a part of progress? or ge called by progress instead?
 mkGotoResponseState :: GopherBrowserState -> IO GopherBrowserState
 mkGotoResponseState gbs =
   -- get the host, port, selector
   let unparsedURI = T.filter (/= '\n')
         $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
-      unparsedWithScheme | "gopher://" `T.isPrefixOf` unparsedURI = unparsedURI
-                         | otherwise = "gopher://" <> unparsedURI
-      maybeParsedURI = parseURI (T.unpack unparsedWithScheme)
-      parsedURI      = case maybeParsedURI of
-        (Just u) -> u
-        Nothing  -> error $ "Invalid URI: " ++ show unparsedWithScheme
-      authority' = case uriAuthority parsedURI of
-        (Just a) -> a
-        Nothing ->
-          error $ "Invalid URI (no authority): " ++ show unparsedWithScheme
-      port = case uriPort authority' of
-        ""  -> 70
-        p -> read $ tail p :: Int
-      host = case uriRegName authority' of
-        ""  -> error $ "Invalid URI (no host): " <> show unparsedWithScheme
-        h -> h
-      resource = case uriPath parsedURI of
-        ""  -> ""
-        r -> r
       gbsNoStatus = gbs { gbsStatus = Nothing }
-  in initProgressMode gbsNoStatus Nothing (T.pack host, port, T.pack resource, guessMode $ T.pack resource)
+  in  either (errorPopup gbs unparsedURI) (initProgressMode gbsNoStatus Nothing) (tryLocationOrFail unparsedURI)
+ where
+  prefixSchemeIfMissing :: T.Text -> T.Text
+  prefixSchemeIfMissing potentialURI
+    | "gopher://" `T.isPrefixOf` potentialURI = potentialURI
+    | otherwise                               = "gopher://" <> potentialURI
+
+  errorPopup :: GopherBrowserState -> T.Text -> T.Text -> IO GopherBrowserState
+  errorPopup gbs' someBadURI message =
+    let pop = Popup
+                { pLabel   = "Goto input error!"
+                , pWidgets = [txt message]
+                , pHelp    = "Invalid:" <> someBadURI
+                }
+    in  pure $ gbs' { gbsPopup = Just pop }
+
+  -- | Try to parse a `Location` from `Text` (which is hopefully
+  -- some kind of valid URI), or give back an error message.
+  tryLocationOrFail :: T.Text -> Either T.Text (T.Text, Int, T.Text, RenderMode)
+  tryLocationOrFail potentialURI = do
+    parsedURI <- case (parseURI . T.unpack $ prefixSchemeIfMissing potentialURI) of
+      Just uri -> Right uri
+      Nothing  -> Left "Cannot even begin to parse supplied URI!"
+    authority' <- case uriAuthority parsedURI of
+      Just auth -> Right auth
+      Nothing   -> Left $ "Invalid URI (no authority)."
+    regName    <- case uriRegName authority' of
+      ""      -> Left "Invalid URI (no regname/host)."
+      rn      -> Right rn
+    port <- case uriPort authority' of
+      ""     -> Right 70
+      ':':p  -> Right (read p :: Int)
+      _      -> Left $ "Invalid URI (bad port)." -- I don' think this ever can occur with Network.URI...
+    let resource = uriPath parsedURI
+    Right (T.pack regName, port, T.pack resource, guessMode $ T.pack resource)
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.

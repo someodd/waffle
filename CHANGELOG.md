@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Fixes, error handling, code cleanup/refactoring, and a performance enhancement.
+Some under-the-hood refactoring for cleanups.
+
+## Add
+
+  * Popups for errors related to `GotoMode` (bad URIs, cannot connect error)
+
+### Fix
+
+  * Errors related to `GotoMode` which would crash Waffle, like malformed URIs,
+    nonresponsive servers, etc.
+  * Inability to goto URIs that include a port specification due to `read` error
+  * Extreme performance issues when viewing large text files; now viewing very large
+
 ## [0.7.0] - 2020-07-04
 
 Bug fixes regarding re-entering modes, popup notification for saving config.

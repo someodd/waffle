@@ -23,6 +23,7 @@ import qualified Brick.BChan                   as B
 import qualified Brick.Main                    as B
 import qualified Brick.Types                   as B
 import qualified Graphics.Vty                  as V
+import           Brick.Widgets.Core             ( txt )
 
 import           UI.Menu
 import           UI.Progress
@@ -110,6 +111,7 @@ appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar '?') [])) =
 -- to the event handlers in case they want custom events
 appEvent gbs (B.VtyEvent e) = appropriateHandler gbs e
 -- Seems hacky FIXME (for customevent)
+appEvent gbs (B.AppEvent (ClearCacheEvent cce)) = cce >> B.continue gbs
 appEvent gbs e
   | gbsRenderMode gbs == ProgressMode = progressEventHandler gbs (Left e)
   | otherwise                         = B.continue gbs
@@ -134,7 +136,7 @@ uiMain possibleLocation = do
 
   let dummyStateToOverride = GopherBrowserState {
       gbsBuffer = TextFileBuffer $ TextFile
-                    { tfContents = ""
+                    { tfContents = txt ""
                     , tfTitle = ""
                     }
     , gbsLocation = ("", 0, "", TextFileMode)
@@ -159,7 +161,7 @@ uiMain possibleLocation = do
           history = ([trueLocationType], 0)
           initialGbs = dummyStateToOverride
             { gbsBuffer = TextFileBuffer $ TextFile
-                            { tfContents = ""
+                            { tfContents = txt ""
                             , tfTitle = ""
                             }
             , gbsLocation = trueLocationType
