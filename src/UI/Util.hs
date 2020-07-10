@@ -54,37 +54,9 @@ defaultBrowserUI ::
   -> B.Widget AnyName
   -> B.Widget AnyName
   -> [B.Widget AnyName]
-defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = [makePopupWidget gbs | hasPopup gbs] ++ [hCenter $ vCenter view]
+defaultBrowserUI gbs mainViewport titleWidget mainWidget statusWidget = defaultOptimizedUI gbs titleWidget mainWidget' statusWidget
  where
-  box :: B.Widget AnyName
-  box =
-    updateAttrMap (B.applyAttrMappings borderMappings)
-      $ withBorderStyle customBorder
-      $ B.borderWithLabel (withAttr titleAttr titleWidget)
-      $ mainViewport
-      $ hLimitPercent 100 mainWidget
-
-  -- Maybe statusWidget should be Maybe so can override?
-  -- FIXME: this is source of enforcing MyName because seEditorState is always MyName type... what if constructed it here instead based
-  -- on type of name given
-  status :: B.Widget AnyName
-  status =
-    if isStatusEditing gbs then
-      let editWidget      = withAttr inputFieldAttr $ B.renderEditor (txt . T.unlines) True (seEditorState $ fromJust $ gbsStatus gbs)
-          editLabelWidget = txt (seLabel $ fromJust $ gbsStatus gbs)
-      in editLabelWidget <+> editWidget
-    else
-      statusWidget
-
-  -- FIXME: could I just use <+> or something here? Try to combinge name N with named other type? impossible?
-  view :: B.Widget AnyName
-  view = vBox
-    [ box
-    -- This needs to be better... it needs to detect the status mode and then construct the widget for either...?
-    , vLimit 1 status
-    -- TODO: status should work like popup. including edit Maybe and put this in represent
-    -- Maybe have an Either status widget where it's either display status or edit field
-    ]
+  mainWidget' = mainViewport $ hLimitPercent 100 mainWidget
 
 -- TODO: replace `defaultBrowserUI` with this!
 -- mainWidget should be like: (mainViewport $ hLimitPercent 100 mainWidget)
