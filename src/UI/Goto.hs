@@ -18,6 +18,7 @@ import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 import           Network.URI
 
+import           Gopher                         ( removeGopherType )
 import           UI.Representation
 import           UI.Progress
 
@@ -76,7 +77,7 @@ mkGotoResponseState gbs =
       ':':p  -> Right (read p :: Int)
       _      -> Left $ "Invalid URI (bad port)." -- I don' think this ever can occur with Network.URI...
     let resource = uriPath parsedURI
-    Right (T.pack regName, port, T.pack resource, guessMode $ T.pack resource)
+    Right (T.pack regName, port, removeGopherType $ T.pack resource, selectorToRenderMode $ T.pack resource)
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.
