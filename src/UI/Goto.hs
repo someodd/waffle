@@ -79,8 +79,6 @@ mkGotoResponseState gbs =
     let resource = uriPath parsedURI
     Right (T.pack regName, port, removeGopherType $ T.pack resource, selectorToRenderMode $ T.pack resource)
 
--- | The Brick application event handler for search mode. See: UI.appEvent and
---- Brick.Main.appHandleEvent.
 gotoEventHandler
   :: GopherBrowserState -> Event -> T.EventM AnyName (T.Next GopherBrowserState)
 gotoEventHandler gbs e = case e of

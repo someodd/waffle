@@ -7,6 +7,7 @@ module UI.Menu
   )
 where
 
+import           Data.Char                      ( isDigit, digitToInt )
 import qualified Data.Text                     as T
 import           Data.List                     as List
 import qualified Data.Vector                   as Vector
@@ -19,26 +20,18 @@ import qualified Brick.Widgets.List            as L
 import           Lens.Micro                     ( (^.) )
 import qualified Brick.Widgets.List            as BrickList
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Edit            as E
 import           Brick.Widgets.Core             ( viewport
                                                 , txt
                                                 , withAttr
                                                 , (<+>)
                                                 )
-import           Web.Browser
-
+import           UI.Menu.State
+import           UI.Menu.Jump
 import           UI.Style
 import           Gopher
 import           UI.Progress
 import           UI.Util
 import           UI.Representation
-
--- | Get the `MenuLine` which is currently selected, or Nothing.
-selectedMenuLine :: Menu -> Maybe MenuLine
-selectedMenuLine menu = case l ^. BrickList.listSelectedL of
-  Just lineNumber -> Just $ menuLine gopherMenu lineNumber
-  Nothing         -> Nothing
-  where (Menu (gopherMenu, l, _)) = menu
 
 -- | Used by `jumpNextLink` and `jumpPrevLink` for creating a new
 -- menu that uses the updated list position.
@@ -112,44 +105,6 @@ jumpPrevLink menu = updateMenuPosition menu next
       (lastOr currentIndex focusLines)
       (find (< currentIndex) $ reverse focusLines)
     Nothing -> lastOr 0 focusLines
-
--- | Make a request based on the currently selected Gopher menu item and change
--- the application state (GopherBrowserState) to reflect the change.
-newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
-newStateFromSelectedMenuItem gbs = case lineType of -- FIXME: it's itemType
-  (Canonical ct) -> case ct of
-    Directory -> initProgressMode gbs Nothing (host, port, resource, MenuMode)
-    File -> initProgressMode gbs Nothing (host, port, resource, TextFileMode)
-    IndexSearchServer -> pure gbs
-      { gbsRenderMode = SearchMode
-      , gbsBuffer     = SearchBuffer $ Search
-                          { sbQuery             = ""
-                          , sbFormerBufferState = gbsBuffer gbs
-                          , sbSelector          = resource
-                          , sbPort              = port
-                          , sbHost              = host
-                          , sbEditorState       = E.editor (MyName MyViewport) Nothing ""
-                          }
-      }
-    ImageFile ->
-      initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
-    -- FIXME: it's possible this could be an incorrect exception if everything isn't covered, like telnet
-    -- so I need to implement those modes above and then of course this can be the catchall...
-    _ -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
-  (NonCanonical nct) -> case nct of
-    HtmlFile -> openBrowser (T.unpack $ T.drop 4 resource) >> pure gbs
-    InformationalMessage -> pure gbs
-    -- FIXME: same as previous comment...
-    _ -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
- where
-  menu                             = getMenu gbs
-  (host, port, resource, lineType) = case selectedMenuLine menu of
-    -- ParsedLine
-    Just (Parsed      gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
-    -- FIXME: why even error here?
-    -- Unrecognized/unparseable line
-    Just (Unparseable _ ) -> error "Can't do anything with unrecognized line."
-    Nothing               -> error "Nothing is selected!"
 
 -- | Make a request based on the currently selected Gopher menu item and open
 -- the file!
@@ -308,6 +263,11 @@ menuEventHandler gbs e
     V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
     V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
     V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
+    -- FIXME: Implement jump to link # here...
+    V.EvKey (V.KChar c) []   ->
+      if isDigit c
+        then initJumpMode gbs (digitToInt c)
+        else M.continue gbs
     -- The following catch-all is to hand off the event to Brick's list handler (the special one with vi controls).
     ev -> M.continue =<< updateMenuList <$> L.handleListEventVi
       L.handleListEvent

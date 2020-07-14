@@ -25,6 +25,7 @@ import qualified Brick.Types                   as B
 import qualified Graphics.Vty                  as V
 import           Brick.Widgets.Core             ( txt )
 
+import           UI.Menu.Jump
 import           UI.Menu
 import           UI.Progress
 import           UI.Save
@@ -51,6 +52,7 @@ drawUI gbs = modeUI $ gbsRenderMode gbs
      SearchMode      -> searchInputUI gbs
      ProgressMode    -> drawProgressUI gbs
      GotoMode        -> modeUI (seFormerMode $ fromJust $ gbsStatus gbs)
+     MenuJumpMode    -> modeUI (seFormerMode $ fromJust $ gbsStatus gbs)
      OpenConfigMode  -> Config.openConfigModeUI gbs
 
 appropriateHandler :: GopherBrowserState -> V.Event -> B.EventM AnyName (B.Next GopherBrowserState)
@@ -61,6 +63,7 @@ appropriateHandler gbs e = case gbsRenderMode gbs of
   FileBrowserMode -> saveEventHandler gbs e
   SearchMode -> searchEventHandler gbs e
   GotoMode -> gotoEventHandler gbs e
+  MenuJumpMode -> jumpEventHandler gbs e
   OpenConfigMode -> Config.openConfigEventHandler gbs e
   -- FIXME: two separate ones because of the way we pass events and pattern match
   -- i.e., one for vtyhandler and one for the custom app events, which we should

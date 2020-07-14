@@ -304,6 +304,7 @@ data RenderMode = MenuMode
                 | HelpMode
                 | GotoMode
                 | OpenConfigMode
+                | MenuJumpMode
                 deriving (Eq, Show)
 
 -- | Pick out the appropriate `RenderMode` for the supplied `Selector`.
