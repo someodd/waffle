@@ -41,7 +41,7 @@ module UI.Representation
   , updateSearchBuffer
   , getProgress
   , updateProgressBuffer
-  , guessMode
+  , selectorToRenderMode 
   ) where
 
 import qualified Data.Text                     as T
@@ -306,13 +306,13 @@ data RenderMode = MenuMode
                 | OpenConfigMode
                 deriving (Eq, Show)
 
-itemTypeToRenderMode :: ItemType -> RenderMode
-itemTypeToRenderMode itemType = case itemType of
-  Canonical Directory -> MenuMode
-  Canonical File      -> TextFileMode
-  _                   -> FileBrowserMode
-
-
-guessMode :: Selector -> RenderMode
-guessMode resource =
-  itemTypeToRenderMode $ fromMaybe (Canonical Directory) (selectorItemType resource)
+-- | Pick out the appropriate `RenderMode` for the supplied `Selector`.
+selectorToRenderMode :: Selector -> RenderMode
+selectorToRenderMode selector =
+  case selectorItemType selector of
+    Just someItemType ->
+      case someItemType of
+        Canonical Directory -> MenuMode
+        Canonical File      -> TextFileMode
+        _                   -> FileBrowserMode
+    Nothing -> FileBrowserMode
