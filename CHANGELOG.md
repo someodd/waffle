@@ -6,6 +6,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Fix gopher URIs (gophertype)
+
+In RFC 4266 the path/resource in a Gopher URI has a
+"gopheritem" prefix in the format /1/foo/bar (`1`
+being the gopheritem). This gopheritem prefix allows
+clients to decipher the content the URI points to,
+a job usually fulfilled by a menu's item type
+(RFC 1436).
+
+### Fix
+
+  * Waffle didn't go to the right resource if the resource
+    in the URI supplied had a gopheritem prefix (RFC 4266).
+    Now it will both use that gopheritem prefix to decipher
+    the content and go to the correct resource which excludes
+    said prefix
+
+### Add
+
+A bit under-the-hood:
+
+  * Implement a function which gets the "gopheritem"
+    (a single character) from a selector/resource
+
+### Change
+
+Again, a bit under-the-hood:
+
+  * Use these new tools for `GotoMode` and for
+    the starting location provided when executing
+    Waffle
+  * Remove `itemTypeToRenderMode` and `guessMode`
+    in favor for the new tools used with the new
+    `selectorToRenderMode` function which will
+    give a `RenderMode` for the supplied URI.
+
 ## [0.8.0] - 2020-07-10
 
 Fixes, error handling, code cleanup/refactoring, and a performance enhancement.

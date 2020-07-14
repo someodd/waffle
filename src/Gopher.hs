@@ -51,6 +51,7 @@ module Gopher
   , explainLine
   , menuLineAsText
   , cleanAll
+  , removeGopherType
   ) where
 
 import qualified Data.Text        as T
@@ -214,20 +215,60 @@ selectorExtToItemType selector =
 -- Nothing
 selectorPrefixItemType :: Selector -> Maybe ItemType
 selectorPrefixItemType selector =
-  let potentialItemChar = selectorToItemChar selector
+  let potentialItemChar = getGopherType selector
   in  case potentialItemChar of
         (Just itemChar) -> charToItemType itemChar
         Nothing         -> Nothing
-  where
-    selectorToItemChar :: Selector -> Maybe Char
-    selectorToItemChar selector' =
-      let splitDirectories = filter (/= "") $ T.splitOn "/" selector'
-      in  if not (null splitDirectories) && T.length (head splitDirectories) == 1
-            then Just $ T.head . head $ splitDirectories
-            else Nothing
 
--- TODO: clean up... lots of casses unneeded?
--- | Efficiently determine the `ItemType` from selector alone.
+-- | Get the `gophertype` as defined by RFC 4266, in a Gopher URI.
+--
+-- >>> getGopherType $ T.pack "/1/some/gopher/map"
+-- Just '1'
+--
+-- >>> getGopherType $ T.pack "/1"
+-- Just '1'
+--
+-- >> getGopherType $ T.pack "/s/some/file.ogg"
+-- Just 's'
+--
+-- >> getGopherType $ T.pack "/blah/whatever"
+-- Nothing
+getGopherType :: Selector -> Maybe Char
+getGopherType selector =
+  case filter (/= "") $ T.splitOn "/" selector of
+    a:_ ->
+      if T.length a == 1
+        then Just (T.head a)
+        else Nothing
+    _   -> Nothing
+
+-- | If there is an `ItemType` (gophertype) in the URI, as per RFC 4266,
+-- remove it.
+--
+-- removeGopherType $ T.pack "/0/some-directory
+-- "/some-directory"
+--
+-- removeGopherType $ T.pack "/foo/bar"
+-- "/foo/bar"
+--
+-- removeGopherType $ T.pack "/0"
+-- "/"
+removeGopherType :: Selector -> Selector
+removeGopherType selector =
+  case getGopherType selector of
+    Just _ -> patternMatchGopherTypeText selector
+    Nothing -> selector
+ where
+  patternMatchGopherTypeText :: T.Text -> T.Text
+  patternMatchGopherTypeText t =
+    let (_:_:noGopherType) = T.unpack t
+    in  T.pack noGopherType
+
+-- | Efficiently determine the `ItemType` from selector alone. The selector is
+-- the path portion of the Gopher URI.
+--
+-- This is the main function used when determining a type of a link without
+-- downloading the contents.
 selectorItemType :: Selector -> Maybe ItemType
 selectorItemType selector = do
   -- First we see if the selector already informs us of the file type.
