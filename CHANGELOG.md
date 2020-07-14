@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2020-07-14
+
 Fix gopher URIs (gophertype)
 
 In RFC 4266 the path/resource in a Gopher URI has a
