@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2020-07-15
+
+### Add
+
+  * You can now jump to a link in a menu by typing out the link #!
+
 ## [0.9.0] - 2020-07-14
 
 Fix gopher URIs (gophertype)
