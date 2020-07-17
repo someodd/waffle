@@ -42,8 +42,8 @@ mkGotoResponseState gbs =
   -- get the host, port, selector
   let unparsedURI = T.filter (/= '\n')
         $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
-      gbsNoStatus = gbs { gbsStatus = Nothing }
-  in  either (errorPopup gbs unparsedURI) (initProgressMode gbsNoStatus Nothing) (tryLocationOrFail unparsedURI)
+      formerGbs = formerMode gbs
+  in  either (errorPopup gbs unparsedURI) (initProgressMode formerGbs Nothing) (tryLocationOrFail unparsedURI)
  where
   prefixSchemeIfMissing :: T.Text -> T.Text
   prefixSchemeIfMissing potentialURI
@@ -79,6 +79,10 @@ mkGotoResponseState gbs =
     let resource = uriPath parsedURI
     Right (T.pack regName, port, removeGopherType $ T.pack resource, selectorToRenderMode $ T.pack resource)
 
+-- | Revert to mode prior to `GotoMode` being initiated.
+formerMode :: GopherBrowserState -> GopherBrowserState
+formerMode g = g { gbsRenderMode = seFormerMode $ fromJust $ gbsStatus g, gbsStatus = Nothing }
+
 gotoEventHandler
   :: GopherBrowserState -> Event -> T.EventM AnyName (T.Next GopherBrowserState)
 gotoEventHandler gbs e = case e of
@@ -87,9 +91,6 @@ gotoEventHandler gbs e = case e of
   V.EvKey V.KEnter [] -> liftIO (mkGotoResponseState gbs) >>= M.continue
   _                   -> M.continue =<< editorEventHandler gbs e
  where
-  -- FIXME: should also reset status
-  formerMode g = g { gbsRenderMode = seFormerMode $ fromJust $ gbsStatus g, gbsStatus = Nothing }
-
   -- | A modification of the default Brick.Widgets.Edit event handler; changed to
   -- return a GopherBrowserState instead of just an editor state.
   editorEventHandler
