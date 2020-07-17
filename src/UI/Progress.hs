@@ -180,9 +180,9 @@ makeErrorPopup gbs' exMsg =
                                           -- error here, because that mode has been cleared!
                                           Nothing -> gbsRenderMode formerGbs
                             x        -> x
-      newBuffState      = formerGbs { gbsRenderMode = formerMode, gbsStatus = Nothing }
+      newBuffState      = formerGbs { gbsRenderMode = formerMode }
       errorPopup        = Just $ Popup { pLabel = "Network/Goto Error", pWidgets = [txt exMsg], pHelp = "Couldn't reach supplied address. ESC to return..."}
-      finalState        = newBuffState { gbsPopup = errorPopup, gbsStatus = Nothing }-- TODO, FIXME: deactivate status
+      finalState        = newBuffState { gbsPopup = errorPopup }-- TODO, FIXME: deactivate status
       chan              = gbsChan finalState
   in  Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
 
