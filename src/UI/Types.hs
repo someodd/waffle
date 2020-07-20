@@ -1,4 +1,6 @@
--- | UI types used in rendering the TUI.
+-- | UI models/types used in rendering the TUI. For the names see
+-- `UI.Types.Names`. Some of these models can be complex, so there
+-- are helper functions at `UI.Types.Helpers`.
 
 module UI.Types where
 
