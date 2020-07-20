@@ -33,8 +33,11 @@ import           UI.Search
 import           UI.Style
 import           UI.TextFile
 import           UI.Help
-import           UI.Representation
 import           UI.Goto
+import           UI.Types
+import           UI.Types.Names
+import           UI.Types.Helpers
+import           UI.Util
 import qualified UI.Config.Open                as Config
 
 -- | The draw handler which will choose a UI based on the browser's mode.

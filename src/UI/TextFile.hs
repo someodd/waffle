@@ -14,9 +14,11 @@ import qualified Brick.Types                   as T
 import           Brick.Widgets.Core             ( txt )
 import qualified Brick.Main                    as M
 
+import           UI.Types
+import           UI.Types.Names
+import           UI.Types.Helpers
 import           UI.Util
 import           UI.Progress
-import           UI.Representation
 
 -- Maybe should use list thingy since that was a million times faster
 textFileModeUI :: GopherBrowserState -> [T.Widget AnyName]

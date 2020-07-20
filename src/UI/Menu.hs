@@ -31,7 +31,9 @@ import           UI.Style
 import           Gopher
 import           UI.Progress
 import           UI.Util
-import           UI.Representation
+import           UI.Types
+import           UI.Types.Names
+import           UI.Types.Helpers
 
 -- | Used by `jumpNextLink` and `jumpPrevLink` for creating a new
 -- menu that uses the updated list position.

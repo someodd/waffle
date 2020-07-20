@@ -121,7 +121,9 @@ library
     UI.Popup
     UI.TextFile
     UI.Progress
-    UI.Representation
+    UI.Types
+    UI.Types.Helpers
+    UI.Types.Names
     UI.Menu
     UI.Menu.Jump
     UI.Menu.State

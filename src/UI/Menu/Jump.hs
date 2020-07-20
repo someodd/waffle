@@ -21,8 +21,10 @@ import           Graphics.Vty.Input.Events      ( Event )
 import qualified Graphics.Vty                  as V
 import           Brick.Widgets.Edit            as E
 
-import UI.Representation
 import UI.Menu.State
+import UI.Types
+import UI.Types.Names
+import UI.Types.Helpers
 
 -- REDUNDANT CODE/DUPLICATE
 -- | Used by `jumpNextLink` and `jumpPrevLink` for creating a new

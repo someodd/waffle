@@ -34,8 +34,10 @@ import qualified Brick.Types                   as T
 import           System.IO.Temp                 ( emptySystemTempFile )
 import qualified Graphics.Vty                  as V
 
+import           UI.Types
+import           UI.Types.Names
+import           UI.Types.Helpers
 import           UI.Util
-import           UI.Representation
 import           Gopher
 import           GopherNet                      ( writeAllBytes )
 import           Open                           ( openItem )
