@@ -2,7 +2,7 @@
 
 -- | Honestly, this is sloppily just a catchall for things many UI modules use. Should be sorted
 -- soon/later.
-module UI.Util
+module UI.Utils
   ( makePopupWidget
   , defaultBrowserUI
   , defaultOptimizedUI
@@ -47,8 +47,8 @@ import           UI.Types                       ( GopherBrowserState(..)
                                                 )
 import           UI.Types.Names                 ( AnyName(..), MyName(..) )
 import           UI.Types.Helpers               ( isStatusEditing, hasPopup )
-import           UI.Popup
-import           UI.Style
+import           UI.Utils.Popup
+import           UI.Utils.Style
 
 makePopupWidget :: GopherBrowserState -> B.Widget AnyName
 makePopupWidget gbs = 

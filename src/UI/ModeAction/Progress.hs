@@ -4,15 +4,7 @@
 -- this would imply the need to have a fallback state, right?
 -- | Handle indication of download progress for various UI.Util.RenderMode types, like downloading
 -- menus, text files, and binary file downloads.
-module UI.Progress
-  ( initProgressMode
-  , modeTransition
-  , drawProgressUI
-  , progressEventHandler
-  , goHistory
-  , goParentDirectory
-  , initOpenMode
-  ) where
+module UI.ModeAction.Progress where
 
 import           Control.Exception
 import           Data.Text.Encoding.Error       (lenientDecode)
@@ -32,12 +24,11 @@ import qualified Brick.BChan
 import qualified Data.ByteString.Char8         as B8
 import qualified Brick.Types                   as T
 import           System.IO.Temp                 ( emptySystemTempFile )
-import qualified Graphics.Vty                  as V
 
 import           UI.Types
 import           UI.Types.Names
 import           UI.Types.Helpers
-import           UI.Util
+import           UI.Utils
 import           Gopher
 import           GopherNet                      ( writeAllBytes )
 import           Open                           ( openItem )
@@ -322,40 +313,6 @@ progressDownloadBytes gbs _ (host, port, resource, _) =
     -- We don't use doFinalEvent, because the file saver (which this is for) works a bit differently!
     Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)
     pure ()
-
--- TODO: progressUI...
-drawProgressUI :: GopherBrowserState -> [T.Widget AnyName]
-drawProgressUI gbs = [a]
- where
-  -- FIXME: "downloaded" isn't necessarily correct. You can request more bytes than is left...
-  bytesDownloaded = T.pack $ show (pbBytesDownloaded (getProgress gbs))
-  bytesMessage = "Downloaded bytes: " <> bytesDownloaded
-  downloadingWhat = pbMessage (getProgress gbs)
-
-  connectMessage :: T.Text
-  connectMessage
-    | pbIsFromCache (getProgress gbs) = "⏳ Loading from cache..."
-    | pbConnected (getProgress gbs)   = bytesMessage
-    | otherwise                       = "⏳ Connecting..."
-
-  a = txt $ downloadingWhat <> "\n" <> connectMessage
-
--- FIXME: maybe this needs to just have generic B.BrickEvent MyName CustomEvent
--- and match from there
--- TODO: handleProgressEvents
--- FIXME: no need for this left/right nonsense because they're both
--- B.BrickEvent MyName CustomEvent and you can decipher from there like in UI...
--- should do this soon...
-progressEventHandler
-  :: GopherBrowserState
-  -> Either (T.BrickEvent AnyName CustomEvent) V.Event
-  -> T.EventM AnyName (T.Next GopherBrowserState)
-progressEventHandler gbs (Left e)  = case e of
-  -- This is extremely hacky!
-  T.AppEvent (NewStateEvent gbs')       -> M.continue gbs'
-  T.AppEvent (FinalNewStateEvent gbs')  -> modeTransition >> M.continue gbs'
-  _                                     -> M.continue gbs
-progressEventHandler gbs (Right _) = M.continue gbs
 
 -- FIXME: this is a hacky way to avoid circular imports
 -- FIXME: the only reason not using progress is because of progress auto history
