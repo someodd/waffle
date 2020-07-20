@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module UI.Style
+module UI.Utils.Style
   ( customBorder
   , custom2Attr
   , theMap

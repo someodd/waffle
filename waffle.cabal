@@ -115,24 +115,46 @@ library
     Open
     Config
     Config.ConfigOpen
-    UI
     GopherNet
-    UI.Goto
-    UI.Popup
-    UI.TextFile
-    UI.Progress
+
+    UI
+
     UI.Types
     UI.Types.Helpers
     UI.Types.Names
-    UI.Menu
-    UI.Menu.Jump
-    UI.Menu.State
-    UI.Save
-    UI.Help
-    UI.Util
-    UI.Style
-    UI.Search
-    UI.Config.Open
+
+    UI.Draw
+    UI.Draw.Help
+    UI.Draw.Menu
+    UI.Draw.Open
+    UI.Draw.Progress
+    UI.Draw.Save
+    UI.Draw.Search
+    UI.Draw.TextFile
+
+    UI.Handle
+    UI.Handle.Goto
+    UI.Handle.Help
+    UI.Handle.Menu
+    UI.Handle.Menu.Jump
+    UI.Handle.Open
+    UI.Handle.Progress
+    UI.Handle.Save
+    UI.Handle.Search
+    UI.Handle.TextFile
+
+    UI.ModeAction.Goto
+    UI.ModeAction.Help
+    UI.ModeAction.Menu
+    UI.ModeAction.Menu.Jump
+    UI.ModeAction.Menu.State
+    UI.ModeAction.Open
+    UI.ModeAction.Progress
+    UI.ModeAction.Search
+
+    UI.Utils
+    UI.Utils.Style
+    UI.Utils.Popup
 
   -- Modules included in this library but not exported.
   -- other-modules:

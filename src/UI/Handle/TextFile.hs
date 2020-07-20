@@ -1,32 +1,15 @@
-{-# LANGUAGE OverloadedStrings #-}
-
--- | Everything related to the UI for viewing text files.
-module UI.TextFile
-  ( textFileModeUI
-  , basicTextFileEventHandler
-  , textFileEventHandler
-  ) where
+module UI.Handle.TextFile where
 
 import           Control.Monad.IO.Class
 
 import qualified Graphics.Vty                  as V
 import qualified Brick.Types                   as T
-import           Brick.Widgets.Core             ( txt )
 import qualified Brick.Main                    as M
 
-import           UI.Types
-import           UI.Types.Names
-import           UI.Types.Helpers
-import           UI.Util
-import           UI.Progress
-
--- Maybe should use list thingy since that was a million times faster
-textFileModeUI :: GopherBrowserState -> [T.Widget AnyName]
-textFileModeUI gbs = defaultOptimizedUI gbs titleWidget mainWidget statusWidget
-  where
-   mainWidget   = tfContents $ getTextFile gbs
-   titleWidget  = txt $ tfTitle $ getTextFile gbs
-   statusWidget = txt "? for help. Text file mode."
+import UI.Types
+import UI.Utils
+import UI.Types.Names
+import UI.ModeAction.Progress
 
 -- | Basic text file controls, modularized so that the Help screen can use
 -- too, without including the history stuff. See the Help module.
