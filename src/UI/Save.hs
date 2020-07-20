@@ -29,7 +29,9 @@ import           Brick.Widgets.Core             ( vLimitPercent
                                                 )
 
 import           UI.Style
-import           UI.Representation
+import           UI.Types.Names
+import           UI.Types                       ( GopherBrowserState(..), SaveBrowser(..), RenderMode(..) )
+import           UI.Types.Helpers               ( getSaveBrowser, updateFileBrowserBuffer )
 
 -- FIXME, TODO: document the features in handleFileBrowserEvent!
 -- FIXME: only need to return GopherBrowserState actually

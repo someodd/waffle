@@ -25,9 +25,11 @@ import           Graphics.Vty.Input.Events      ( Event )
 import qualified Data.ConfigFile               as CF
 
 import           UI.Util                        ( defaultBrowserUI, myNameScroll )
-import           UI.Representation
 import           Config.ConfigOpen
 import           Config
+import           UI.Types
+import           UI.Types.Names
+import           UI.Types.Helpers
 
 allFieldNames :: [AnyName]
 allFieldNames = map FieldName [FileField ..]

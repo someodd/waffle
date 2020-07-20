@@ -19,8 +19,10 @@ import           Graphics.Vty.Input.Events      ( Event )
 import           Network.URI
 
 import           Gopher                         ( removeGopherType )
-import           UI.Representation
+import           UI.Util
 import           UI.Progress
+import           UI.Types
+import           UI.Types.Names
 
 initGotoMode :: GopherBrowserState -> GopherBrowserState
 initGotoMode gbs = gbs

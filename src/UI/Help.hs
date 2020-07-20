@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | The help screen, which is also the homepage. It's just a TextFile, basically.
+-- This is for handling and rendeirng `HelpMode`.
 module UI.Help
   ( helpModeUI
   , helpEventHandler
@@ -23,7 +24,9 @@ import qualified Brick.Main                    as M
 
 import           UI.Util
 import           UI.TextFile
-import           UI.Representation
+import           UI.Types
+import           UI.Types.Names
+import           UI.Types.Helpers               ( getHelpTextFileContents, getHelp )
 
 helpModeUI :: GopherBrowserState -> [T.Widget AnyName]
 helpModeUI gbs = defaultBrowserUI gbs (viewport (MyName TextViewport) T.Both) titleWidget mainWidget statusWidget

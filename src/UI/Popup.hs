@@ -28,7 +28,7 @@ import           Brick.Widgets.Core             ( vBox
                                                 )
 
 import           UI.Style
-import           UI.Representation
+import           UI.Types.Names
 
 -- | A vertically-centered, full-width popup box to be displayed over other widgets by putting it before
 -- the other widgets in the list of widgets being rendered.

@@ -13,7 +13,9 @@ import           Web.Browser
 
 import           UI.Progress
 import           Gopher
-import           UI.Representation
+import           UI.Types
+import           UI.Types.Names
+import           UI.Types.Helpers
 
 -- | Get the `MenuLine` which is currently selected, or Nothing.
 selectedMenuLine :: Menu -> Maybe MenuLine

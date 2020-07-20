@@ -21,8 +21,10 @@ import           Graphics.Vty.Input.Events      ( Event )
 
 import           Gopher                         ( searchSelector )
 import           UI.Popup
-import           UI.Representation
 import           UI.Progress
+import           UI.Types
+import           UI.Types.Names
+import           UI.Types.Helpers
 
 -- | Draw the search prompt. Used by UI.drawUI if the gbsRenderMode
 -- is SearchMode.
