@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Reorganize and clean up the structure of the UI package (the brick app portion)...
+This is all under-the-hood stuff. Refactoring.
+
+### Change
+
+  * Rename the UI modules to BrickApp since that more accurately describes
+    their role
+  * Re-organize UI/BrickApp into these parts: handle (for handling events),
+    mode action (for manipulating models/types), and types (for models).
+    Basically the MVC structure. There's also a utils section.
+
+### Change
+
 ## [0.10.1] - 2020-07-17
 
 ### Fix
