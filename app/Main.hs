@@ -3,7 +3,7 @@ module Main where
 import qualified Data.Text                     as T
 import System.Environment
 
-import UI
+import BrickApp
 import Config
 import Config.ConfigOpen
 

@@ -117,44 +117,44 @@ library
     Config.ConfigOpen
     GopherNet
 
-    UI
+    BrickApp
 
-    UI.Types
-    UI.Types.Helpers
-    UI.Types.Names
+    BrickApp.Types
+    BrickApp.Types.Helpers
+    BrickApp.Types.Names
 
-    UI.Draw
-    UI.Draw.Help
-    UI.Draw.Menu
-    UI.Draw.Open
-    UI.Draw.Progress
-    UI.Draw.Save
-    UI.Draw.Search
-    UI.Draw.TextFile
+    BrickApp.Draw
+    BrickApp.Draw.Help
+    BrickApp.Draw.Menu
+    BrickApp.Draw.Open
+    BrickApp.Draw.Progress
+    BrickApp.Draw.Save
+    BrickApp.Draw.Search
+    BrickApp.Draw.TextFile
 
-    UI.Handle
-    UI.Handle.Goto
-    UI.Handle.Help
-    UI.Handle.Menu
-    UI.Handle.Menu.Jump
-    UI.Handle.Open
-    UI.Handle.Progress
-    UI.Handle.Save
-    UI.Handle.Search
-    UI.Handle.TextFile
+    BrickApp.Handle
+    BrickApp.Handle.Goto
+    BrickApp.Handle.Help
+    BrickApp.Handle.Menu
+    BrickApp.Handle.Menu.Jump
+    BrickApp.Handle.Open
+    BrickApp.Handle.Progress
+    BrickApp.Handle.Save
+    BrickApp.Handle.Search
+    BrickApp.Handle.TextFile
 
-    UI.ModeAction.Goto
-    UI.ModeAction.Help
-    UI.ModeAction.Menu
-    UI.ModeAction.Menu.Jump
-    UI.ModeAction.Menu.State
-    UI.ModeAction.Open
-    UI.ModeAction.Progress
-    UI.ModeAction.Search
+    BrickApp.ModeAction.Goto
+    BrickApp.ModeAction.Help
+    BrickApp.ModeAction.Menu
+    BrickApp.ModeAction.Menu.Jump
+    BrickApp.ModeAction.Menu.State
+    BrickApp.ModeAction.Open
+    BrickApp.ModeAction.Progress
+    BrickApp.ModeAction.Search
 
-    UI.Utils
-    UI.Utils.Style
-    UI.Utils.Popup
+    BrickApp.Utils
+    BrickApp.Utils.Style
+    BrickApp.Utils.Popup
 
   -- Modules included in this library but not exported.
   -- other-modules:
