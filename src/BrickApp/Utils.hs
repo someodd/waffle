@@ -2,7 +2,7 @@
 
 -- | Honestly, this is sloppily just a catchall for things many UI modules use. Should be sorted
 -- soon/later.
-module UI.Util
+module BrickApp.Utils
   ( makePopupWidget
   , defaultBrowserUI
   , defaultOptimizedUI
@@ -15,6 +15,7 @@ module UI.Util
   , menuViewportScroll
   , textViewportScroll
   , locationAsString
+  , selectorToRenderMode
   ) where
 
 import qualified Data.Text                     as T
@@ -33,13 +34,36 @@ import           Brick.AttrMap                 as B
 import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 
 import           Gopher
-import           UI.Representation
-import           UI.Popup
-import           UI.Style
+import           BrickApp.Types                       ( GopherBrowserState(..)
+                                                , Cache
+                                                , History
+                                                , Location
+                                                , RenderMode(..)
+                                                , CustomEvent
+                                                , Menu(..)
+                                                , Buffer(..)
+                                                , StatusEditor(..)
+                                                , Popup(..)
+                                                )
+import           BrickApp.Types.Names                 ( AnyName(..), MyName(..) )
+import           BrickApp.Types.Helpers               ( isStatusEditing, hasPopup )
+import           BrickApp.Utils.Popup
+import           BrickApp.Utils.Style
 
 makePopupWidget :: GopherBrowserState -> B.Widget AnyName
 makePopupWidget gbs = 
   B.centerLayer $ head $ popup (pLabel . fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
+
+-- | Pick out the appropriate `RenderMode` for the supplied `Selector`.
+selectorToRenderMode :: Selector -> RenderMode
+selectorToRenderMode selector =
+  case selectorItemType selector of
+    Just someItemType ->
+      case someItemType of
+        Canonical Directory -> MenuMode
+        Canonical File      -> TextFileMode
+        _                   -> FileBrowserMode
+    Nothing -> FileBrowserMode
 
 -- FIXME: okay so this is nice and all but how will we handle editor input once activated? how do we tell it's activated?
 -- FIXME: poppys and statusWidget both relevant!

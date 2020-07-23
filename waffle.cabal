@@ -115,22 +115,46 @@ library
     Open
     Config
     Config.ConfigOpen
-    UI
     GopherNet
-    UI.Goto
-    UI.Popup
-    UI.TextFile
-    UI.Progress
-    UI.Representation
-    UI.Menu
-    UI.Menu.Jump
-    UI.Menu.State
-    UI.Save
-    UI.Help
-    UI.Util
-    UI.Style
-    UI.Search
-    UI.Config.Open
+
+    BrickApp
+
+    BrickApp.Types
+    BrickApp.Types.Helpers
+    BrickApp.Types.Names
+
+    BrickApp.Draw
+    BrickApp.Draw.Help
+    BrickApp.Draw.Menu
+    BrickApp.Draw.Open
+    BrickApp.Draw.Progress
+    BrickApp.Draw.Save
+    BrickApp.Draw.Search
+    BrickApp.Draw.TextFile
+
+    BrickApp.Handle
+    BrickApp.Handle.Goto
+    BrickApp.Handle.Help
+    BrickApp.Handle.Menu
+    BrickApp.Handle.Menu.Jump
+    BrickApp.Handle.Open
+    BrickApp.Handle.Progress
+    BrickApp.Handle.Save
+    BrickApp.Handle.Search
+    BrickApp.Handle.TextFile
+
+    BrickApp.ModeAction.Goto
+    BrickApp.ModeAction.Help
+    BrickApp.ModeAction.Menu
+    BrickApp.ModeAction.Menu.Jump
+    BrickApp.ModeAction.Menu.State
+    BrickApp.ModeAction.Open
+    BrickApp.ModeAction.Progress
+    BrickApp.ModeAction.Search
+
+    BrickApp.Utils
+    BrickApp.Utils.Style
+    BrickApp.Utils.Popup
 
   -- Modules included in this library but not exported.
   -- other-modules:

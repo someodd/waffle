@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module UI.Style
+module BrickApp.Utils.Style
   ( customBorder
   , custom2Attr
   , theMap

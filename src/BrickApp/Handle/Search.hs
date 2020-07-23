@@ -1,48 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Search mode for the UI. Index search implementation for UI.
---
--- Handle drawing the search UI, modifying the application state
--- for the search UI, and handling Brick events for search.
-module UI.Search
-  ( searchInputUI
-  , searchEventHandler
-  )
-where
+module BrickApp.Handle.Search where
 
 import           Control.Monad.IO.Class
 
-import qualified Data.Text                     as T
 import qualified Brick.Main                    as M
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Edit            as E
 import qualified Graphics.Vty                  as V
 import           Graphics.Vty.Input.Events      ( Event )
 
-import           Gopher                         ( searchSelector )
-import           UI.Popup
-import           UI.Representation
-import           UI.Progress
-
--- | Draw the search prompt. Used by UI.drawUI if the gbsRenderMode
--- is SearchMode.
-searchInputUI :: GopherBrowserState -> [T.Widget AnyName]
-searchInputUI gbs = inputPopupUI editorBuffer labelText helpText
- where
-  searchBuffer = getSearch gbs
-  editorBuffer = sbEditorState (getSearch gbs)
-  labelText    = "Search: " <> sbHost searchBuffer
-  helpText     = "Press ENTER to search"
-
--- | Form a new application state based on a Gopher search request.
-mkSearchResponseState :: GopherBrowserState -> IO GopherBrowserState
-mkSearchResponseState gbs = do
-  let host     = sbHost $ getSearch gbs
-      port     = sbPort $ getSearch gbs
-      resource = sbSelector $ getSearch gbs
-      query    = T.unlines (E.getEditContents $ sbEditorState $ getSearch gbs)
-      selector = searchSelector resource query
-  initProgressMode gbs Nothing (host, port, selector, MenuMode)
+import BrickApp.Types
+import BrickApp.Types.Names
+import BrickApp.Types.Helpers
+import BrickApp.ModeAction.Search
 
 -- | The Brick application event handler for search mode. See: UI.appEvent and
 --- Brick.Main.appHandleEvent.

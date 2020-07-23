@@ -1,86 +1,24 @@
--- | Data types representing different RenderModes.
-module UI.Representation
-  (
-  -- * UI representations/models/types
-    Progress(..)
-  , SaveBrowser(..)
-  , OpenConfigState(..)
-  , Search(..)
-  , Help(..)
-  , emptyCache
-  , GopherBrowserState(..)
-  , TextFile(..)
-  , Menu(..)
-  , Buffer(..)
-  , StatusEditor(..)
-  , Popup(..)
-  , RenderMode(..)
-  , Location
-  , Cache
-  , History
-  -- * Names
-  , MyName(..)
-  , FieldName(..)
-  , AnyName(..)
-  -- * Events
-  , CustomEvent(..)
-  -- * Helper utilities for UI representations
-  , getFocusRing
-  , newMenuBuffer
-  , closePopup
-  , getHelp
-  , getOpenConfig
-  , getHelpTextFileContents
-  , hasPopup
-  , updateFileBrowserBuffer
-  , isStatusEditing
-  , getMenu
-  , getSaveBrowser
-  , getTextFile
-  , getSearch
-  , updateSearchBuffer
-  , getProgress
-  , updateProgressBuffer
-  , selectorToRenderMode 
-  ) where
+-- | UI models/types used in rendering the TUI. For the names see
+-- `UI.Types.Names`. Some of these models can be complex, so there
+-- are helper functions at `UI.Types.Helpers`.
 
-import qualified Data.Text                     as T
-import           Data.Maybe
+module BrickApp.Types where
+
 import qualified Data.Map as Map
+import qualified Data.Text                     as T
 
-import qualified Brick.Focus as F
-import qualified Brick.Types                   as T
-import qualified Brick.BChan
-import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
 import           Brick.Widgets.FileBrowser      ( FileBrowser )
 import           Brick.Widgets.Edit            as E
+import qualified Brick.BChan
+import qualified Brick.Types                   as T
+import qualified Brick.Widgets.List            as BrickList -- (List)? FIXME
+import qualified Brick.Focus as F
 
-import           Gopher
+import Gopher                                   ( GopherMenu )
+import BrickApp.Types.Names
 
--- FIXME: this is not specific! Should be OpenConfigFieldNames!
-data FieldName = FileField
-              | DirectoryField
-              | CsoPhoneBookServerField
-              | ErrorField
-              | BinHexedMacintoshFileField
-              | DosBinaryArchiveField
-              | UnixUuencodedFileField
-              | IndexSearchServerField
-              | TextBasedTelnetSessionField
-              | BinaryFileField
-              | RedundantServerField
-              | GifFileField
-              | ImageFileField
-              | Tn3270SessionField
-              | DocField
-              | HtmlFileField
-              | InformationalMessageField
-              | SoundFileField
-              deriving (Bounded, Enum, Show, Ord, Eq)
-
-data AnyName = FieldName FieldName | MyName MyName
-  deriving (Show, Eq, Ord)
-
+-- | Used for rendering the TUI that changes the commands associated with
+-- opening specific menu items.
 data OpenConfigState =
   OpenConfigState { formerState :: GopherBrowserState
                   , focusRing :: F.FocusRing AnyName
@@ -103,13 +41,6 @@ data OpenConfigState =
                   , editInformationalMessage :: E.Editor String AnyName
                   , editSoundFile :: E.Editor String AnyName
                   }
-
--- | Return the `focusRing` from the `GopherBrowserState`'s
--- `OpenConfigState`.
-getFocusRing :: GopherBrowserState -> F.FocusRing AnyName
-getFocusRing gbs =
-  let (OpenConfigBuffer openConfigState) = gbsBuffer gbs
-  in  focusRing openConfigState
 
 -- This is used to indicate how many bytes have been downloaded
 -- of a menu or a save a text file etc, anything!
@@ -154,15 +85,6 @@ emptyCache = Map.empty
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
 newtype Menu = Menu (GopherMenu, BrickList.List AnyName T.Text, FocusLines)
 
--- | Construct a new `MenuBuffer` in the `GopherBrowserState` using
--- the supplied `Menu`.
-newMenuBuffer :: GopherBrowserState -> Menu -> GopherBrowserState
-newMenuBuffer gbs menu = gbs { gbsBuffer = MenuBuffer $ menu }
-
--- | Get `Menu` out of the buffer in `GopherBrowserState`.
-getMenu :: GopherBrowserState -> Menu
-getMenu gbs = let (MenuBuffer m) = gbsBuffer gbs in m
-
 -- | This is for the contents of a File to be rendered when in TextFileMode.
 -- this should be a combination of things. it should have the addres of the temporary file
 -- which should then be moved to the picked location
@@ -180,46 +102,6 @@ data Buffer
   | ProgressBuffer Progress
   | HelpBuffer Help
   | OpenConfigBuffer OpenConfigState
-
-getOpenConfig :: GopherBrowserState -> OpenConfigState
-getOpenConfig gbs = let (OpenConfigBuffer openConfig) = gbsBuffer gbs in openConfig
-
--- help file should have title "Help" FIXME
--- Could use with below TODO NOTE
-getHelp :: GopherBrowserState -> Help
-getHelp gbs = let (HelpBuffer help) = gbsBuffer gbs in help
-
-getHelpTextFileContents :: GopherBrowserState -> T.Widget AnyName -- txt
-getHelpTextFileContents gbs = let (HelpBuffer help) = gbsBuffer gbs in tfContents $ hText help
-
-updateFileBrowserBuffer :: GopherBrowserState -> (SaveBrowser -> SaveBrowser) -> GopherBrowserState
-updateFileBrowserBuffer gbs f =
-  let (FileBrowserBuffer sb) = gbsBuffer gbs
-  in  gbs { gbsBuffer = FileBrowserBuffer (f sb) }
-
-getProgress :: GopherBrowserState -> Progress
-getProgress gbs = let (ProgressBuffer p) = gbsBuffer gbs in p
-
-updateProgressBuffer :: GopherBrowserState -> (Progress -> Progress) -> GopherBrowserState
-updateProgressBuffer gbs f =
-  let (ProgressBuffer p) = gbsBuffer gbs
-  in  gbs { gbsBuffer = ProgressBuffer (f p) }
-
--- | Get the SaveBrowser from Buffer
-getSaveBrowser :: GopherBrowserState -> SaveBrowser
-getSaveBrowser gbs = let (FileBrowserBuffer sb) = gbsBuffer gbs in sb
-
--- | Get the TextFile from Buffer.
-getTextFile :: GopherBrowserState -> TextFile
-getTextFile gbs = let (TextFileBuffer tf) = gbsBuffer gbs in tf
-
-getSearch :: GopherBrowserState -> Search
-getSearch gbs = let (SearchBuffer s) = gbsBuffer gbs in s
-
-updateSearchBuffer :: GopherBrowserState -> (Search -> Search) -> GopherBrowserState
-updateSearchBuffer gbs f =
-  let (SearchBuffer sb) = gbsBuffer gbs
-  in  gbs { gbsBuffer = SearchBuffer (f sb) }
 
 -- | The line #s which have linkable entries. Used for jumping by number and n and p hotkeys and display stuff.
 -- use get elemIndex to enumerate
@@ -257,12 +139,6 @@ data Popup = Popup
 -- Note that GotoMode isn't necessarily a "rendermode" but an event mode...
 data StatusEditor = StatusEditor { seLabel :: T.Text, seEditorState :: EditorState, seFormerMode :: RenderMode }
 
-isStatusEditing :: GopherBrowserState -> Bool
-isStatusEditing gbs = case gbsStatus gbs of
-  -- Is this pattern even right? FIXME
-  (Just StatusEditor {}) -> True
-  _                      -> False
-
 -- TODO: maybe define an empty gbs?
 -- | The application state for Brick.
 data GopherBrowserState = GopherBrowserState
@@ -278,19 +154,6 @@ data GopherBrowserState = GopherBrowserState
   , gbsStatus :: Maybe StatusEditor
   }
 
--- Should this go in Popup.hs? NOTE
-hasPopup :: GopherBrowserState -> Bool
-hasPopup gbs = isJust $ gbsPopup gbs
-
--- NOTE same as above: should be in Popup.hs probably!
-closePopup :: GopherBrowserState -> GopherBrowserState
-closePopup gbs = gbs { gbsPopup = Nothing }
-
-data MyName = MyViewport | MainViewport | EditorViewport | MyWidget | TextViewport | MenuViewport
-  deriving (Show, Eq, Ord)
-
--- FIXME: This name is very bad!
-data EditName = Edit1 deriving (Ord, Show, Eq)
 type EditorState = E.Editor T.Text AnyName
 
 -- FIXME: maybe "rendermode" is bad now and should jsut be called "mode"
@@ -306,14 +169,3 @@ data RenderMode = MenuMode
                 | OpenConfigMode
                 | MenuJumpMode
                 deriving (Eq, Show)
-
--- | Pick out the appropriate `RenderMode` for the supplied `Selector`.
-selectorToRenderMode :: Selector -> RenderMode
-selectorToRenderMode selector =
-  case selectorItemType selector of
-    Just someItemType ->
-      case someItemType of
-        Canonical Directory -> MenuMode
-        Canonical File      -> TextFileMode
-        _                   -> FileBrowserMode
-    Nothing -> FileBrowserMode
