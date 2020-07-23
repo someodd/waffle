@@ -1,6 +1,6 @@
 -- FIXME TODO: rename to DialogPopup?
 -- | A single-line input dialog box.
-module UI.Popup
+module BrickApp.Utils.Popup
   ( popOver
   , popup
   , inputPopupUI
@@ -27,8 +27,8 @@ import           Brick.Widgets.Core             ( vBox
                                                 , updateAttrMap
                                                 )
 
-import           UI.Style
-import           UI.Representation
+import           BrickApp.Utils.Style
+import           BrickApp.Types.Names
 
 -- | A vertically-centered, full-width popup box to be displayed over other widgets by putting it before
 -- the other widgets in the list of widgets being rendered.

@@ -1,35 +1,16 @@
--- TODO: rename stuff to *save* and not file browser etc
-{-# LANGUAGE OverloadedStrings #-}
-module UI.Save
-  ( saveEventHandler
-  , fileBrowserUi
-  ) where
+-- | Handle events for `SaveMode`
+module BrickApp.Handle.Save where
 
 import           Control.Monad.IO.Class
-import qualified Data.Text                     as T
-import           Control.Exception              ( displayException )
 
 import qualified Brick.Main                    as M
+import qualified Brick.Types                   as T
 import qualified Brick.Widgets.FileBrowser     as FB
 import qualified Graphics.Vty                  as V
-import qualified Brick.Types                   as T
-import           Brick.Widgets.Center           ( center
-                                                , hCenter
-                                                )
-import           Brick.Widgets.Border           ( borderWithLabel )
-import           Brick.Widgets.Core             ( vLimitPercent
-                                                , hLimitPercent
-                                                , (<=>)
-                                                , txt
-                                                , padTop
-                                                , vBox
-                                                , emptyWidget
-                                                , str
-                                                , withDefAttr
-                                                )
 
-import           UI.Style
-import           UI.Representation
+import BrickApp.Types
+import BrickApp.Types.Names
+import BrickApp.Types.Helpers
 
 -- FIXME, TODO: document the features in handleFileBrowserEvent!
 -- FIXME: only need to return GopherBrowserState actually
@@ -89,27 +70,6 @@ handleFileBrowserEvent' gbs e b
 
   curOutFilePath :: String
   curOutFilePath = fbFileOutPath (getSaveBrowser gbs)
-
--- FIXME
-fileBrowserUi :: GopherBrowserState -> [T.Widget AnyName]
-fileBrowserUi gbs =
-  [center $ vLimitPercent 100 $ hLimitPercent 100 $ ui <=> help]
- where
-  b = fromBuffer $ getSaveBrowser gbs
-  fromBuffer = fbFileBrowser
-  ui = hCenter $ borderWithLabel (txt "Choose a file") $ FB.renderFileBrowser
-    True
-    b
-  help = padTop (T.Pad 1) $ vBox
-    [ case FB.fileBrowserException b of
-      Nothing -> emptyWidget
-      Just e ->
-        hCenter $ withDefAttr errorAttr $ txt $ T.pack $ displayException e
-    , hCenter $ txt "/: search, Ctrl-C or Esc: cancel search"
-    , hCenter $ txt "Esc: quit/cancel save"
-    , hCenter $ txt "n: name the output file and then hit enter"
-    , hCenter $ str $ fbFileOutPath (getSaveBrowser gbs)
-    ]
 
 saveEventHandler
   :: GopherBrowserState

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Network state I guess?
-module UI.Menu.State ( newStateFromSelectedMenuItem, selectedMenuLine ) where
+module BrickApp.ModeAction.Menu.State ( newStateFromSelectedMenuItem, selectedMenuLine ) where
 
 import qualified Data.Text                     as T
 
@@ -11,9 +11,11 @@ import           Brick.Widgets.Edit            as E
 import           Web.Browser
 
 
-import           UI.Progress
+import           BrickApp.ModeAction.Progress
 import           Gopher
-import           UI.Representation
+import           BrickApp.Types
+import           BrickApp.Types.Names
+import           BrickApp.Types.Helpers
 
 -- | Get the `MenuLine` which is currently selected, or Nothing.
 selectedMenuLine :: Menu -> Maybe MenuLine
@@ -59,5 +61,3 @@ newStateFromSelectedMenuItem gbs = case lineType of -- FIXME: it's itemType
     -- Unrecognized/unparseable line
     Just (Unparseable _ ) -> error "Can't do anything with unrecognized line."
     Nothing               -> error "Nothing is selected!"
-
-
