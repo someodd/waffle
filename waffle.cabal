@@ -12,7 +12,7 @@ name:                waffle
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.10.1.0
+version:             0.11.0.0
 
 -- A short (one-line) description of the package.
 synopsis:            Gopher protocol client
@@ -25,10 +25,10 @@ description:
   1436](https://tools.ietf.org/html/rfc1436).
 
 -- URL for the project homepage or repository.
-homepage:            https://github.com/hyperreal-gopher/waffle
+homepage:            https://github.com/hyperrealgopher/waffle
 
 -- A URL where users can report bugs.
-bug-reports:         https://github.com/hyperreal-gopher/waffle/issues
+bug-reports:         https://github.com/hyperrealgopher/waffle/issues
 
 -- The license under which the package is released.
 license:             GPL-3.0-only
@@ -41,7 +41,7 @@ author:              Hyperreal Gopher
 
 -- An email address to which users can send suggestions, bug reports, and
 -- patches.
-maintainer:          hyperreal.gopher@protonmail.ch
+maintainer:          hyperrealgopher@protonmail.ch
 
 -- A copyright notice.
 -- copyright:
