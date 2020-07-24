@@ -36,6 +36,11 @@ name to save as--use the `enter` key to accept the filename.
 
 DURING SEARCH MODE: type your query then hit `enter`. Be patient.
 
+BOOKMARKS: On any page use `+` to add the current page as a bookmark, you'll
+be asked to (optionally) provide a bookmark display string. To view bookmarks
+use `ctrl` + `b`. When viewing bookmarks you can delete the selected bookmark
+with `d`. Bookmark view works the same as any Gopher menu.
+
 TOR: You can browse Gopherspace using Tor, even visit hidden services like
 gopher://bztf2mno3tpwrqop.onion:70/1/ if you just start Waffle with `torsocks`,
 for example: `torsocks waffle`.
