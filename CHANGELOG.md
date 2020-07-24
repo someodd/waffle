@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Bookmarks!
+
+## Add
+
+  * Bookmarks are stored in `bookmarks.ini`, but
+    can also be edited with the TUI using `ctrl` + `b`
+  * A default set of bookmarks, which will be copied if
+    ~/.config/waffle/bookmarks.ini doesn't exist
+  * Bookmark current page with `ctrl` + `p`
+  * Help instructions for the new bookmark feature
+
+## Change
+
+  * Refactor utility code to be more reusable, specifically
+    making `Menu`s into `MenuBuffer`s
+
 ## [0.11.0] - 2020-07-22
 
 Reorganize and clean up the structure of the UI package (the brick app portion)...

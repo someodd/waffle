@@ -6,6 +6,7 @@ module BrickApp.Utils
   ( makePopupWidget
   , defaultBrowserUI
   , defaultOptimizedUI
+  , menuToMenuBuffer
   , cacheLookup
   , isCached
   , newStateForMenu
@@ -16,6 +17,7 @@ module BrickApp.Utils
   , textViewportScroll
   , locationAsString
   , selectorToRenderMode
+  , renderModeToItemChar
   ) where
 
 import qualified Data.Text                     as T
@@ -139,36 +141,13 @@ locationAsString :: Location -> T.Text
 locationAsString (host, port, resource, mode) =
   host <> ":" <> (T.pack $ show port) <> resource <> " (" <> (T.pack $ show mode) <> ")"
 
--- FIXME: more like makeState from menu lol. maybe can make do for any state
--- FIXME: update for cache
--- based on passing it the mode and other info! newStateForMenu?
---
--- probs needs to be IO
---
--- | Make a new GopherBrowserState for a GopherMenu based on a few
--- necessary parts that must be carried over, like History and
--- Cache.
-newStateForMenu
-  :: B.BChan CustomEvent
-  -> GopherMenu
-  -> Location
-  -> History
-  -> Cache
-  -> GopherBrowserState
-newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserState
-  { gbsBuffer     =
-    MenuBuffer
-      $ Menu (gm, BrickList.list (MyName MyWidget) glsVector 1, mkFocusLinesIndex gm)
-  , gbsLocation   = location
-  , gbsHistory    = history
-  , gbsRenderMode = MenuMode
-  , gbsChan       = chan
-  , gbsPopup      = Nothing
-  , gbsCache      = cache-- FIXME: should I be updating this?
-  , gbsStatus     = Nothing
-  }
+-- | From a generic `GopherMenu` to a TUI-specific `Buffer` type.
+menuToMenuBuffer :: GopherMenu -> Buffer
+menuToMenuBuffer gopherMenu@(GopherMenu ls) =
+  MenuBuffer $ Menu (gopherMenu, BrickList.list (MyName MyWidget) glsVector 1, mkFocusLinesIndex gopherMenu)
  where
   glsVector = Vector.fromList $ map lineShow ls
+
   mkFocusLinesIndex (GopherMenu m) =
     map fst $ filter (not . isInfoMsg . snd) (zip [0 ..] m)
 
@@ -187,6 +166,33 @@ newStateForMenu chan gm@(GopherMenu ls) location history cache = GopherBrowserSt
     -- It's a MalformedGopherLine
     (Unparseable _) -> menuLineAsText line
 
+-- FIXME: more like makeState from menu lol. maybe can make do for any state
+-- FIXME: update for cache
+-- based on passing it the mode and other info! newStateForMenu?
+--
+-- probs needs to be IO
+--
+-- | Make a new GopherBrowserState for a GopherMenu based on a few
+-- necessary parts that must be carried over, like History and
+-- Cache.
+newStateForMenu
+  :: B.BChan CustomEvent
+  -> GopherMenu
+  -> Location
+  -> History
+  -> Cache
+  -> GopherBrowserState
+newStateForMenu chan gm location history cache = GopherBrowserState
+  { gbsBuffer     = menuToMenuBuffer gm
+  , gbsLocation   = location
+  , gbsHistory    = history
+  , gbsRenderMode = MenuMode
+  , gbsChan       = chan
+  , gbsPopup      = Nothing
+  , gbsCache      = cache-- FIXME: should I be updating this?
+  , gbsStatus     = Nothing
+  }
+
 myNameScroll :: B.ViewportScroll AnyName
 myNameScroll = B.viewportScroll $ MyName MyViewport
 
@@ -198,3 +204,14 @@ menuViewportScroll = B.viewportScroll $ MyName MenuViewport
 
 textViewportScroll :: B.ViewportScroll AnyName
 textViewportScroll = B.viewportScroll $ MyName TextViewport
+
+renderModeToItemChar :: RenderMode -> Char
+renderModeToItemChar renderMode =
+  case renderMode of
+    TextFileMode -> '0'
+    MenuMode -> '1'
+    MenuJumpMode -> '1'
+    FileBrowserMode -> '9'
+    SearchMode -> '1'
+    -- FIXME: this shouldn't be an error!
+    _ -> error $ "Can't bookmark mode " ++ show renderMode

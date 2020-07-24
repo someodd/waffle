@@ -14,7 +14,9 @@ import BrickApp.Types
 import BrickApp.ModeAction.Help
 import BrickApp.ModeAction.Goto
 import BrickApp.ModeAction.Open
+import BrickApp.ModeAction.Bookmarks
 import BrickApp.Handle.Open
+import BrickApp.Handle.Bookmarks
 import BrickApp.Handle.Progress
 import BrickApp.Handle.Menu
 import BrickApp.Handle.Menu.Jump
@@ -34,6 +36,8 @@ appropriateHandler gbs e = case gbsRenderMode gbs of
   GotoMode -> gotoEventHandler gbs e
   MenuJumpMode -> jumpEventHandler gbs e
   OpenConfigMode -> openConfigEventHandler gbs e
+  BookmarksMode -> bookmarksEventHandler gbs e
+  AddBookmarkMode -> addBookmarkEventHandler gbs e
   -- FIXME: two separate ones because of the way we pass events and pattern match
   -- i.e., one for vtyhandler and one for the custom app events, which we should
   -- soon conflate by not matching specifically for VtyEvent (thus passing all events
@@ -66,11 +70,16 @@ appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt gbs
 appEvent gbs (B.VtyEvent e@(V.EvKey V.KEsc []))
   | hasPopup gbs = B.continue $ closePopup gbs
   | otherwise   = appropriateHandler gbs e
+-- add new bookmark
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '+') [])) = B.continue $ initAddBookmarkMode gbs
 -- FIXME
 -- This is the config mode, which currently just goes right into the menu item
 -- command association editor.
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'c') [V.MCtrl])) =
   eventDependingMode gbs OpenConfigMode (openConfigEventHandler gbs e) (initConfigOpenMode gbs)
+-- Bookmark mode! FIXME this is a hack atm
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'b') [V.MCtrl])) =
+  liftIO (initBookmarksMode gbs) >>= B.continue
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'g') [V.MCtrl])) =
   eventDependingMode gbs GotoMode (appropriateHandler gbs e) (B.continue $ initGotoMode gbs)
 -- TODO: needs to reset viewport
