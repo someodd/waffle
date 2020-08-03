@@ -116,7 +116,7 @@ type HistoryIndex = Int
 -- locations are appended. See also: newChangeHistory.
 type History = ([Location], HistoryIndex)
 
--- TODO: there's an actual HostName, ServiceName in Network.TCP.Simple
+-- FIXME, TODO: there's an actual HostName, ServiceName in Network.TCP.Simple
 -- | Gopher location in the form of domain, port, resource/magic string,
 -- and the BrowserMode used to render it.
 type Location = (T.Text, Int, T.Text, RenderMode)
@@ -168,4 +168,6 @@ data RenderMode = MenuMode
                 | GotoMode
                 | OpenConfigMode
                 | MenuJumpMode
+                | BookmarksMode
+                | AddBookmarkMode
                 deriving (Eq, Show)

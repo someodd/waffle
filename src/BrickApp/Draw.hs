@@ -33,3 +33,5 @@ drawUI gbs = modeUI $ gbsRenderMode gbs
      GotoMode        -> modeUI (seFormerMode $ fromJust $ gbsStatus gbs)
      MenuJumpMode    -> modeUI (seFormerMode $ fromJust $ gbsStatus gbs)
      OpenConfigMode  -> openConfigModeUI gbs
+     BookmarksMode   -> menuModeUI gbs
+     AddBookmarkMode -> modeUI (seFormerMode $ fromJust $ gbsStatus gbs)
