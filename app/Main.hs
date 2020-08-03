@@ -6,6 +6,7 @@ import System.Environment
 import BrickApp
 import Config
 import Config.ConfigOpen
+import Config.Bookmarks
 
 handleArgs :: [String] -> IO ()
 handleArgs []                      = uiMain Nothing
@@ -19,6 +20,7 @@ main = do
   -- maybe could have a cli option to reset even
   setupConfigDirectory
   setupDefaultOpenConfig
+  setupDefaultBookmarks
   -- Now run!
   args <- getArgs
   handleArgs args

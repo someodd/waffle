@@ -1,3 +1,4 @@
+-- FIXME, TODO: why isn't this just in Config/ConfigOpen?
 -- | Open a file with the proper association set as a command in
 -- the config.
 
