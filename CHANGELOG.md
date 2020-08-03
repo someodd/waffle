@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Bookmarks!
 
-## Add
+### Add
 
   * Bookmarks are stored in `bookmarks.ini`, but
     can also be edited with the TUI using `ctrl` + `b`
@@ -19,7 +19,7 @@ Bookmarks!
   * Bookmark current page with `ctrl` + `p`
   * Help instructions for the new bookmark feature
 
-## Change
+### Change
 
   * Refactor utility code to be more reusable, specifically
     making `Menu`s into `MenuBuffer`s
