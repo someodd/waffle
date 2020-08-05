@@ -1,5 +1,6 @@
 module BrickApp.Handle.Menu.Find where
 
+import           Control.Monad.IO.Class
 import           Data.Maybe                               ( fromJust )
 
 import qualified Brick.Main                    as B
@@ -12,6 +13,7 @@ import           BrickApp.ModeAction.Menu.Find
 import           BrickApp.Types
 import           BrickApp.Utils
 import           BrickApp.Types.Names
+import BrickApp.ModeAction.Menu.State
 
 -- REDUNDANT FIXME (move to Utils/Status mayb?
 
@@ -21,7 +23,8 @@ menuFindEventHandler gbs e = case e of
     -- FIXME: esc quits! Change key...
   V.EvKey V.KEsc   [] -> B.continue $ statusEditorFormerMode gbs
   -- On enter save bookmark with the name inputted
-  -- V.EvKey V.KEnter [] -> liftIO (bookmarkCurrentLocation gbs) >>= B.continue
+  V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= B.continue
+  V.EvKey (V.KChar 'n') [V.MCtrl] -> B.continue =<< editorEventHandler gbs e
   _                   -> B.continue =<< editorEventHandler gbs e
  where
   -- FIXME: this should just be in utils!
