@@ -103,6 +103,8 @@ listDrawElement menu indx sel a = cursorRegion <+> possibleNumber <+> withAttr
       (Canonical ct) -> case ct of
         Directory -> withAttr directoryAttr $ txt " 📂 [Directory]"
         File      -> withAttr fileAttr $ txt " 📄 [File]"
+        GifFile   -> withAttr fileAttr $ txt " 🎥 [GIF]"
+        ImageFile -> withAttr fileAttr $ txt " 🖼 [Image]"
         IndexSearchServer ->
           withAttr indexSearchServerAttr $ txt " 🔎 [IndexSearchServer]"
         _ -> withAttr genericTypeAttr $ txt $ " [" <> T.pack (show ct) <> "]"
