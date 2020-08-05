@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Menu item finder!
+
+### Add
+
+  * Help documentation for menu find
+  * Menu finder: find a menu item that contains input text
+  * Utilities for the status bar editor
+
+### Fix
+
+  * Use a new `doEventIfModes` to replace `eventDependingMode`,
+    resolving some issues relating to the fact that some modes
+    should only be initiated if the current mode matches a
+    whitelist of modes. Tangibly, this means you will no longer
+    get stuck, for instance, if you enter goto mode while saving
+    a file, or in progress mode, etc.
+
+### Change
+
+  * Refactor a little bit of `Handle.hs`
+
 ## [0.12.0] - 2020-08-03
 
 Bookmarks!
