@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2020-08-05
+
+### Fix
+
+  * Made it so add bookmark could only be activated
+    if current mode is MenuMode or TextFileMode,
+    avoiding weird bugs like trying to bookmark
+    save file screen
+
 ## [0.13.0] - 2020-08-05
 
 Menu item finder!
