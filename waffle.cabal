@@ -142,6 +142,7 @@ library
     BrickApp.Handle.Help
     BrickApp.Handle.Menu
     BrickApp.Handle.Menu.Jump
+    BrickApp.Handle.Menu.Find
     BrickApp.Handle.Open
     BrickApp.Handle.Progress
     BrickApp.Handle.Save
@@ -153,6 +154,7 @@ library
     BrickApp.ModeAction.Menu
     BrickApp.ModeAction.Menu.Jump
     BrickApp.ModeAction.Menu.State
+    BrickApp.ModeAction.Menu.Find
     BrickApp.ModeAction.Open
     BrickApp.ModeAction.Progress
     BrickApp.ModeAction.Search

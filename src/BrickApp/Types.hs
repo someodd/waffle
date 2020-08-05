@@ -79,6 +79,7 @@ type Cache = Map.Map T.Text FilePath
 emptyCache :: Cache
 emptyCache = Map.empty
 
+-- FIXME: stop using List and use GenericList
 -- | For MenuBuffer...
 -- Simply used to store the current GopherMenu when viewing one during MenuMode.
 -- The second element is the widget which is used when rendering a GopherMenu.
@@ -170,4 +171,5 @@ data RenderMode = MenuMode
                 | MenuJumpMode
                 | BookmarksMode
                 | AddBookmarkMode
+                | MenuFindMode
                 deriving (Eq, Show)

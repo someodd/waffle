@@ -20,6 +20,7 @@ import BrickApp.Handle.Bookmarks
 import BrickApp.Handle.Progress
 import BrickApp.Handle.Menu
 import BrickApp.Handle.Menu.Jump
+import BrickApp.Handle.Menu.Find
 import BrickApp.Handle.Goto
 import BrickApp.Handle.TextFile
 import BrickApp.Handle.Search
@@ -38,6 +39,7 @@ appropriateHandler gbs e = case gbsRenderMode gbs of
   OpenConfigMode -> openConfigEventHandler gbs e
   BookmarksMode -> bookmarksEventHandler gbs e
   AddBookmarkMode -> addBookmarkEventHandler gbs e
+  MenuFindMode -> menuFindEventHandler gbs e
   -- FIXME: two separate ones because of the way we pass events and pattern match
   -- i.e., one for vtyhandler and one for the custom app events, which we should
   -- soon conflate by not matching specifically for VtyEvent (thus passing all events
