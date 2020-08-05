@@ -75,7 +75,8 @@ appEvent gbs (B.VtyEvent e@(V.EvKey V.KEsc []))
   | hasPopup gbs = B.continue $ closePopup gbs
   | otherwise   = appropriateHandler gbs e
 -- add new bookmark
-appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '+') [])) = B.continue $ initAddBookmarkMode gbs
+appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar '+') [])) =
+  doEventIfModes gbs [TextFileMode, MenuMode] (B.continue $ initAddBookmarkMode gbs) (appropriateHandler gbs e)
 -- FIXME
 -- This is the config mode, which currently just goes right into the menu item
 -- command association editor.
