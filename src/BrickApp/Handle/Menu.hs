@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Event handling for `MenuMode`.
 module BrickApp.Handle.Menu where
 
@@ -6,6 +8,7 @@ import           Control.Monad.IO.Class
 
 import qualified Graphics.Vty                  as V
 import qualified Brick.Main                    as M
+import qualified Brick.Widgets.Edit            as B
 import qualified Brick.Widgets.List            as L
 import qualified Brick.Types                   as T
 
@@ -17,6 +20,16 @@ import BrickApp.ModeAction.Progress
 import BrickApp.ModeAction.Menu
 import BrickApp.ModeAction.Menu.State
 import BrickApp.Utils
+
+-- This belongs in ModeAction FIXME
+initMenuFindMode :: GopherBrowserState -> GopherBrowserState
+initMenuFindMode gbs = gbs
+  { gbsRenderMode = MenuFindMode
+  , gbsStatus     = Just $ StatusEditor { seLabel = "Find item: "
+                                        , seEditorState = B.editor (MyName EditorViewport) Nothing ""
+                                        , seFormerMode = gbsRenderMode gbs
+                                        }
+  }
 
 menuEventHandler
   :: GopherBrowserState
@@ -55,6 +68,7 @@ menuEventHandler gbs e
     V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
     V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
     V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
+    V.EvKey (V.KChar '/') [] -> M.continue $ initMenuFindMode gbs
     -- FIXME: Implement jump to link # here...
     V.EvKey (V.KChar c) []   ->
       if isDigit c

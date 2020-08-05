@@ -1,3 +1,4 @@
+-- FIXME: put status stuff in Utils/StatusEditor.hs?
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Honestly, this is sloppily just a catchall for things many UI modules use. Should be sorted
@@ -17,7 +18,9 @@ module BrickApp.Utils
   , textViewportScroll
   , locationAsString
   , selectorToRenderMode
+  , statusEditorFormerMode
   , renderModeToItemChar
+  , getSearchEditorContents 
   ) where
 
 import qualified Data.Text                     as T
@@ -51,6 +54,25 @@ import           BrickApp.Types.Names                 ( AnyName(..), MyName(..) 
 import           BrickApp.Types.Helpers               ( isStatusEditing, hasPopup )
 import           BrickApp.Utils.Popup
 import           BrickApp.Utils.Style
+
+{- TODO:
+-- | A modification of the default Brick.Widgets.Edit event handler; changed to
+-- return a GopherBrowserState instead of just an editor state.
+statusEditorEventHandler
+  :: GopherBrowserState -> V.Event -> T.EventM AnyName GopherBrowserState
+-- TODO: e' is unused!
+statusEditorEventHandler _ e' =
+  -- Maybe this should be a general function in Representation.
+  let updateEditorInStatus x = gbs { gbsStatus = Just $ (fromJust $ gbsStatus gbs) { seEditorState = x } }
+  in  updateEditorInStatus
+        <$> B.handleEditorEvent e' (seEditorState $ fromJust $ gbsStatus gbs)
+-}
+
+statusEditorFormerMode :: GopherBrowserState -> GopherBrowserState
+statusEditorFormerMode g = g { gbsRenderMode = seFormerMode $ fromJust $ gbsStatus g, gbsStatus = Nothing }
+
+getSearchEditorContents :: GopherBrowserState -> T.Text
+getSearchEditorContents gbs = T.filter (/= '\n') $ T.unlines (B.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
 
 makePopupWidget :: GopherBrowserState -> B.Widget AnyName
 makePopupWidget gbs = 
