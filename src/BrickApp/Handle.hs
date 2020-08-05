@@ -46,15 +46,17 @@ appropriateHandler gbs e = case gbsRenderMode gbs of
   -- to the appropriate mode's handler)
   ProgressMode -> progressEventHandler gbs (Right e)
 
-eventDependingMode
+-- | Will do an event if the current `RenderMode` is in the allow list,
+-- otherwise another event will be performed.
+doEventIfModes
   :: GopherBrowserState
-  -> RenderMode
+  -> [RenderMode]
   -> B.EventM AnyName (B.Next GopherBrowserState)
   -> B.EventM AnyName (B.Next GopherBrowserState)
   -> B.EventM AnyName (B.Next GopherBrowserState)
-eventDependingMode gbs someRenderMode doThisIfMode doThisIfNotMode
-  | gbsRenderMode gbs /= someRenderMode = doThisIfNotMode
-  | otherwise          = doThisIfMode
+doEventIfModes gbs renderModesAllowList successEvent failEvent
+  | gbsRenderMode gbs `elem` renderModesAllowList = successEvent
+  | otherwise = failEvent
 
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
 -- some cases where we don't want history available
@@ -78,15 +80,17 @@ appEvent gbs (B.VtyEvent (V.EvKey (V.KChar '+') [])) = B.continue $ initAddBookm
 -- This is the config mode, which currently just goes right into the menu item
 -- command association editor.
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'c') [V.MCtrl])) =
-  eventDependingMode gbs OpenConfigMode (openConfigEventHandler gbs e) (initConfigOpenMode gbs)
+  -- Why not just have this function defer to the appropriateHandler on failure?
+  doEventIfModes gbs [OpenConfigMode] (openConfigEventHandler gbs e) (initConfigOpenMode gbs)
 -- Bookmark mode! FIXME this is a hack atm
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'b') [V.MCtrl])) =
   liftIO (initBookmarksMode gbs) >>= B.continue
+-- `GotoMode`... should only activate if in `HelpMode`, `TextFileMode`, or `MenuMode`.
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'g') [V.MCtrl])) =
-  eventDependingMode gbs GotoMode (appropriateHandler gbs e) (B.continue $ initGotoMode gbs)
+  doEventIfModes gbs [MenuMode, TextFileMode, HelpMode] (B.continue $ initGotoMode gbs) (appropriateHandler gbs e)
 -- TODO: needs to reset viewport
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar '?') [])) =
-  eventDependingMode gbs HelpMode (appropriateHandler gbs e) (liftIO (modifyGbsForHelp gbs) >>= B.continue)
+  doEventIfModes gbs [HelpMode] (appropriateHandler gbs e) (liftIO (modifyGbsForHelp gbs) >>= B.continue)
 -- FIXME: this could be easily fixed just by doing appEvent gbs e instead of vtyevent
 -- and leaving it up to eventhandlers
 -- What about above FIXME... event types should be deicphered by event handler?
