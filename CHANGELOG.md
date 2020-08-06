@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Add
+
+  * Docs/help for using jump to menu item #
+
 ## [0.16.0] - 2020-08-09
 
 ### Fix
