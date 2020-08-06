@@ -33,6 +33,11 @@ menu line. Press `ctrl` + `n` to jump to next item. Press
 `enter` to follow the currently selected menu item. Press
 `esc` to exit search mode. The search does not wrap.
 
+JUMP TO A MENU ITEM: Simply start typing a number and the menu
+item selected will correspond to the number you have typed.
+You can press `Enter` to follow the menu item, or hit `esc`,
+or anything not a number, to leave this mode.
+
 QUIT WAFFLE: ctrl+q.
 
 GOTO URI: open a Gopherspace by specifying a Gopher URI with `ctrl` + `g`.
