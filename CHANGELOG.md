@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   * Docs/help for using jump to menu item #
 
+### Change
+
+  * Make it so menu item find is case-insensitive
+
 ## [0.16.0] - 2020-08-09
 
 ### Fix
