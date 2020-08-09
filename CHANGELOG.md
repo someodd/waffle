@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2020-08-09
+
+### Fix
+
+  * Any bookmark which would alphabetically come before `DEFAULT`
+    would cause reading the bookmarks to crash Waffle. This has
+    been fixed!
+
 ## [0.15.0] - 2020-08-05
 
 ### Add
