@@ -38,7 +38,7 @@ bookmarksMenuText :: IO T.Text
 bookmarksMenuText = do
   cp <- getUserBookmarks
   -- It is noted in Data.ConfigFile to not do this
-  let sectionOptionsList = tail $ Map.toList $ CF.content cp -- this skips DEFAULT
+  let sectionOptionsList = filter (\x -> fst x /= "DEFAULT") $ Map.toList $ CF.content cp -- this skips DEFAULT
       menuLines          = map entryToMenuItemText sectionOptionsList
   pure $ T.intercalate "\n" menuLines
  where
