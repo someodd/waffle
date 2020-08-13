@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Add
 
   * Docs/help for using jump to menu item #
+  * Titlebar uses display string from links which led the user to the resource
 
 ### Change
 

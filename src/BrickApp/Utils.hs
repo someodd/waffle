@@ -160,8 +160,10 @@ cacheInsert location = Map.insert (locationAsString location)
 
 -- TODO: document and give a repl example
 locationAsString :: Location -> T.Text
-locationAsString (host, port, resource, mode) =
-  host <> ":" <> (T.pack $ show port) <> resource <> " (" <> (T.pack $ show mode) <> ")"
+locationAsString (host, port, resource, mode, displayString) =
+  case displayString of
+    Just d  -> d
+    Nothing -> host <> ":" <> (T.pack $ show port) <> resource <> " (" <> (T.pack $ show mode) <> ")"
 
 -- | From a generic `GopherMenu` to a TUI-specific `Buffer` type.
 menuToMenuBuffer :: GopherMenu -> Buffer
