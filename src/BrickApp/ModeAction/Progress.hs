@@ -51,7 +51,7 @@ modeTransition = do
 -- FIXME: could reset the scroll here...?
 -- | The entrypoint for using "progress mode" which...
 initProgressMode :: GopherBrowserState -> Maybe History -> Location -> IO GopherBrowserState
-initProgressMode gbs history location@(_, _, _, mode) =
+initProgressMode gbs history location@(_, _, _, mode, _) =
   let
     (downloader, message) = case mode of
       TextFileMode    -> (progressCacheable, "text file 📄")
@@ -91,7 +91,7 @@ initOpenMode gbs location itemType =
 
 -- FIXME: This could basically be turned into a higher level function with progressDownloadBytes or whatever which combo
 progressOpen :: GopherBrowserState -> ItemType -> Location -> IO ()
-progressOpen gbs itemType (host, port, resource, _) =
+progressOpen gbs itemType (host, port, resource, _, _) =
   connect (T.unpack host) (show port) $ \(connectionSocket, _) -> do
     let chan              = gbsChan gbs
         initialGBS = pbInitGbs (getProgress gbs) -- FIXME: not needed
@@ -138,7 +138,7 @@ counterMutator gbs someBytes =
 -- `(Socket, SockAddr)` in the event that nothing went wrong when
 -- establishing the socket connection.
 gracefulSock :: GopherBrowserState -> Location -> ((Socket, SockAddr) -> IO ()) -> IO ()
-gracefulSock gbs (host, port, _, _) handler = do
+gracefulSock gbs (host, port, _, _, _) handler = do
   result <- try $ connectSock (T.unpack host) (show port) :: IO (Either SomeException (Socket, SockAddr))
   case result of
     -- Left means exception: we want to make a popup to display that error.
@@ -190,7 +190,7 @@ makeErrorPopup gbs' exMsg =
 -- This is important for refreshing or navigating history (you don't want to update
 -- the history in those cases, so you supply Nothing).
 progressGetBytes :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressGetBytes initialProgGbs history location@(_, _, resource, _) =
+progressGetBytes initialProgGbs history location@(_, _, resource, _, _) =
   gracefulSock initialProgGbs location handleResult
   where
     handleResult (connectionSocket, _) = do
@@ -228,7 +228,7 @@ doFinalEvent
   -> T.Text
   -> Cache
   -> IO ()
-doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCache = do
+doFinalEvent chan initialProgGbs history location@(_, _, _, mode, _) contents newCache = do
   let
     finalState = case mode of
       TextFileMode -> initialProgGbs
@@ -262,7 +262,7 @@ doFinalEvent chan initialProgGbs history location@(_, _, _, mode) contents newCa
 -- | The progress downloader for resources we want to cache, which also end
 -- in a render mode associated with the resource requested. Not for save mode.
 progressCacheable :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressCacheable gbs history location@(_, _, _, _) =
+progressCacheable gbs history location@(_, _, _, _, _) =
   case cacheLookup location $ gbsCache gbs of
     -- There is a cache for the requested location, so let's load that, instead...
     (Just pathToCachedFile) -> do
@@ -280,7 +280,7 @@ progressCacheable gbs history location@(_, _, _, _) =
 -- | Download a binary file to a temporary locationkk
 -- Emits an Brick.T.AppEvent 
 progressDownloadBytes :: GopherBrowserState -> Maybe History -> Location -> IO ()
-progressDownloadBytes gbs _ (host, port, resource, _) =
+progressDownloadBytes gbs _ (host, port, resource, _, _) =
   connect (T.unpack host) (show port) $ \(connectionSocket, _) -> do
     let chan              = gbsChan gbs
         formerBufferState = gbsBuffer $ pbInitGbs (getProgress gbs) -- FIXME: not needed
@@ -352,8 +352,8 @@ newChangeHistory gbs newLoc =
 -- | Go up a directory; go to the parent menu of whatever the current selector is.
 goParentDirectory :: GopherBrowserState -> IO GopherBrowserState
 goParentDirectory gbs = do
-  let (host, port, magicString, _) = gbsLocation gbs
-      parentMagicString            = parentDirectory magicString
+  let (host, port, magicString, _, _) = gbsLocation gbs
+      parentMagicString               = parentDirectory magicString
   case parentMagicString of
     Nothing            -> pure gbs
-    Just newLocation   -> initProgressMode gbs Nothing (host, port, newLocation, MenuMode)
+    Just newLocation   -> initProgressMode gbs Nothing (host, port, newLocation, MenuMode, Nothing)

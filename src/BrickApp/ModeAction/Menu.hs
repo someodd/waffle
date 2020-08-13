@@ -91,7 +91,7 @@ jumpPrevLink menu = updateMenuPosition menu next
 -- the file!
 newStateFromOpenItem :: GopherBrowserState -> IO GopherBrowserState
 newStateFromOpenItem gbs =
-  initOpenMode gbs (host, port, resource, FileBrowserMode) lineType -- render mode not needed
+  initOpenMode gbs (host, port, resource, FileBrowserMode, Nothing) lineType -- render mode not needed
  where
   menu                             = getMenu gbs
   (host, port, resource, lineType) = case selectedMenuLine menu of

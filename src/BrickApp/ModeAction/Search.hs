@@ -17,4 +17,4 @@ mkSearchResponseState gbs = do
       resource = sbSelector $ getSearch gbs
       query    = T.unlines (E.getEditContents $ sbEditorState $ getSearch gbs)
       selector = searchSelector resource query
-  initProgressMode gbs Nothing (host, port, selector, MenuMode)
+  initProgressMode gbs Nothing (host, port, selector, MenuMode, Nothing)
