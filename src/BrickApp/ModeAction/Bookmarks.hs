@@ -116,8 +116,8 @@ createUriString hostName port itemTypeChar resource =
 bookmarkCurrentLocation :: GopherBrowserState -> IO GopherBrowserState
 bookmarkCurrentLocation gbs =
   -- FIXME: this get contents should be in utils or something
-  -- FIXME: fromJust is bad!
-  let (hostName, port, resource, renderMode) = gbsLocation gbs
+  -- FIXME: fromJust is bad!. Also this could have displayString as default
+  let (hostName, port, resource, renderMode, _) = gbsLocation gbs
       uri   = createUriString hostName port itemTypeChar resource
       inputValue = T.unpack $ T.filter (/= '\n') $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
       label = createDisplayString uri inputValue

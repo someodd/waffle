@@ -25,6 +25,9 @@ an associated external program. You can edit the assocations with
 ctrl + c for a UI or edit the config/INI directly at
 `~/.config/waffle/open.ini`.
 
+REFRESH A MENU OR TEXT FILE: press F5 to delete the current text file/menu's
+cache and reload the resource.
+
 GET INFO ON CURRENTLY SELECTED LINE: in menu/map mode, with `i`.
 
 SEARCH FOR MENU ITEM: Press `/` to start searching for a bit
@@ -32,6 +35,11 @@ of text to be found somewhere after the currently selected
 menu line. Press `ctrl` + `n` to jump to next item. Press
 `enter` to follow the currently selected menu item. Press
 `esc` to exit search mode. The search does not wrap.
+
+JUMP TO A MENU ITEM: Simply start typing a number and the menu
+item selected will correspond to the number you have typed.
+You can press `Enter` to follow the menu item, or hit `esc`,
+or anything not a number, to leave this mode.
 
 QUIT WAFFLE: ctrl+q.
 

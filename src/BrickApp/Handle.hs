@@ -8,11 +8,13 @@ import qualified Brick.Main                    as B
 import qualified Brick.Types                   as B
 import qualified Graphics.Vty                  as V
 
+import BrickApp.Utils                           ( cacheRemove )
 import BrickApp.Types.Names
 import BrickApp.Types.Helpers
 import BrickApp.Types
 import BrickApp.ModeAction.Help
 import BrickApp.ModeAction.Goto
+import BrickApp.ModeAction.Progress
 import BrickApp.ModeAction.Open
 import BrickApp.ModeAction.Bookmarks
 import BrickApp.Handle.Open
@@ -70,6 +72,10 @@ appEvent
   -> B.BrickEvent AnyName CustomEvent
   -> B.EventM AnyName (B.Next GopherBrowserState)
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = B.halt gbs
+appEvent gbs (B.VtyEvent e@(V.EvKey (V.KFun 5) [])) =
+  let newCache = cacheRemove (gbsLocation gbs) (gbsCache gbs)
+      newGbs   = gbs { gbsCache = newCache }
+  in  doEventIfModes gbs [TextFileMode, MenuMode] (liftIO (initProgressMode newGbs (Just $ gbsHistory gbs) (gbsLocation gbs)) >>= B.continue) (appropriateHandler gbs e)
 -- Close a popup if there is one, otherwise forward to appropriate handler!
 appEvent gbs (B.VtyEvent e@(V.EvKey V.KEsc []))
   | hasPopup gbs = B.continue $ closePopup gbs

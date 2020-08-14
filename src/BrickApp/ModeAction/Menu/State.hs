@@ -29,8 +29,8 @@ selectedMenuLine menu = case l ^. BrickList.listSelectedL of
 newStateFromSelectedMenuItem :: GopherBrowserState -> IO GopherBrowserState
 newStateFromSelectedMenuItem gbs = case lineType of -- FIXME: it's itemType
   (Canonical ct) -> case ct of
-    Directory -> initProgressMode gbs Nothing (host, port, resource, MenuMode)
-    File -> initProgressMode gbs Nothing (host, port, resource, TextFileMode)
+    Directory -> initProgressMode gbs Nothing (host, port, resource, MenuMode, Just displayString)
+    File -> initProgressMode gbs Nothing (host, port, resource, TextFileMode, Just displayString)
     IndexSearchServer -> pure gbs
       { gbsRenderMode = SearchMode
       , gbsBuffer     = SearchBuffer $ Search
@@ -43,20 +43,20 @@ newStateFromSelectedMenuItem gbs = case lineType of -- FIXME: it's itemType
                           }
       }
     ImageFile ->
-      initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
+      initProgressMode gbs Nothing (host, port, resource, FileBrowserMode, Nothing)
     -- FIXME: it's possible this could be an incorrect exception if everything isn't covered, like telnet
     -- so I need to implement those modes above and then of course this can be the catchall...
-    _ -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
+    _ -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode, Nothing)
   (NonCanonical nct) -> case nct of
     HtmlFile -> openBrowser (T.unpack $ T.drop 4 resource) >> pure gbs
     InformationalMessage -> pure gbs
     -- FIXME: same as previous comment...
-    _ -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode)
+    _ -> initProgressMode gbs Nothing (host, port, resource, FileBrowserMode, Nothing)
  where
   menu                             = getMenu gbs
-  (host, port, resource, lineType) = case selectedMenuLine menu of
+  (host, port, resource, lineType, displayString) = case selectedMenuLine menu of
     -- ParsedLine
-    Just (Parsed      gl) -> (glHost gl, glPort gl, glSelector gl, glType gl)
+    Just (Parsed      gl) -> (glHost gl, glPort gl, glSelector gl, glType gl, glDisplayString gl)
     -- FIXME: why even error here?
     -- Unrecognized/unparseable line
     Just (Unparseable _ ) -> error "Can't do anything with unrecognized line."

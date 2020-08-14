@@ -55,7 +55,7 @@ mkGotoResponseState gbs =
 
   -- | Try to parse a `Location` from `Text` (which is hopefully
   -- some kind of valid URI), or give back an error message.
-  tryLocationOrFail :: T.Text -> Either T.Text (T.Text, Int, T.Text, RenderMode)
+  tryLocationOrFail :: T.Text -> Either T.Text (T.Text, Int, T.Text, RenderMode, Maybe T.Text)
   tryLocationOrFail potentialURI = do
     parsedURI <- case (parseURI . T.unpack $ prefixSchemeIfMissing potentialURI) of
       Just uri -> Right uri
@@ -71,7 +71,7 @@ mkGotoResponseState gbs =
       ':':p  -> Right (read p :: Int)
       _      -> Left $ "Invalid URI (bad port)." -- I don' think this ever can occur with Network.URI...
     let resource = uriPath parsedURI
-    Right (T.pack regName, port, removeGopherType $ T.pack resource, selectorToRenderMode $ T.pack resource)
+    Right (T.pack regName, port, removeGopherType $ T.pack resource, selectorToRenderMode $ T.pack resource, Nothing)
 
 -- | Revert to mode prior to `GotoMode` being initiated.
 formerMode :: GopherBrowserState -> GopherBrowserState

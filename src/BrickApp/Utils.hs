@@ -8,6 +8,7 @@ module BrickApp.Utils
   , defaultBrowserUI
   , defaultOptimizedUI
   , menuToMenuBuffer
+  , cacheRemove
   , cacheLookup
   , isCached
   , newStateForMenu
@@ -146,22 +147,42 @@ defaultOptimizedUI gbs titleWidget mainWidget statusWidget = [makePopupWidget gb
     ]
 
 
--- WRONG TYPE, MAYBE IS NECESSARY
-cacheLookup :: Location -> Cache -> Maybe FilePath
-cacheLookup location = Map.lookup (locationAsString location)
+-- | Basically a URI without the gopher:// scheme.
+type CacheKey = T.Text
 
+-- | Creates a `CacheKey` from a `Location`.
+locationToCacheKey :: Location -> CacheKey
+locationToCacheKey (host, port, resource, _, _) =
+  host <> ":" <> (T.pack $ show port) <> resource
+
+-- | Get the path to the temporary file/cache which corresponds to the `Location`.
+cacheLookup :: Location -> Cache -> Maybe FilePath
+cacheLookup location = Map.lookup (locationToCacheKey location)
+
+-- | Remove a cache entry for a given `Location`.
+cacheRemove :: Location -> Cache -> Cache
+cacheRemove location = Map.delete (locationToCacheKey location)
+
+-- | Check if a `Location` already exists in the cache.
+-- In other words, checks if something is already cached or not.
 isCached :: Location -> Cache -> Bool
-isCached location cache = case Map.lookup (locationAsString location) cache of
+isCached location cache = case Map.lookup (locationToCacheKey location) cache of
   (Just _) -> True
   Nothing  -> False
 
+-- | Update the cache so the `FilePath` to the cache temporary file
+-- supplied, corresponds to a `Location`.
 cacheInsert :: Location -> FilePath -> Cache -> Cache
-cacheInsert location = Map.insert (locationAsString location)
+cacheInsert location = Map.insert (locationToCacheKey location)
 
+-- FIXME: may as well make location a record?
+-- TODO: just make an instance for location?
 -- TODO: document and give a repl example
 locationAsString :: Location -> T.Text
-locationAsString (host, port, resource, mode) =
-  host <> ":" <> (T.pack $ show port) <> resource <> " (" <> (T.pack $ show mode) <> ")"
+locationAsString (host, port, resource, mode, displayString) =
+  case displayString of
+    Just d  -> d
+    Nothing -> host <> ":" <> (T.pack $ show port) <> resource <> " (" <> (T.pack $ show mode) <> ")"
 
 -- | From a generic `GopherMenu` to a TUI-specific `Buffer` type.
 menuToMenuBuffer :: GopherMenu -> Buffer
