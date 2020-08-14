@@ -25,6 +25,9 @@ an associated external program. You can edit the assocations with
 ctrl + c for a UI or edit the config/INI directly at
 `~/.config/waffle/open.ini`.
 
+REFRESH A MENU OR TEXT FILE: press F5 to delete the current text file/menu's
+cache and reload the resource.
+
 GET INFO ON CURRENTLY SELECTED LINE: in menu/map mode, with `i`.
 
 SEARCH FOR MENU ITEM: Press `/` to start searching for a bit
