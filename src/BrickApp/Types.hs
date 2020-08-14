@@ -118,9 +118,10 @@ type HistoryIndex = Int
 type History = ([Location], HistoryIndex)
 
 -- FIXME, TODO: there's an actual HostName, ServiceName in Network.TCP.Simple
+-- FIXME: maybe at this point better to use record syntax
 -- | Gopher location in the form of domain, port, resource/magic string,
--- and the BrowserMode used to render it.
-type Location = (T.Text, Int, T.Text, RenderMode)
+-- the BrowserMode used to render it, and finally an optional display string.
+type Location = (T.Text, Int, T.Text, RenderMode, Maybe T.Text)
 
 -- FinalNewStateEvent is used for transition handlers and for sending the new state (like the new page; setting it as the new gbs)
 -- | Carries through the entire state I guess!

@@ -33,8 +33,9 @@ menuModeUI gbs = defaultBrowserUI gbs
                                   statusWidget
  where
   (Menu (_, l, _)) = getMenu gbs
-  titleWidget =
-    let (host, port, resource, _) = gbsLocation gbs
+  titleWidget = maybe defaultTitle txt (let (_, _, _, _, displayString) = gbsLocation gbs in displayString)
+  defaultTitle =
+    let (host, port, resource, _, _) = gbsLocation gbs
     in  txt
           $  " "
           <> host

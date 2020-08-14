@@ -19,7 +19,8 @@ selectFirstFound gbs =
     then gbs
     else
       let Menu (gopherMenu, brickList, focusLines) = getMenu gbs
-          newList = listFindBy (T.isInfixOf inputValue) brickList
+          newList = listFindBy (compareText inputValue) brickList
       in  gbs { gbsBuffer = MenuBuffer $ Menu (gopherMenu, newList, focusLines) }
  where
   inputValue = getSearchEditorContents gbs
+  compareText x y = T.toLower x `T.isInfixOf` (T.toLower y)
