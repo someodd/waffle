@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   * Docs/help for using jump to menu item #
   * Titlebar uses display string from links which led the user to the resource
+  * Refresh feature! Press F5 to reload a text file or a menu!
 
 ### Change
 

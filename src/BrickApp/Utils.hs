@@ -8,6 +8,7 @@ module BrickApp.Utils
   , defaultBrowserUI
   , defaultOptimizedUI
   , menuToMenuBuffer
+  , cacheRemove
   , cacheLookup
   , isCached
   , newStateForMenu
@@ -157,6 +158,10 @@ locationToCacheKey (host, port, resource, _, _) =
 -- | Get the path to the temporary file/cache which corresponds to the `Location`.
 cacheLookup :: Location -> Cache -> Maybe FilePath
 cacheLookup location = Map.lookup (locationToCacheKey location)
+
+-- | Remove a cache entry for a given `Location`.
+cacheRemove :: Location -> Cache -> Cache
+cacheRemove location = Map.delete (locationToCacheKey location)
 
 -- | Check if a `Location` already exists in the cache.
 -- In other words, checks if something is already cached or not.
