@@ -6,7 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.17.0]
+## [0.18.0] - 2020-08-14
+
+### Fix
+
+  * Issue with menu find and pressing enter to follow a link found
+    when it's a link to a text file, the find search bar would stay
+    open in the bottom/status bar
+
+## [0.17.0] - 2020-08-14
 
 ### Add
 
