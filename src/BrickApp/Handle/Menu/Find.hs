@@ -23,7 +23,7 @@ menuFindEventHandler gbs e = case e of
     -- FIXME: esc quits! Change key...
   V.EvKey V.KEsc   [] -> B.continue $ statusEditorFormerMode gbs
   -- On enter save bookmark with the name inputted
-  V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem gbs) >>= B.continue
+  V.EvKey V.KEnter [] -> liftIO (newStateFromSelectedMenuItem $ gbs { gbsStatus = Nothing }) >>= B.continue
   V.EvKey (V.KChar 'n') [V.MCtrl] -> B.continue =<< editorEventHandler gbs e
   _                   -> B.continue =<< editorEventHandler gbs e
  where
