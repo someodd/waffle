@@ -81,4 +81,5 @@ uiMain possibleLocation = do
             }
       in initProgressMode initialGbs (Just history) trueLocationType
 
-  void $ B.customMain initialVty buildVty (Just eventChan) theApp initialState
+  theme <- getTheme
+  void $ B.customMain initialVty buildVty (Just eventChan) (theApp {B.appAttrMap=const theme}) initialState

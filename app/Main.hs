@@ -7,6 +7,7 @@ import BrickApp
 import Config
 import Config.ConfigOpen
 import Config.Bookmarks
+import Config.Theme
 
 handleArgs :: [String] -> IO ()
 handleArgs []                      = uiMain Nothing
@@ -21,6 +22,7 @@ main = do
   setupConfigDirectory
   setupDefaultOpenConfig
   setupDefaultBookmarks
+  setupDefaultTheme
   -- Now run!
   args <- getArgs
   handleArgs args
