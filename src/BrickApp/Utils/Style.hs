@@ -7,6 +7,7 @@ module BrickApp.Utils.Style
   , inputDialogBorder
   , inputDialogBorderAttr
   , borderMappingsInputDialog
+  , getTheme
   , borderMappings
   , errorAttr
   , inputDialogAttr
@@ -23,6 +24,11 @@ module BrickApp.Utils.Style
   , genericTypeAttr
   ) where
 
+import           Brick.Themes ( Theme
+                              , newTheme
+                              , themeToAttrMap
+                              , loadCustomizations
+                              )
 import qualified Brick.Widgets.List            as L
 import qualified Graphics.Vty                  as V
 import qualified Brick.Widgets.FileBrowser     as FB
@@ -33,6 +39,22 @@ import qualified Brick.Widgets.Border          as B
 import           Brick.Util                     ( fg
                                                 , on
                                                 )
+
+import           Config.Theme ( getUserThemePath )
+
+-- | In order to use ini-defined themes we need to have a default `Theme`,
+-- as that's the way `Brick` works.
+defaultTheme :: Theme
+defaultTheme = newTheme (V.white `on` V.blue) listMapThingy
+
+-- | Load the main theme..
+getTheme :: IO A.AttrMap
+getTheme = do
+  userThemePath <- getUserThemePath
+  perhapsTheme <- loadCustomizations userThemePath defaultTheme
+  case perhapsTheme of
+    Left errorMessage -> error errorMessage
+    Right theme -> pure $ themeToAttrMap theme
 
 -- TODO: this all feels very messy
 customAttr :: A.AttrName
@@ -81,14 +103,13 @@ inputDialogLabelAttr = "inputDialogLabelAttr"
 inputDialogAttr :: A.AttrName
 inputDialogAttr = "inputDialogAttr"
 
-theMap :: A.AttrMap
-theMap = A.attrMap
-  V.defAttr
+listMapThingy :: [(A.AttrName, V.Attr)]
+listMapThingy =
   [ (L.listAttr, V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
   , ( L.listSelectedAttr
     , (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white
     )
-  , ( inputDialogAttr
+  , ( inputDialogAttr-- FIXME: unused?
     , V.rgbColor (255 :: Int) (255 :: Int) (0 :: Int)
       `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int)
     )
@@ -125,6 +146,10 @@ theMap = A.attrMap
   , (FB.fileBrowserSelectedAttr        , V.white `on` V.magenta)
   , (errorAttr                         , fg V.red)
   ]
+
+theMap :: A.AttrMap
+theMap = A.attrMap
+  V.defAttr listMapThingy
 
 customBorder :: BS.BorderStyle
 customBorder = BS.BorderStyle { BS.bsCornerTL      = '▚'

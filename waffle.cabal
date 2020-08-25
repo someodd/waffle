@@ -120,6 +120,7 @@ library
     Config
     Config.ConfigOpen
     Config.Bookmarks
+    Config.Theme
 
     BrickApp
 
