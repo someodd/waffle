@@ -12,10 +12,10 @@ name:                waffle
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.18.0.0
+version:             0.19.0.0
 
 -- A short (one-line) description of the package.
-synopsis:            Gopher protocol client
+synopsis:            Gopher protocol TUI client
 
 -- A longer description of the package.
 description:
