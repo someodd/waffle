@@ -100,12 +100,14 @@ inputFieldAttr = "inputField"
 inputDialogLabelAttr :: A.AttrName
 inputDialogLabelAttr = "inputDialogLabelAttr"
 
+-- I don't think this is being used FIXME
 inputDialogAttr :: A.AttrName
 inputDialogAttr = "inputDialogAttr"
 
 listMapThingy :: [(A.AttrName, V.Attr)]
 listMapThingy =
   [ (L.listAttr, V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
+  -- The forecolor below effectively does *nothing*
   , ( L.listSelectedAttr
     , (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.white
     )
@@ -151,6 +153,7 @@ theMap :: A.AttrMap
 theMap = A.attrMap
   V.defAttr listMapThingy
 
+-- FIXME: better name and make configurable through INI
 customBorder :: BS.BorderStyle
 customBorder = BS.BorderStyle { BS.bsCornerTL      = '▚'
                               , BS.bsCornerTR      = '▚'
@@ -165,6 +168,7 @@ customBorder = BS.BorderStyle { BS.bsCornerTL      = '▚'
                               , BS.bsVertical      = ' '
                               }
 
+-- FIXME: make configurable through INI
 -- Round oval
 inputDialogBorder :: BS.BorderStyle
 inputDialogBorder = BS.BorderStyle { BS.bsCornerTL      = '░'
