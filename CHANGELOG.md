@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2020-09-03
+
+### Change
+
+  * Rename theme attributes to give a much more readable and intuitive theme/INI
+    interface
+
 ## [0.19.0] - 2020-08-24
 
 ### Add
