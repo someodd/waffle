@@ -56,37 +56,51 @@ getTheme = do
     Left errorMessage -> error errorMessage
     Right theme -> pure $ themeToAttrMap theme
 
+menuLineAttr :: A.AttrName
+menuLineAttr = menuAttr <> "line"
+
 -- TODO: this all feels very messy
 customAttr :: A.AttrName
-customAttr = "custom"
+customAttr = menuLineAttr <> "selected"
 
 custom2Attr :: A.AttrName
-custom2Attr = "custom2"
+custom2Attr = textAttr <> "selected"
 
+-- | This style attribute is used for the menus in gopherspace.
+-- The menus are just a specific kind of list.
+menuAttr :: A.AttrName
+menuAttr = "menu"
+
+-- | This is the bit that describes the line's item type
+itemDescAttr :: A.AttrName
+itemDescAttr = menuLineAttr <> "itemDesc"
+
+-- | This is used for the item type indicator in menus...
 directoryAttr :: A.AttrName
-directoryAttr = "directoryAttr"
+directoryAttr = itemDescAttr <> "directory"
 
 fileAttr :: A.AttrName
-fileAttr = "fileAttr"
+fileAttr = itemDescAttr <> "file"
 
 indexSearchServerAttr :: A.AttrName
-indexSearchServerAttr = "indexSearchServerAttr"
+indexSearchServerAttr = itemDescAttr <> "indexSearchServer"
 
+-- | A catchall, in other words "other."
 genericTypeAttr :: A.AttrName
-genericTypeAttr = "genericTypeAttr"
+genericTypeAttr = itemDescAttr <> "generic"
 
 numberPrefixAttr :: A.AttrName
-numberPrefixAttr = "numberPrefixAttr"
+numberPrefixAttr = menuAttr <> "numberPrefix"
 
 linkAttr :: A.AttrName
-linkAttr = "linkAttr"
+linkAttr = menuLineAttr <> "linkString"
 
 textAttr :: A.AttrName
-textAttr = "textAttr"
+textAttr = menuLineAttr <> "info"
 
 -- TODO: bad name now...
 asteriskAttr :: A.AttrName
-asteriskAttr = "asteriskAttr"
+asteriskAttr = menuAttr <> "asterisk"
 
 titleAttr :: A.AttrName
 titleAttr = "titleAttr"
@@ -97,8 +111,11 @@ errorAttr = "error"
 inputFieldAttr :: A.AttrName
 inputFieldAttr = "inputField"
 
+popupAttr :: A.AttrName
+popupAttr = "popup"
+
 inputDialogLabelAttr :: A.AttrName
-inputDialogLabelAttr = "inputDialogLabelAttr"
+inputDialogLabelAttr = popupAttr <> "label"
 
 -- I don't think this is being used FIXME
 inputDialogAttr :: A.AttrName
