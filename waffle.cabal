@@ -116,6 +116,7 @@ library
     Gopher
     Open
     GopherNet
+    Bookmarks
 
     Config
     Config.ConfigOpen
