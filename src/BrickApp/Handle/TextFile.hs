@@ -31,7 +31,13 @@ textFileEventHandler
   -> V.Event
   -> T.EventM AnyName (T.Next GopherBrowserState)
 textFileEventHandler gbs e = case e of
+  -- NOTE: maybe you should be able to save menus, too!
+  V.EvKey (V.KChar 's') [V.MCtrl] ->
+    liftIO (initProgressMode gbs Nothing (host, port, resource, FileBrowserMode, displayString)) >>= M.continue
+  -- FIXME: these aren't specific to text file mode what the heck?!
   V.EvKey (V.KChar 'u') [] -> liftIO (goParentDirectory gbs) >>= M.continue
   V.EvKey (V.KChar 'f') [] -> liftIO (goHistory gbs 1) >>= M.continue
   V.EvKey (V.KChar 'b') [] -> liftIO (goHistory gbs (-1)) >>= M.continue
   _                        -> basicTextFileEventHandler gbs e
+ where
+  (host, port, resource, _, displayString) = gbsLocation gbs
