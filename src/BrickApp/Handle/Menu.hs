@@ -44,6 +44,10 @@ menuEventHandler gbs e
   |
   --- Handle controlling the menu.
     otherwise = case e of
+    -- Save a menu
+    V.EvKey (V.KChar 's') [V.MCtrl] -> do
+      let (host, port, resource, _, displayString) = gbsLocation gbs
+      liftIO (initProgressMode gbs Nothing (host, port, resource, FileBrowserMode, displayString)) >>= M.continue
     V.EvKey (V.KChar 'i') [] -> M.continue $ lineInfoPopup gbs
     V.EvKey V.KEnter [] ->
       liftIO (newStateFromSelectedMenuItem gbs) >>= M.continue
