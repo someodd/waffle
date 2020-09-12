@@ -1,3 +1,4 @@
+-- FIXME: put a lot of this into ModeAction/Save.hs
 -- | Handle events for `SaveMode`
 module BrickApp.Handle.Save where
 
@@ -100,9 +101,10 @@ saveEventHandler gbs e = case e of
         then liftIO (doCallBack fileOutPath) >>= M.continue
         else M.continue (upFileBrowserBuffer gbs' b')
  where
+  (_, _, _, formerRenderMode, _) = gbsLocation gbs
   fromFileBrowserBuffer = fbFileBrowser
   returnFormerState g = g { gbsBuffer = fbFormerBufferState $ getSaveBrowser g
-                          , gbsRenderMode = MenuMode
+                          , gbsRenderMode = formerRenderMode
                           }
   isNamingFile g = fbIsNamingFile (getSaveBrowser g)
 
@@ -114,5 +116,5 @@ saveEventHandler gbs e = case e of
   doCallBack a = do
     fbCallBack (getSaveBrowser gbs) a
     pure $ gbs { gbsBuffer     = fbFormerBufferState $ getSaveBrowser gbs
-               , gbsRenderMode = MenuMode
+               , gbsRenderMode = formerRenderMode
                }
