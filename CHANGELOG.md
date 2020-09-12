@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2020-09-12
+
+### Add
+
+  * Saving of menus and text files in gopherspace!
+
 ## [0.21.0] - 2020-09-12
 
 ### Add
