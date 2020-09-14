@@ -3,9 +3,12 @@
 -- | The heavy-lifting/actual actions of `GotoMode`.
 module BrickApp.ModeAction.Goto where
 
+import           Control.Monad.IO.Class
 import           Data.Maybe
 import qualified Data.Text                     as T
 
+import qualified Brick.Main                    as M
+import qualified Brick.Types                   as B
 import           Brick.Widgets.Core             ( txt )
 import           Brick.Widgets.Edit            as E
 import           Network.URI
@@ -13,6 +16,7 @@ import           Network.URI
 import BrickApp.Types
 import BrickApp.Types.Names
 import BrickApp.Utils
+import BrickApp.Utils.WaffleAddresses
 import BrickApp.ModeAction.Progress
 import Gopher
 
@@ -31,13 +35,20 @@ initGotoMode gbs = gbs
 -- FIXME: what if bad input?! what if can't resolve? errors in network need better handling
 -- FIXME: what if NOT a menu!
 -- should this be a part of progress? or ge called by progress instead?
-mkGotoResponseState :: GopherBrowserState -> IO GopherBrowserState
+--mkGotoResponseState :: GopherBrowserState -> IO GopherBrowserState
+mkGotoResponseState :: GopherBrowserState -> B.EventM AnyName (B.Next GopherBrowserState)
 mkGotoResponseState gbs =
   -- get the host, port, selector
   let unparsedURI = T.filter (/= '\n')
         $ T.unlines (E.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
       formerGbs = formerMode gbs
-  in  either (errorPopup gbs unparsedURI) (initProgressMode formerGbs Nothing) (tryLocationOrFail unparsedURI)
+  -- here is where i detect type first
+  -- I should modularize this to be used elsewhere like home or follow links?
+  in  case  waffleAddressEvent gbs unparsedURI of
+        -- It was a valid waffle:// address
+        Just event -> event
+        -- It was not a valid waffle:// address and is (hopefully) some valid gopher:// address
+        Nothing    -> liftIO (either (errorPopup gbs unparsedURI) (initProgressMode formerGbs Nothing) (tryLocationOrFail unparsedURI)) >>= M.continue
  where
   prefixSchemeIfMissing :: T.Text -> T.Text
   prefixSchemeIfMissing potentialURI

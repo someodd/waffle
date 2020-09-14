@@ -91,6 +91,7 @@ appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'c') [V.MCtrl])) =
   doEventIfModes gbs [OpenConfigMode] (openConfigEventHandler gbs e) (initConfigOpenMode gbs)
 -- Bookmark mode! FIXME this is a hack atm
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'b') [V.MCtrl])) =
+  -- FIXME: will be able to keep opening bookmarks which will resutl in bug
   liftIO (initBookmarksMode gbs) >>= B.continue
 -- `GotoMode`... should only activate if in `HelpMode`, `TextFileMode`, or `MenuMode`.
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'g') [V.MCtrl])) =
