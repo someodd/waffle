@@ -19,8 +19,8 @@ import BrickApp.ModeAction.Open
 openConfigEventHandler
   :: GopherBrowserState -> Event -> T.EventM AnyName (T.Next GopherBrowserState)
 openConfigEventHandler gbs e = case e of
-  V.EvKey V.KBackTab [] -> scrollFocusPrev (getFocusRing gbs) >> M.continue (updateGbs gbs focusPrev)
-  V.EvKey (V.KChar '\t') [] -> scrollFocusNext (getFocusRing gbs) >> M.continue (updateGbs gbs focusNext)
+  V.EvKey V.KBackTab [] -> M.continue (updateGbs gbs focusPrev)
+  V.EvKey (V.KChar '\t') [] -> M.continue (updateGbs gbs focusNext)
   V.EvKey (V.KChar 's') [V.MCtrl] -> liftIO (saveConfig (getOpenConfig gbs)) >> M.continue (addSavedPopup gbs)
     -- FIXME: ctrl+c quits!
   V.EvKey V.KEsc [] -> M.continue $ returnFormerGbs gbs

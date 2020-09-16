@@ -88,7 +88,7 @@ appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar '+') [])) =
 -- command association editor.
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'c') [V.MCtrl])) =
   -- Why not just have this function defer to the appropriateHandler on failure?
-  doEventIfModes gbs [OpenConfigMode] (openConfigEventHandler gbs e) (initConfigOpenMode gbs)
+  doEventIfModes gbs [OpenConfigMode] (openConfigEventHandler gbs e) (liftIO (initConfigOpenMode gbs) >>= B.continue)
 -- Bookmark mode! FIXME this is a hack atm
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'b') [V.MCtrl])) =
   -- FIXME: will be able to keep opening bookmarks which will resutl in bug

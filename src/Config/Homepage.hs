@@ -4,7 +4,6 @@
 
 module Config.Homepage where
 
-{-
 import           System.FilePath
 import qualified Data.ByteString.Lazy as BL
 
@@ -13,23 +12,22 @@ import           Data.ConfigFile
 
 import           Config                            ( getConfigDirectory, readConfigParser, doIfPathDoesntExist )
 
-defaultOpenConfig :: BL.ByteString
-defaultOpenConfig = BL.fromStrict $(embedFile "data/open.ini")
+defaultHomepageConfig :: BL.ByteString
+defaultHomepageConfig = BL.fromStrict $(embedFile "data/homepage.ini")
 
 -- TODO: maybe should be setupFactoryOpenConfig
-setupDefaultOpenConfig :: IO ()
-setupDefaultOpenConfig = do
-  userOpenConfigPath <- getUserOpenConfigPath
-  doIfPathDoesntExist userOpenConfigPath (BL.writeFile userOpenConfigPath defaultOpenConfig)
+setupDefaultHomepageConfig :: IO ()
+setupDefaultHomepageConfig = do
+  userHomepageConfigPath <- getUserHomepageConfigPath
+  doIfPathDoesntExist userHomepageConfigPath (BL.writeFile userHomepageConfigPath defaultHomepageConfig)
 
 -- | Get the `FilePath` to the user's open/associations configuration file.
-getUserOpenConfigPath :: IO FilePath
-getUserOpenConfigPath = do
+getUserHomepageConfigPath :: IO FilePath
+getUserHomepageConfigPath = do
   configDir <- getConfigDirectory
-  pure $ joinPath [configDir, "open.ini"]
+  pure $ joinPath [configDir, "homepage.ini"]
 
 -- | The default open.ini list of associations between item types and
 -- commands to open them.
-getUserOpenConfig :: IO ConfigParser
-getUserOpenConfig = getUserOpenConfigPath >>= readConfigParser
--}
+getUserHomepageConfig :: IO ConfigParser
+getUserHomepageConfig = getUserHomepageConfigPath >>= readConfigParser

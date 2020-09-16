@@ -4,7 +4,6 @@
 -- opening a menu item of specific types.
 module BrickApp.ModeAction.Open where
 
-import           Control.Monad.IO.Class
 import           Data.List                      ( intersperse )
 
 import qualified Brick.Focus as F
@@ -14,6 +13,7 @@ import Brick.Widgets.Core
   , vLimit
   , str
   , txt
+  , visible
   )
 import qualified Brick.Main                    as M
 import qualified Brick.Types                   as T
@@ -42,8 +42,8 @@ beginningScroll = M.vScrollToBeginning myNameScroll >> M.vScrollBy myNameScroll 
 --initConfigOpenMode :: GopherBrowserState -> GopherBrowserState
 initConfigOpenMode ::
   GopherBrowserState
-  -> T.EventM AnyName (T.Next GopherBrowserState)
-initConfigOpenMode gbs = M.vScrollToBeginning myNameScroll >> (liftIO gbsToGiveBack >>= M.continue)
+  -> IO GopherBrowserState
+initConfigOpenMode gbs = gbsToGiveBack
  where
   gbsToGiveBack :: IO GopherBrowserState
   gbsToGiveBack = do
@@ -123,8 +123,12 @@ editWidgets :: OpenConfigState -> [T.Widget AnyName]
 editWidgets openConfigState =
   intersperse (str " ") $ map makeField editFields
  where
+  -- if it is the current focus add "visible"
   customRenderEditor :: Bool -> E.Editor String AnyName -> T.Widget AnyName
-  customRenderEditor = E.renderEditor (str . unlines)
+  customRenderEditor hasFocus theEditor =
+    if hasFocus
+      then visible $ E.renderEditor (str . unlines) hasFocus theEditor
+      else E.renderEditor (str . unlines) hasFocus theEditor
 
   fieldWidth = 30
 
