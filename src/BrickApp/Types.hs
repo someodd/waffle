@@ -112,6 +112,7 @@ type FocusLines = [Int]
 -- 0 is the oldest location in history. See also: GopherBrowserState.
 type HistoryIndex = Int
 
+-- TODO: maybe the location stack could be called history stack or something like that
 -- TODO: what if history also saved which line # you were on in cas eyou go back and forward
 -- The history is a list of locations, where 0th element is the oldest and new
 -- locations are appended. See also: newChangeHistory.

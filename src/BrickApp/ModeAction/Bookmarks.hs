@@ -53,6 +53,7 @@ initBookmarksMode gbs = do
              , gbsRenderMode = BookmarksMode
              , gbsStatus = Nothing
              , gbsPopup = Nothing
+             , gbsLocation = ("", 0, "", MenuMode, Just "Bookmarks")
              }
 
 -- | Create the display string/SectionSpec using the URI of
