@@ -18,13 +18,22 @@ import           BrickApp.ModeAction.Bookmarks
 formerMode :: GopherBrowserState -> GopherBrowserState
 formerMode g = g { gbsRenderMode = seFormerMode $ fromJust $ gbsStatus g, gbsStatus = Nothing }
 
+-- NOTE: it's worth noting that the bookmarks feature is build around lazily using the existing menu feature
+-- so it's just build directly on top of the menu's renderer, handler, etc.
 bookmarksEventHandler
   :: GopherBrowserState
   -> V.Event
   -> T.EventM AnyName (T.Next GopherBrowserState)
 bookmarksEventHandler gbs e =
   case e of
-    V.EvKey V.KEsc   []      -> liftIO (initProgressMode gbs (Just $ gbsHistory gbs) (gbsLocation gbs)) >>= B.continue
+    V.EvKey V.KEsc   []      -> do
+      -- LOL all this is all done so we can have the display string in title since we're
+      -- using the menu's draw code (lazy, but DRY)
+      if let (_, historyIndex) = gbsHistory gbs in historyIndex == (-1)
+        then B.continue gbs
+        else let (historyStack, historyIndex) = gbsHistory gbs
+                 currentLocation              = historyStack !! historyIndex
+             in  liftIO (initProgressMode gbs (Just $ gbsHistory gbs) currentLocation) >>= B.continue
     V.EvKey (V.KChar 'd') [] -> liftIO (removeSelectedBookmark gbs) >>= B.continue
     _                        -> menuEventHandler gbs e
 
