@@ -5,10 +5,12 @@
 -- opening a menu item of specific types.
 module BrickApp.ModeAction.Bookmarks where
 
+import qualified Data.Map as Map
 import           Data.Maybe                     ( fromJust )
 import qualified Data.Text                     as T
 import           Data.List                      ( intercalate )
 
+import qualified Brick.Widgets.Dialog as D
 import           Brick.Widgets.Edit            as E
 import           Brick.Widgets.Core             ( str )
 import qualified Data.ConfigFile               as CF
@@ -91,7 +93,11 @@ bookmarkCurrentLocation gbs =
       label = createDisplayString uri inputValue
       itemTypeChar = renderModeToItemChar renderMode
       bookmark = (label, T.unpack hostName, port, T.unpack resource, itemTypeChar)
-      popup    = Popup { pLabel = "Added Bookmark", pWidgets = [str $ "Added: " ++ inputValue], pHelp = T.pack uri }
+      popup             = Popup
+                            { pDialogWidget = D.dialog (Just "Added Bookmark") (Just (0, [ ("Ok", Ok) ])) 50--wtf what about max width for bug
+                            , pDialogMap = Map.fromList [("Ok", pure . closePopup)]
+                            , pDialogBody = str $ "Added: " ++ inputValue
+                            }
   -- FIXME: fromJust!
   in addBookmark bookmark >> pure (gbs { gbsPopup = Just popup, gbsStatus = Nothing, gbsRenderMode = seFormerMode (fromJust . gbsStatus $ gbs) } )
 

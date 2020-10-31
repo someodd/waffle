@@ -6,6 +6,7 @@
 -- menus, text files, and binary file downloads.
 module BrickApp.ModeAction.Progress where
 
+import qualified Data.Map as Map
 import           Control.Exception
 import           Data.Text.Encoding.Error       (lenientDecode)
 import           Data.Text.Encoding            as E
@@ -15,6 +16,7 @@ import qualified Data.ByteString               as ByteString
 import           Control.Concurrent             ( forkIO )
 import           System.Directory               ( renameFile )
 
+import qualified Brick.Widgets.Dialog as D
 import           System.FilePath                ( takeFileName )
 import           Network.Simple.TCP
 import qualified Brick.Widgets.FileBrowser     as FB
@@ -174,7 +176,12 @@ makeErrorPopup gbs' exMsg =
                                           Nothing -> gbsRenderMode formerGbs
                             x        -> x
       newBuffState      = formerGbs { gbsRenderMode = formerMode }
-      errorPopup        = Just $ Popup { pLabel = "Network/Goto Error", pWidgets = [txt exMsg], pHelp = "Couldn't reach supplied address. ESC to return..."}
+      popup             = Popup
+                            { pDialogWidget = D.dialog (Just "Network/Goto Error!") (Just (0, [ ("Ok", Ok) ])) 50--wtf what about max width for bug
+                            , pDialogMap = Map.fromList [("Ok", pure . closePopup)]
+                            , pDialogBody = txt exMsg
+                            }
+      errorPopup        = Just popup
       finalState        = newBuffState { gbsPopup = errorPopup }-- TODO, FIXME: deactivate status
       chan              = gbsChan finalState
   in  Brick.BChan.writeBChan chan (FinalNewStateEvent finalState)

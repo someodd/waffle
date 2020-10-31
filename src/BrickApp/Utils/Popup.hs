@@ -1,12 +1,21 @@
 -- FIXME TODO: rename to DialogPopup?
--- | A single-line input dialog box.
+-- | A single-line input dialog box. Being phased out with a Dialog version
+-- from `brick`.
 module BrickApp.Utils.Popup
   ( popOver
   , popup
   , inputPopupUI
+  , popupDialogEventHandler
   ) where
 
+import           Control.Monad.IO.Class
+import qualified Data.Map                      as Map
 import qualified Data.Text                     as T
+
+import qualified Brick.Main                    as B
+import qualified Brick.Types                   as B
+import qualified Graphics.Vty                  as V
+import qualified Brick.Widgets.Dialog          as B
 import qualified Brick.Widgets.Edit            as E
 import qualified Brick.Types                   as T
 import           Brick.Widgets.Center           ( center
@@ -29,6 +38,8 @@ import           Brick.Widgets.Core             ( vBox
 
 import           BrickApp.Utils.Style
 import           BrickApp.Types.Names
+import           BrickApp.Types
+import           BrickApp.Types.Helpers
 
 -- | A vertically-centered, full-width popup box to be displayed over other widgets by putting it before
 -- the other widgets in the list of widgets being rendered.
@@ -67,3 +78,23 @@ inputPopupUI :: E.Editor T.Text AnyName -> T.Text -> T.Text -> [T.Widget AnyName
 inputPopupUI editorState label helpString = popOver label [editorWidget] helpString
   where
    editorWidget = withAttr inputFieldAttr $ E.renderEditor (txt . T.unlines) True editorState
+
+-- | The Brick event handler used when a popup dialog is present.
+popupDialogEventHandler
+  :: GopherBrowserState
+  -> Popup
+  -> B.BrickEvent AnyName CustomEvent
+  -> T.EventM AnyName (T.Next GopherBrowserState)
+popupDialogEventHandler gbs n e =
+  case e of
+    B.VtyEvent (V.EvKey V.KEsc []) -> B.continue $ closePopup gbs
+    B.VtyEvent (V.EvKey V.KEnter []) -> B.continue =<< liftIO (doChoice (B.dialogSelection (pDialogWidget n)) gbs)
+    B.VtyEvent vtyev@(_) -> B.continue =<< (updatePopupWidget gbs <$> B.handleDialogEvent vtyev (pDialogWidget n))
+    _ -> B.continue gbs
+ where
+  updatePopupWidget gbs' dialog = gbs' { gbsPopup = Just (n { pDialogWidget = dialog } ) }
+  doChoice Nothing gbs' = pure gbs'
+  doChoice (Just choice) gbs' =
+    let (Just popup') = gbsPopup gbs
+        (Just choiceFunc) = Map.lookup (show choice) (pDialogMap popup')
+    in  choiceFunc gbs'

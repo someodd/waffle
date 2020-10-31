@@ -7,6 +7,7 @@ module BrickApp.Types where
 import qualified Data.Map as Map
 import qualified Data.Text                     as T
 
+import qualified Brick.Widgets.Dialog as D
 import           Brick.Widgets.FileBrowser      ( FileBrowser )
 import           Brick.Widgets.Edit            as E
 import qualified Brick.BChan
@@ -129,12 +130,28 @@ type Location = (T.Text, Int, T.Text, RenderMode, Maybe T.Text)
 -- think of this right now as a progress event
 data CustomEvent = NewStateEvent GopherBrowserState | FinalNewStateEvent GopherBrowserState | ClearCacheEvent (T.EventM AnyName ())
 
+-- FIXME: move on from Popup to Dialog! or just have somethign else? maybe pair with a handler
 -- FIXME: But what if we don't want a label, widgets, help? maybe there should be different
 -- types of popups!
+{-
 data Popup = Popup
   { pLabel :: T.Text
   , pWidgets :: [T.Widget AnyName]
   , pHelp :: T.Text
+  }
+-}
+
+data PopupDialogChoice = Ok | Cancel deriving Show
+
+-- In the future this will replace Popup because all popups can be dialogs (like with an "ok" button)
+data Popup = Popup
+  { pDialogWidget :: D.Dialog PopupDialogChoice
+  -- pDialogWidget :: D.Dialog PopupDialogChoice
+  -- ^ The dialog widget itself. Will be rendered with the popup renderer,
+  -- which is mostly just D.renderDialog...
+  , pDialogMap :: Map.Map String (GopherBrowserState -> IO GopherBrowserState)
+  , pDialogBody :: T.Widget AnyName
+  --, pDialogHandler :: Event -> Dialog a -> EventM n (Dialog a)
   }
 
 -- Works in conjunction with other modes like GotoMode which handles editing the statusEditor state
