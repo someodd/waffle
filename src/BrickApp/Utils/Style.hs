@@ -22,6 +22,7 @@ module BrickApp.Utils.Style
   , textAttr
   , directoryAttr
   , genericTypeAttr
+  , buttonSelectedAttr
   ) where
 
 import           Brick.Themes ( Theme
@@ -121,6 +122,12 @@ inputDialogLabelAttr = popupAttr <> "label"
 inputDialogAttr :: A.AttrName
 inputDialogAttr = "inputDialogAttr"
 
+buttonAttr :: A.AttrName
+buttonAttr = "button"
+
+buttonSelectedAttr :: A.AttrName
+buttonSelectedAttr = buttonAttr <> "selected"
+
 listMapThingy :: [(A.AttrName, V.Attr)]
 listMapThingy =
   [ (L.listAttr, V.yellow `on` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int))
@@ -152,6 +159,8 @@ listMapThingy =
     `V.withForeColor` V.yellow
     )
   , (asteriskAttr                      , fg V.white)
+  , (buttonAttr                        , (V.black `on`  V.yellow))
+  , (buttonSelectedAttr                , (V.defAttr `V.withStyle` V.bold) `V.withForeColor` V.rgbColor (0 :: Int) (0 :: Int) (0 :: Int) `V.withBackColor` V.rgbColor (255 :: Int) (255 :: Int) (0 :: Int))
   , (E.editAttr                        , V.white `on` V.brightBlack)
   , (E.editFocusedAttr                 , V.white `on` V.brightBlack)
   , (FB.fileBrowserCurrentDirectoryAttr, V.white `on` V.blue)

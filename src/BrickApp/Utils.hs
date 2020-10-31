@@ -24,11 +24,15 @@ module BrickApp.Utils
   , getSearchEditorContents 
   ) where
 
+import Data.List (intersperse)
 import qualified Data.Text                     as T
 import           Data.Maybe
 import qualified Data.Vector                   as Vector
 import qualified Data.Map                      as Map
 
+import Lens.Micro
+import Brick.Widgets.Border
+import qualified Brick.Widgets.Dialog          as D
 import qualified Brick.Widgets.Edit            as B
 import qualified Brick.BChan                   as B
 import qualified Brick.Main                    as B
@@ -53,7 +57,7 @@ import           BrickApp.Types                       ( GopherBrowserState(..)
                                                 )
 import           BrickApp.Types.Names                 ( AnyName(..), MyName(..) )
 import           BrickApp.Types.Helpers               ( isStatusEditing, hasPopup )
-import           BrickApp.Utils.Popup
+--import           BrickApp.Utils.Popup
 import           BrickApp.Utils.Style
 
 {- TODO:
@@ -75,9 +79,34 @@ statusEditorFormerMode g = g { gbsRenderMode = seFormerMode $ fromJust $ gbsStat
 getSearchEditorContents :: GopherBrowserState -> T.Text
 getSearchEditorContents gbs = T.filter (/= '\n') $ T.unlines (B.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
 
+-- FIXME
+-- Because I don't want the width thingy and I wanna apply my custom stylez
+renderDialog :: D.Dialog a -> B.Widget n -> B.Widget n
+renderDialog d body =
+    let buttonPadding = str "   "
+        mkButton (i, (s, _)) = let att = if Just i == d^.D.dialogSelectedIndexL
+                                         then buttonSelectedAttr
+                                         else D.buttonAttr
+                               in withAttr att $ str $ "  " <> s <> "  "
+        buttons = hBox $ intersperse buttonPadding $
+                         mkButton <$> (zip [0..] (d^.D.dialogButtonsL))
+
+        doBorder = maybe border (borderWithLabel . withAttr inputDialogLabelAttr . padLeftRight 1) (str <$> d^.D.dialogTitleL)
+    in centerLayer $
+       --withDefAttr D.dialogAttr $ -- This should be popup attr
+       updateAttrMap (applyAttrMappings borderMappingsInputDialog) $
+       withBorderStyle inputDialogBorder $
+       doBorder $
+       vBox [ body
+            , padBottom (B.Pad 1) $ hCenter buttons
+            ]
+
+-- FIXME: belongs in popup.hs
 makePopupWidget :: GopherBrowserState -> B.Widget AnyName
 makePopupWidget gbs = 
-  B.centerLayer $ head $ popup (pLabel . fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
+  let popupDialog = fromJust $ gbsPopup gbs
+  in  renderDialog (pDialogWidget popupDialog) $ hCenter $ padAll 1 $ (pDialogBody popupDialog)
+  --B.centerLayer $ head $ popup (pLabel . fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
 
 -- | Pick out the appropriate `RenderMode` for the supplied `Selector`.
 selectorToRenderMode :: Selector -> RenderMode

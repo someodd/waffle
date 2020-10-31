@@ -6,6 +6,8 @@ module BrickApp.ModeAction.Open where
 
 import           Data.List                      ( intersperse )
 
+import qualified Data.Map as Map
+import qualified Brick.Widgets.Dialog as D
 import qualified Brick.Focus as F
 import Brick.Widgets.Core
   ( (<+>)
@@ -20,6 +22,7 @@ import qualified Brick.Types                   as T
 import           Brick.Widgets.Edit            as E
 import qualified Data.ConfigFile               as CF
 
+import           BrickApp.Types.Helpers
 import           BrickApp.Utils                       ( myNameScroll )
 import           Config.ConfigOpen
 import           Config
@@ -282,9 +285,10 @@ saveConfig openConfig = do
 
 addSavedPopup :: GopherBrowserState -> GopherBrowserState
 addSavedPopup gbs =
-  let pop = Popup
-              { pLabel = "Saved!"
-              , pWidgets = [txt "Your changes were saved successfully!"]
-              , pHelp = "Saved to ~/.config/waffle/open.ini"
+  let choices = [ ("Ok", Ok) ]
+      pop = Popup
+              { pDialogWidget = D.dialog (Just "Saved!") (Just (0, choices)) 50--wtf what about max width for bug
+              , pDialogMap = Map.fromList [("Ok", pure . closePopup)]
+              , pDialogBody = txt "Saved successfully to ~/.config/waffle/open.ini"
               }
   in gbs { gbsPopup = Just pop }

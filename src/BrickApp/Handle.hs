@@ -9,6 +9,7 @@ import qualified Brick.Types                   as B
 import qualified Graphics.Vty                  as V
 
 import BrickApp.Utils                           ( cacheRemove )
+import BrickApp.Utils.Popup                     ( popupDialogEventHandler)
 import BrickApp.Types.Names
 import BrickApp.Types.Helpers
 import BrickApp.Types
@@ -76,6 +77,8 @@ appEvent gbs (B.VtyEvent e@(V.EvKey (V.KFun 5) [])) =
   let newCache = cacheRemove (gbsLocation gbs) (gbsCache gbs)
       newGbs   = gbs { gbsCache = newCache }
   in  doEventIfModes gbs [TextFileMode, MenuMode] (liftIO (initProgressMode newGbs (Just $ gbsHistory gbs) (gbsLocation gbs)) >>= B.continue) (appropriateHandler gbs e)
+-- popup logic catching
+appEvent gbs@(GopherBrowserState{gbsPopup=(Just n)}) e = popupDialogEventHandler gbs n e
 -- Close a popup if there is one, otherwise forward to appropriate handler!
 appEvent gbs (B.VtyEvent e@(V.EvKey V.KEsc []))
   | hasPopup gbs = B.continue $ closePopup gbs

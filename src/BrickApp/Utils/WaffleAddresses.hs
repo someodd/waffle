@@ -10,12 +10,14 @@ import qualified Data.Map as Map
 import           Brick.Widgets.Core             ( txt )
 import           Network.URI
 
+import qualified Brick.Widgets.Dialog as D
 import           BrickApp.ModeAction.Help
 import           BrickApp.ModeAction.Open
 import           BrickApp.ModeAction.Bookmarks
 import           BrickApp.Types
 import           BrickApp.Utils
 import           BrickApp.ModeAction.Progress
+import           BrickApp.Types.Helpers
 import           Gopher
 
 
@@ -71,10 +73,11 @@ loadAddress gbs unparsedURI =
   errorPopup :: GopherBrowserState -> T.Text -> T.Text -> IO GopherBrowserState
   errorPopup gbs' someBadURI message =
     let pop = Popup
-                { pLabel   = "Goto input error!"
-                , pWidgets = [txt message]
-                , pHelp    = "Invalid:" <> someBadURI
+                { pDialogWidget = D.dialog (Just "Goto input error!") (Just (0, [ ("Ok", Ok) ])) 50--wtf what about max width for bug
+                , pDialogMap = Map.fromList [("Ok", pure . closePopup)]
+                , pDialogBody = txt $ (message <> "Invalid: " <> someBadURI)
                 }
+
     in  pure $ gbs' { gbsPopup = Just pop }
 
   -- | Try to parse a `Location` from `Text` (which is hopefully
