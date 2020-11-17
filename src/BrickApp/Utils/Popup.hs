@@ -1,3 +1,4 @@
+-- FIXME: maybe a lot of this could go into modeaction?
 -- FIXME TODO: rename to DialogPopup?
 -- | A single-line input dialog box. Being phased out with a Dialog version
 -- from `brick`.

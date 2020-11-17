@@ -154,6 +154,7 @@ library
     BrickApp.Handle.TextFile
 
     BrickApp.ModeAction.Goto
+    BrickApp.ModeAction.Homepage
     BrickApp.ModeAction.Help
     BrickApp.ModeAction.Menu
     BrickApp.ModeAction.Menu.Jump

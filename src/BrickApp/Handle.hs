@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | Brick application event handlers, depending on the current `RenderMode`, as used
 -- by this Brick application's `Brick.Main.appHandleEvent`.
 module BrickApp.Handle where
@@ -8,11 +9,13 @@ import qualified Brick.Main                    as B
 import qualified Brick.Types                   as B
 import qualified Graphics.Vty                  as V
 
+import Homepage                                 ( goHome )
 import BrickApp.Utils                           ( cacheRemove )
 import BrickApp.Utils.Popup                     ( popupDialogEventHandler)
 import BrickApp.Types.Names
 import BrickApp.Types.Helpers
 import BrickApp.Types
+import BrickApp.ModeAction.Homepage             ( createHomeDialog )
 import BrickApp.ModeAction.Help
 import BrickApp.ModeAction.Goto
 import BrickApp.ModeAction.Progress
@@ -102,6 +105,14 @@ appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'g') [V.MCtrl])) =
 -- TODO: needs to reset viewport
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar '?') [])) =
   doEventIfModes gbs [HelpMode] (appropriateHandler gbs e) (liftIO (modifyGbsForHelp gbs) >>= B.continue)
+-- Go to the homepage
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'h') [])) =
+  (liftIO $ goHome gbs) >>= B.continue
+-- Set the homepage
+appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'z') [V.MCtrl])) =
+  -- TODO/FIXME: bring up prompt about setting homepage
+  B.continue (createHomeDialog gbs)
+--
 -- FIXME: this could be easily fixed just by doing appEvent gbs e instead of vtyevent
 -- and leaving it up to eventhandlers
 -- What about above FIXME... event types should be deicphered by event handler?
