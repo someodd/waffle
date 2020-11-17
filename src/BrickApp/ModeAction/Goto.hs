@@ -39,7 +39,7 @@ mkGotoResponseState gbs =
       formerGbs = formerMode gbs
   -- here is where i detect type first
   -- I should modularize this to be used elsewhere like home or follow links?
-  in  liftIO (loadAddress formerGbs unparsedURI) >>= B.continue
+  in  liftIO (loadAddress formerGbs unparsedURI Nothing) >>= B.continue
 
 -- | Revert to mode prior to `GotoMode` being initiated.
 formerMode :: GopherBrowserState -> GopherBrowserState

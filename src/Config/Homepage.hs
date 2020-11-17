@@ -4,6 +4,7 @@
 
 module Config.Homepage where
 
+import Data.Maybe (fromMaybe)
 import           Control.Monad.Except
 import           System.FilePath
 import qualified Data.ByteString.Lazy as BL
@@ -34,16 +35,17 @@ getUserHomepageConfig :: IO ConfigParser
 getUserHomepageConfig = getUserHomepageConfigPath >>= readConfigParser
 
 -- FIXME: could be easily changed to account for display string
-setHomepage :: String -> IO ()
-setHomepage homepageURI = do
+setHomepage :: String -> Maybe String -> IO ()
+setHomepage homepageURI maybeDisplayString = do
   userHomepagePath <- getUserHomepageConfigPath
   -- Trust me, I know how this looks, but that's how the `Data.ConfigFile` author
   -- wants it done. It's an interface I don't appreciate much.
   outCP <- runExceptT $
          do
-         cp      <- join $ liftIO $ readfile customEmptyCP userHomepagePath
-         cp'    <- set cp "homepage" "uri" (homepageURI)
-         pure cp'
+         cp <- join $ liftIO $ readfile customEmptyCP userHomepagePath
+         cp' <- set cp "homepage" "uri" (homepageURI)
+         cp'' <- set cp' "homepage" "display" (fromMaybe homepageURI maybeDisplayString)
+         pure cp''
 
   -- Handle errors from the building the output configuration parser
   case outCP of
