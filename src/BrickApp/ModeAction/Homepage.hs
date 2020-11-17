@@ -18,7 +18,7 @@ import Config.Homepage
 -- | Function for setting current location as the homepage
 setHomeDialog :: GopherBrowserState -> IO GopherBrowserState
 setHomeDialog gbs =
-  let (domain, port, resource, _, _) = gbsLocation gbs
+  let (domain, port, resource, _, displayString) = gbsLocation gbs
       uri = T.unpack $ "gopher://" <> domain <> ":" <> (T.pack $ show port) <> resource
       -- FIXME: maybe should have a helper function since this gets repeated so dang much!
       -- this new gbs below will replace the current home dialog with a success dialog
@@ -29,7 +29,7 @@ setHomeDialog gbs =
               , pDialogBody = txt "Success: Current page set as homepage!"
               }
       newGbs = gbs { gbsPopup = Just pop }
-  in  setHomepage uri >> pure newGbs
+  in  setHomepage uri (fmap T.unpack displayString) >> pure newGbs
 
 -- | The dialog for OK/cancel setting homepage to current
 createHomeDialog :: GopherBrowserState -> GopherBrowserState

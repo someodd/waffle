@@ -62,8 +62,8 @@ waffleAddressEvent gbs address =
 
 -- | Either load the appropriate waffle:// mode from address, or load an actual
 -- URI/destination in gopherspace as specified by supplied address.
-loadAddress :: GopherBrowserState -> T.Text -> IO GopherBrowserState
-loadAddress gbs unparsedURI =
+loadAddress :: GopherBrowserState -> T.Text -> Maybe String -> IO GopherBrowserState
+loadAddress gbs unparsedURI maybeDisplayString =
   case waffleAddressEvent gbs unparsedURI of
     -- It was a valid waffle:// address
     Just event -> event
@@ -98,7 +98,7 @@ loadAddress gbs unparsedURI =
       ':':p  -> Right (read p :: Int)
       _      -> Left $ "Invalid URI (bad port)." -- I don' think this ever can occur with Network.URI...
     let resource = uriPath parsedURI
-    Right (T.pack regName, port, removeGopherType $ T.pack resource, selectorToRenderMode $ T.pack resource, Nothing)
+    Right (T.pack regName, port, removeGopherType $ T.pack resource, selectorToRenderMode $ T.pack resource, fmap T.pack maybeDisplayString)
 
   prefixSchemeIfMissing :: T.Text -> T.Text
   prefixSchemeIfMissing potentialURI

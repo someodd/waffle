@@ -1,4 +1,4 @@
--- FIXME: this is all wrong because it references GopherBrowserState so it shoudl be in utils!
+-- FIXME: this is all wrong because it references GopherBrowserState so it shoudl be in BrickApp!
 -- IIt also references loadAddress!
 module Homepage where
 
@@ -14,4 +14,5 @@ goHome :: GopherBrowserState -> IO GopherBrowserState
 goHome gbs = do
   configParser <- getUserHomepageConfig
   unparsedURI <- readConfigParserValue configParser "homepage" "uri"
-  loadAddress gbs (T.pack $ unparsedURI)
+  displayString <- readConfigParserValue configParser "homepage" "display" -- What happens if this is blank?
+  loadAddress gbs (T.pack $ unparsedURI) (Just displayString)
