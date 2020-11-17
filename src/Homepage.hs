@@ -9,6 +9,7 @@ import           Config
 import           BrickApp.Utils.WaffleAddresses
 import           Config.Homepage
 
+-- FIXME: this should be in src/Brickapp/ModeAction/Homepage.hs
 goHome :: GopherBrowserState -> IO GopherBrowserState
 goHome gbs = do
   configParser <- getUserHomepageConfig

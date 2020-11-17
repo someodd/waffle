@@ -33,6 +33,7 @@ getUserHomepageConfigPath = do
 getUserHomepageConfig :: IO ConfigParser
 getUserHomepageConfig = getUserHomepageConfigPath >>= readConfigParser
 
+-- FIXME: could be easily changed to account for display string
 setHomepage :: String -> IO ()
 setHomepage homepageURI = do
   userHomepagePath <- getUserHomepageConfigPath
