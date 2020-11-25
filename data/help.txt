@@ -58,3 +58,6 @@ with `d`. Bookmark view works the same as any Gopher menu.
 TOR: You can browse Gopherspace using Tor, even visit hidden services like
 gopher://bztf2mno3tpwrqop.onion:70/1/ if you just start Waffle with `torsocks`,
 for example: `torsocks waffle`.
+
+HOMEPAGE: set the homepage with `ctrl` + `z`. Go home with `h`. You can
+also edit `~/.config/waffle/homepage.ini`.

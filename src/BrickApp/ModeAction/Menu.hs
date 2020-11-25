@@ -2,9 +2,11 @@
 
 module BrickApp.ModeAction.Menu where
 
+import qualified Data.Map as Map
 import           Data.List                     as List
 import           Data.Maybe
 
+import qualified Brick.Widgets.Dialog as D
 import qualified Brick.Widgets.List            as BrickList
 import           Brick.Widgets.Core             ( txt )
 
@@ -112,8 +114,8 @@ lineInfoPopup gbs =
   in  gbs
         { gbsPopup =
           Just $ Popup
-            { pLabel = "Line Info"
-            , pWidgets = [txt currentLineInfo]
-            , pHelp = "Currently selected line is of this type. ESC to close."
+            { pDialogWidget = D.dialog (Just "Currently Selected Line Info") (Just (0, [ ("Ok", Ok) ])) 50--wtf what about max width for bug
+            , pDialogMap = Map.fromList [("Ok", pure . closePopup)]
+            , pDialogBody = txt currentLineInfo
             }
         }
