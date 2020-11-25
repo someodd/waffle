@@ -18,8 +18,8 @@ import           BrickApp.ModeAction.Bookmarks
 formerMode :: GopherBrowserState -> GopherBrowserState
 formerMode g = g { gbsRenderMode = seFormerMode $ fromJust $ gbsStatus g, gbsStatus = Nothing }
 
--- NOTE: it's worth noting that the bookmarks feature is build around lazily using the existing menu feature
--- so it's just build directly on top of the menu's renderer, handler, etc.
+-- | The handler for the bookmark viewer, which just extends the menu's handler, since the bookmark viewer
+-- is a menu!
 bookmarksEventHandler
   :: GopherBrowserState
   -> V.Event
@@ -37,10 +37,10 @@ bookmarksEventHandler gbs e =
     V.EvKey (V.KChar 'd') [] -> liftIO (removeSelectedBookmark gbs) >>= B.continue
     _                        -> menuEventHandler gbs e
 
+-- | The handler for the add a bookmark dialog.
 addBookmarkEventHandler
   :: GopherBrowserState -> V.Event -> T.EventM AnyName (T.Next GopherBrowserState)
 addBookmarkEventHandler gbs e = case e of
-    -- FIXME: esc quits! Change key...
   V.EvKey V.KEsc   [] -> B.continue $ formerMode gbs
   -- On enter save bookmark with the name inputted
   V.EvKey V.KEnter [] -> liftIO (bookmarkCurrentLocation gbs) >>= B.continue

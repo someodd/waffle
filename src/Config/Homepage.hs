@@ -17,7 +17,6 @@ import           Config                            ( customEmptyCP, getConfigDir
 defaultHomepageConfig :: BL.ByteString
 defaultHomepageConfig = BL.fromStrict $(embedFile "data/homepage.ini")
 
--- TODO: maybe should be setupFactoryOpenConfig
 setupDefaultHomepageConfig :: IO ()
 setupDefaultHomepageConfig = do
   userHomepageConfigPath <- getUserHomepageConfigPath
@@ -34,7 +33,6 @@ getUserHomepageConfigPath = do
 getUserHomepageConfig :: IO ConfigParser
 getUserHomepageConfig = getUserHomepageConfigPath >>= readConfigParser
 
--- FIXME: could be easily changed to account for display string
 setHomepage :: String -> Maybe String -> IO ()
 setHomepage homepageURI maybeDisplayString = do
   userHomepagePath <- getUserHomepageConfigPath
