@@ -79,8 +79,8 @@ statusEditorFormerMode g = g { gbsRenderMode = seFormerMode $ fromJust $ gbsStat
 getSearchEditorContents :: GopherBrowserState -> T.Text
 getSearchEditorContents gbs = T.filter (/= '\n') $ T.unlines (B.getEditContents $ seEditorState $ fromJust $ gbsStatus gbs)
 
--- FIXME
--- Because I don't want the width thingy and I wanna apply my custom stylez
+-- | Overrides the default Dialog renderer. I overrided it beacuse I want my custom popup
+-- styles and a 100% width for popups.
 renderDialog :: D.Dialog a -> B.Widget n -> B.Widget n
 renderDialog d body =
     let buttonPadding = str "   "
@@ -106,9 +106,6 @@ makePopupWidget :: GopherBrowserState -> B.Widget AnyName
 makePopupWidget gbs = 
   let popupDialog = fromJust $ gbsPopup gbs
   in  renderDialog (pDialogWidget popupDialog) $ hCenter $ padAll 1 $ (pDialogBody popupDialog)
-  --B.centerLayer $ head $ popup (pLabel . fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
-
--- TODO: hasItemType in selector
 
 -- | Pick out the appropriate `RenderMode` for the supplied `Selector`.
 selectorToRenderMode :: Selector -> RenderMode

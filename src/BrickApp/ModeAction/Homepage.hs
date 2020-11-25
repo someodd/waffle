@@ -11,11 +11,11 @@ import qualified Brick.Widgets.Dialog          as D
 import BrickApp.Utils
 import BrickApp.Types
 import BrickApp.Types.Helpers
+import           Config
 import Config.Homepage
+import           BrickApp.Utils.WaffleAddresses
 
 
--- FIXME: rename this function, very misleading
--- FIXME: needs another popup notice that it worked/replace the popup on OK, I guess!
 -- | Function for setting current location as the homepage
 setHomeDialog :: GopherBrowserState -> IO GopherBrowserState
 setHomeDialog gbs =
@@ -43,3 +43,10 @@ createHomeDialog gbs =
               , pDialogBody = txt "Set current page as homepage?"
               }
   in gbs { gbsPopup = Just pop }
+
+goHome :: GopherBrowserState -> IO GopherBrowserState
+goHome gbs = do
+  configParser <- getUserHomepageConfig
+  unparsedURI <- readConfigParserValue configParser "homepage" "uri"
+  displayString <- readConfigParserValue configParser "homepage" "display" -- What happens if this is blank?
+  loadAddress gbs (T.pack $ unparsedURI) (Just displayString)

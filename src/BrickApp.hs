@@ -18,7 +18,7 @@ import qualified Brick.Main                    as B
 import qualified Graphics.Vty                  as V
 import           Brick.Widgets.Core             ( txt )
 
-import Homepage
+import BrickApp.ModeAction.Homepage ( goHome )
 import BrickApp.Types
 import BrickApp.Types.Names
 import BrickApp.Utils
@@ -35,10 +35,6 @@ theApp = B.App { B.appDraw         = drawUI
                , B.appAttrMap      = const theMap
                }
 
--- FIXME: interpret homepage from config
--- FIXME: isn't there a way to infer a location's type? Assuming first
--- link is a menu is a horrible hack...
---
 -- | Start the Brick app at a specific Gopher menu in Gopherspace.
 uiMain :: Maybe (T.Text, Int, T.Text) -> IO ()
 uiMain possibleLocation = do
@@ -64,7 +60,6 @@ uiMain possibleLocation = do
       -- if we didn't get a location passed to us, then we want to
       -- start with the home page from the config!
       goHome dummyStateToOverride
-      -- modifyGbsForHelp dummyStateToOverride
     else
       -- ...otherwise let's open the page supplied!
       let (host, port, magicString) = fromJust possibleLocation

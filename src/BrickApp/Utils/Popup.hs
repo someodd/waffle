@@ -75,6 +75,7 @@ popOver label mainWidget helpString =
         (head $ popup label mainWidget helpString)
   in  [center ui]
 
+-- TODO: just make search a popup dialog?
 inputPopupUI :: E.Editor T.Text AnyName -> T.Text -> T.Text -> [T.Widget AnyName]
 inputPopupUI editorState label helpString = popOver label [editorWidget] helpString
   where
