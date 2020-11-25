@@ -109,6 +109,7 @@ appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar '?') [])) =
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'h') [])) =
   (liftIO $ goHome gbs) >>= B.continue
 -- Set the homepage
+-- FIXME: why does ctrl h not work?
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'z') [V.MCtrl])) =
   -- TODO/FIXME: bring up prompt about setting homepage
   B.continue (createHomeDialog gbs)

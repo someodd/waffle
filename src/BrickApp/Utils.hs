@@ -108,6 +108,8 @@ makePopupWidget gbs =
   in  renderDialog (pDialogWidget popupDialog) $ hCenter $ padAll 1 $ (pDialogBody popupDialog)
   --B.centerLayer $ head $ popup (pLabel . fromJust $ gbsPopup gbs) (pWidgets . fromJust $ gbsPopup gbs) (pHelp . fromJust $ gbsPopup gbs)
 
+-- TODO: hasItemType in selector
+
 -- | Pick out the appropriate `RenderMode` for the supplied `Selector`.
 selectorToRenderMode :: Selector -> RenderMode
 selectorToRenderMode selector =

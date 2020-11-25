@@ -8,6 +8,7 @@ import qualified Data.Map                      as Map
 import Brick.Widgets.Core (txt)
 import qualified Brick.Widgets.Dialog          as D
 
+import BrickApp.Utils
 import BrickApp.Types
 import BrickApp.Types.Helpers
 import Config.Homepage
@@ -18,8 +19,9 @@ import Config.Homepage
 -- | Function for setting current location as the homepage
 setHomeDialog :: GopherBrowserState -> IO GopherBrowserState
 setHomeDialog gbs =
-  let (domain, port, resource, _, displayString) = gbsLocation gbs
-      uri = T.unpack $ "gopher://" <> domain <> ":" <> (T.pack $ show port) <> resource
+  let (domain, port, resource, renderMode, displayString) = gbsLocation gbs
+      itemType = T.pack [renderModeToItemChar renderMode]
+      uri = T.unpack $ "gopher://" <> domain <> ":" <> (T.pack $ show port) <> "/" <> itemType <> resource
       -- FIXME: maybe should have a helper function since this gets repeated so dang much!
       -- this new gbs below will replace the current home dialog with a success dialog
       choices = [ ("Ok", Ok) ]

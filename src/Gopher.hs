@@ -169,7 +169,7 @@ selectorExtToItemType selector =
   let extension = takeExtension (T.unpack selector)
   in  case extension of
         -- Canonical types
-        ""      -> Just $ Canonical Directory  -- TODO: should we rename Directory to GopherMap or *Menu* or something?
+        ""      -> Just $ Canonical Directory  -- NOTE: this is a risky guess. TODO: should we rename Directory to GopherMap or *Menu* or something?
         ".gif"  -> Just $ Canonical GifFile
         -- Canonical types: (text) File
         ".txt"  -> Just $ Canonical File
@@ -269,6 +269,8 @@ removeGopherType selector =
 --
 -- This is the main function used when determining a type of a link without
 -- downloading the contents.
+--
+-- Also useful for determining if the selector has an item type specified.
 selectorItemType :: Selector -> Maybe ItemType
 selectorItemType selector = do
   -- First we see if the selector already informs us of the file type.
