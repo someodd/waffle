@@ -1,10 +1,31 @@
 # Changelog
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file. This is
+mostly for the enduser.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.23.0] - 2020-11-25
+
+### Add
+
+  * Homepage support
+  * "Ok" and "cancel" buttons for popups
+  * Bookmark title in bookmark mode
+  * Support for "waffle addresses" like waffle://bookmarks, waffle://help, and waffle://assocs
+
+### Change
+
+  * Replace popup system with Brick's Dialog system
+
+### Fix
+
+  * OpenConfigMode (setting associations) menu now less buggy when scrolling
+    around/tabbing through the fields
+  * You can no longer keep opening bookmark mode, which might not be noticeable,
+    except it would keep consuming memory
 
 ## [0.22.0] - 2020-09-12
 

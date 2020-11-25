@@ -18,20 +18,29 @@ import           BrickApp.ModeAction.Bookmarks
 formerMode :: GopherBrowserState -> GopherBrowserState
 formerMode g = g { gbsRenderMode = seFormerMode $ fromJust $ gbsStatus g, gbsStatus = Nothing }
 
+-- | The handler for the bookmark viewer, which just extends the menu's handler, since the bookmark viewer
+-- is a menu!
 bookmarksEventHandler
   :: GopherBrowserState
   -> V.Event
   -> T.EventM AnyName (T.Next GopherBrowserState)
 bookmarksEventHandler gbs e =
   case e of
-    V.EvKey V.KEsc   []      -> liftIO (initProgressMode gbs (Just $ gbsHistory gbs) (gbsLocation gbs)) >>= B.continue
+    V.EvKey V.KEsc   []      -> do
+      -- LOL all this is all done so we can have the display string in title since we're
+      -- using the menu's draw code (lazy, but DRY)
+      if let (_, historyIndex) = gbsHistory gbs in historyIndex == (-1)
+        then B.continue gbs
+        else let (historyStack, historyIndex) = gbsHistory gbs
+                 currentLocation              = historyStack !! historyIndex
+             in  liftIO (initProgressMode gbs (Just $ gbsHistory gbs) currentLocation) >>= B.continue
     V.EvKey (V.KChar 'd') [] -> liftIO (removeSelectedBookmark gbs) >>= B.continue
     _                        -> menuEventHandler gbs e
 
+-- | The handler for the add a bookmark dialog.
 addBookmarkEventHandler
   :: GopherBrowserState -> V.Event -> T.EventM AnyName (T.Next GopherBrowserState)
 addBookmarkEventHandler gbs e = case e of
-    -- FIXME: esc quits! Change key...
   V.EvKey V.KEsc   [] -> B.continue $ formerMode gbs
   -- On enter save bookmark with the name inputted
   V.EvKey V.KEnter [] -> liftIO (bookmarkCurrentLocation gbs) >>= B.continue

@@ -120,6 +120,7 @@ library
 
     Config
     Config.ConfigOpen
+    Config.Homepage
     Config.Bookmarks
     Config.Theme
 
@@ -152,6 +153,7 @@ library
     BrickApp.Handle.TextFile
 
     BrickApp.ModeAction.Goto
+    BrickApp.ModeAction.Homepage
     BrickApp.ModeAction.Help
     BrickApp.ModeAction.Menu
     BrickApp.ModeAction.Menu.Jump
@@ -163,6 +165,7 @@ library
     BrickApp.ModeAction.Bookmarks
 
     BrickApp.Utils
+    BrickApp.Utils.WaffleAddresses
     BrickApp.Utils.Style
     BrickApp.Utils.Popup
 

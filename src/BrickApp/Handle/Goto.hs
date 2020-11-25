@@ -2,7 +2,6 @@
 module BrickApp.Handle.Goto where
 
 import           Data.Maybe
-import           Control.Monad.IO.Class
 
 import qualified Brick.Main                    as M
 import qualified Brick.Types                   as T
@@ -19,7 +18,7 @@ gotoEventHandler
 gotoEventHandler gbs e = case e of
     -- FIXME: esc quits! Change key...
   V.EvKey V.KEsc   [] -> M.continue $ formerMode gbs
-  V.EvKey V.KEnter [] -> liftIO (mkGotoResponseState gbs) >>= M.continue
+  V.EvKey V.KEnter [] -> mkGotoResponseState gbs
   _                   -> M.continue =<< editorEventHandler gbs e
  where
   -- | A modification of the default Brick.Widgets.Edit event handler; changed to
