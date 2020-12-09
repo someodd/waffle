@@ -66,6 +66,11 @@ doEventIfModeTrue gbs func successEvent failEvent
   | otherwise = failEvent
 
 
+-- FIXME: the way I'm handling input here is bad. It relies on whitelisting which modes are allowed
+-- to initiate a new mode/use a command. So for example, if I ever add a new thing that handles input,
+-- the homepage event handler might active, unless homepage event handler is whitelisted, which then
+-- a problem occurs where homepagemode might not be tripped if and when it actually should be during
+-- a new mode that gets added!
 -- FIXME: shouldn't history be handled top level and not in individual handlers? or are there
 -- some cases where we don't want history available
 --
@@ -104,13 +109,13 @@ appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'b') [V.MCtrl])) =
   in doEventIfModeTrue gbs (/= BookmarksMode) successEvent failureEvent
 -- GotoMode
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'g') [V.MCtrl])) =
-  doEventIfModeTrue gbs (`elem` [MenuMode, TextFileMode, HelpMode]) (B.continue $ initGotoMode gbs) (appropriateHandler gbs e)
+  doEventIfModeTrue gbs (`elem` [BookmarksMode, MenuMode, TextFileMode, HelpMode]) (B.continue $ initGotoMode gbs) (appropriateHandler gbs e)
 -- TODO: needs to reset viewport
 appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar '?') [])) =
   doEventIfModeTrue gbs (== HelpMode) (appropriateHandler gbs e) (liftIO (modifyGbsForHelp gbs) >>= B.continue)
 -- Go to the homepage
-appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'h') [])) =
-  (liftIO $ goHome gbs) >>= B.continue
+appEvent gbs (B.VtyEvent e@(V.EvKey (V.KChar 'h') [])) =
+  doEventIfModeTrue gbs (`elem` [BookmarksMode, MenuMode, TextFileMode, HelpMode]) ((liftIO $ goHome gbs) >>= B.continue) (appropriateHandler gbs e)
 -- Set the homepage
 -- FIXME: why does ctrl h not work?
 appEvent gbs (B.VtyEvent (V.EvKey (V.KChar 'z') [V.MCtrl])) =

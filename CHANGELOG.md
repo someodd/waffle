@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2020-12-09
+
+### Fix
+
+  * Prevent homepage from being launched during modes where it shouldn't, like
+    GotoMode and SearchMode
+  * Allow GotoMode to be launched while viewing bookmarks
+
 ## [0.23.0] - 2020-11-25
 
 ### Add
