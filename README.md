@@ -25,8 +25,8 @@ Special thanks to @Garmelon for mentoring me through all of this.
 
 ## Try it out!
 
-Compile it with `cabal build` and then try it out with
-`cabal run waffle sdf.org 70 phlogs`.
+Compile it with `cabal build` and then try it out with `cabal run waffle
+sdf.org 70 phlogs`. I compiled with GHC 8.10.7.
 
 Press `?` while using the browser for full details on using it!
 
