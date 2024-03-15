@@ -13,6 +13,8 @@ protocol](https://en.wikipedia.org/wiki/Gopher_%28protocol%29) client with a
 text interface written in Haskell, implemented according to [RFC
 1436](https://tools.ietf.org/html/rfc1436) technical specification.
 
+You can build and run with `nix`, like `nix build` and `nix run`.
+
 ## Alpha
 
 This is a project in alpha. It is not fully functional. It is currently a demo.
